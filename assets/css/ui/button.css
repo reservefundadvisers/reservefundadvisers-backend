@@ -1,0 +1,5 @@
+.btn-circle.btn-xs, .btn-group-xs > .btn-circle.btn {
+    height: 1.6rem;
+    width: 1.6rem;
+    font-size: 0.75rem;
+}

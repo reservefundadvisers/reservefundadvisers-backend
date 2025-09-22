@@ -1,0 +1,134 @@
+.ui-slider{
+    height: 0.4rem !important;
+    background-color: var(--primary-disabled);
+    border:none !important;
+    margin-bottom: 1rem !important;
+}
+
+.ui-slider-with-limits{
+    margin-bottom: 2rem !important;
+}
+
+.ui-slider::hover{
+    cursor: pointer !important;
+}
+
+.ui-slider-horizontal .ui-slider-handle{
+    top: -0.45em;
+    width: 0.2em;
+    height: 1.3em;
+    margin-left: -0.1em;
+    background-color: var(--primary);  
+    text-align: center;  
+}
+
+
+.ui-slider-handle.ui-state-hover{
+    background-color: var(--primary-hover);
+}
+.ui-slider-range{
+    background-color: var(--primary-accent);
+    text-align: center;
+}
+
+.ui-slider-handle.ui-state-default{
+    border: none;
+    outline: none;
+}
+
+/* TOOLTIP */
+.app-slider-tooltip{
+    top: -1.8rem;
+    position: absolute;
+    height:1.3rem;
+    padding:0.1rem 0.2rem;
+    border-radius: 0.2rem;
+    background-color: var(--primary);
+    text-align: center;
+    font-size:0.7rem;
+    color: white;
+    white-space: nowrap;
+
+}
+.app-slider-tooltip-joined{
+    top: -2.2rem;
+    position: absolute;
+    height:1.3rem;
+    padding:0.1rem 0.2rem;
+    border-radius: 0.2rem;
+    background-color: var(--primary);
+    text-align: center;
+    font-size:0.7rem;
+    font-weight: normal;
+    color: white;
+    white-space: nowrap;
+
+}
+
+/* LIMITS */
+
+/* TOOLTIP */
+.app-slider-limit{
+    position: relative;
+    padding-top:1rem;
+    width:100%;
+    height:1.7rem;
+    text-align: center;
+    white-space: nowrap;
+    font-size:0.7rem;
+    color:#686868;
+}
+
+.app-slider-limit-left{
+    position: absolute;
+    left:0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.app-slider-limit-right{
+    position: absolute;
+    right:0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+
+
+
+
+
+/* Color */
+.ui-slider.ui-blue > .ui-slider-range{
+    background-color: var(--blue);
+}
+.ui-slider.ui-indigo > .ui-slider-range{
+    background-color: var(--indigo);
+}
+.ui-slider.ui-purple > .ui-slider-range{
+    background-color: var(--purple);
+}
+.ui-slider.ui-pink > .ui-slider-range{
+    background-color: var(--pink);
+}
+.ui-slider.ui-red > .ui-slider-range{
+    background-color: var(--red);
+}
+.ui-slider.ui-orange > .ui-slider-range{
+    background-color: var(--orange);
+}
+.ui-slider.ui-green > .ui-slider-range{
+    background-color: var(--green);
+}
+.ui-slider.ui-teal > .ui-slider-range{
+    background-color: var(--teal);
+}
+.ui-slider.ui-cyan > .ui-slider-range{
+    background-color: var(--cyan);
+}
+.ui-slider.ui-white > .ui-slider-range{
+    background-color: var(--white);
+}
+.ui-slider.ui-black > .ui-slider-range{
+    background-color: var(--black);
+}

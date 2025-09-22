@@ -1,0 +1,121 @@
+[22-Jun-2022 22:39:41 UTC] PHP Warning:  require(D:/laragon/www/abel/orloff/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 22:39:41 UTC] PHP Fatal error:  Uncaught Error: Failed opening required 'D:/laragon/www/abel/orloff/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 22:39:41 UTC] PHP Warning:  require(D:/laragon/www/abel/orloff/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 22:39:41 UTC] PHP Fatal error:  Uncaught Error: Failed opening required 'D:/laragon/www/abel/orloff/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:01 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:01 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:02 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:02 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:04 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:04 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:05 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:03:05 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:04:17 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:04:17 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:04:17 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:04:17 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:12:07 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:12:07 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:12:07 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:12:07 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:13:47 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:13:47 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:14:01 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:14:01 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:16:55 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:16:55 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:16:59 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:16:59 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:18:11 UTC] PHP Warning:  require(/home/orloffadvisors/simulator/vendor/autoload.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:18:11 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/orloffadvisors/simulator/vendor/autoload.php' (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/init.php:17
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(2): include_once()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/init.php on line 17
+[22-Jun-2022 23:24:22 UTC] PHP Warning:  include_once(app/init.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/index.php on line 2
+[22-Jun-2022 23:24:22 UTC] PHP Warning:  include_once(): Failed opening 'app/init.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/index.php on line 2
+[22-Jun-2022 23:24:22 UTC] PHP Warning:  include_once(init.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/auth.php on line 4
+[22-Jun-2022 23:24:22 UTC] PHP Warning:  include_once(): Failed opening 'init.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/auth.php on line 4
+[22-Jun-2022 23:24:22 UTC] PHP Warning:  Undefined variable $auth in /home/orloffadvisors/public_html/simulator/app/auth.php on line 51
+[22-Jun-2022 23:24:22 UTC] PHP Fatal error:  Uncaught Error: Call to a member function islogged() on null in /home/orloffadvisors/public_html/simulator/app/auth.php:51
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(5): auth_handle_user()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/auth.php on line 51
+[22-Jun-2022 23:24:23 UTC] PHP Warning:  include_once(app/init.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/index.php on line 2
+[22-Jun-2022 23:24:23 UTC] PHP Warning:  include_once(): Failed opening 'app/init.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/index.php on line 2
+[22-Jun-2022 23:24:23 UTC] PHP Warning:  include_once(init.php): Failed to open stream: No such file or directory in /home/orloffadvisors/public_html/simulator/app/auth.php on line 4
+[22-Jun-2022 23:24:23 UTC] PHP Warning:  include_once(): Failed opening 'init.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home/orloffadvisors/public_html/simulator/app/auth.php on line 4
+[22-Jun-2022 23:24:23 UTC] PHP Warning:  Undefined variable $auth in /home/orloffadvisors/public_html/simulator/app/auth.php on line 51
+[22-Jun-2022 23:24:23 UTC] PHP Fatal error:  Uncaught Error: Call to a member function islogged() on null in /home/orloffadvisors/public_html/simulator/app/auth.php:51
+Stack trace:
+#0 /home/orloffadvisors/public_html/simulator/index.php(5): auth_handle_user()
+#1 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/app/auth.php on line 51
+[16-Oct-2022 03:45:06 UTC] PHP Parse error:  syntax error, unexpected token "function" in /home/orloffadvisors/public_html/simulator/app/global_func.php on line 349
+[16-Oct-2022 03:50:18 UTC] PHP Parse error:  syntax error, unexpected variable "$roles_menu" in /home/orloffadvisors/public_html/simulator/app/config.php on line 119
+[16-Oct-2022 03:50:29 UTC] PHP Parse error:  syntax error, unexpected variable "$roles_menu" in /home/orloffadvisors/public_html/simulator/app/config.php on line 119
+[07-Nov-2023 16:49:45 UTC] PHP Parse error:  syntax error, unexpected token ";", expecting ")" in /home/orloffadvisors/public_html/simulator/signup.php on line 10
+[07-Nov-2023 16:50:16 UTC] PHP Parse error:  syntax error, unexpected token ";", expecting ")" in /home/orloffadvisors/public_html/simulator/signup.php on line 10
+[07-Nov-2023 16:50:25 UTC] PHP Parse error:  syntax error, unexpected token ";", expecting ")" in /home/orloffadvisors/public_html/simulator/signup.php on line 10
+[07-Nov-2023 17:15:26 UTC] PHP Parse error:  Unclosed '(' does not match ']' in /home/orloffadvisors/public_html/simulator/subscription.php on line 46
+[07-Nov-2023 17:16:35 UTC] PHP Parse error:  Unclosed '(' does not match ']' in /home/orloffadvisors/public_html/simulator/subscription.php on line 46
+[07-Nov-2023 17:16:50 UTC] PHP Parse error:  Unmatched '}' in /home/orloffadvisors/public_html/simulator/subscription.php on line 52
+[07-Nov-2023 17:17:48 UTC] PHP Parse error:  Unmatched '}' in /home/orloffadvisors/public_html/simulator/subscription.php on line 52
+[07-Nov-2023 17:18:26 UTC] PHP Parse error:  Unmatched '}' in /home/orloffadvisors/public_html/simulator/subscription.php on line 52

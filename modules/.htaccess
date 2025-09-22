@@ -1,0 +1,2 @@
+RewriteEngine On
+RedirectMatch 403 ^.*modules\/.*js\/.*\.php$

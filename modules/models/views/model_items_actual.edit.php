@@ -1,0 +1,410 @@
+<div class="modal fade" id="<?=$arand;?>_modal" data-backdrop="false" data-keyboard="false" style="background:rgba(0,0,0,0.2)" tabindex="-1" role="dialog" aria-labelledby="editorModalLabel" aria-hidden="true"> 
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width:720px !important;"> 
+        <div class="modal-content shadow"> 
+            <div class="modal-header pb-2"> 
+            <h5 class="modal-title" style="font-size:20px;" qompta-tr="user">Model Items</h5> 
+            <button type="button" class="close action-cancel" data-dismiss="modal" aria-label="Close"> 
+                <span aria-hidden="true">×</span> 
+            </button> 
+            </div> 
+
+            <div class="modal-body pt-0">  
+
+
+                <div class="w-100 h6 mt-2 mb-2 pb-4 border-bottom border-dark font-weight-bold">
+                    
+                    <span class="text-primary mr-3">Select Year </span>
+                    <select class="app-input items-year" data-classes="d-inline-block" data-style="width:120px;">
+
+                    </select>
+
+                    <label class="btn btn-sm btn-danger items-reset float-right">Reset All</label>
+
+                    <br>
+                    <spanc class="w3-text-red"><b>Warning:</b> Changing costs will <b>Unsplit</b> all items <b>Splitted</b> by users running the simulation !<span>
+                    
+                </div>      
+
+                <template class="item-tmpl">
+                    
+                    <div class="col-md-5 col-lg-6 pt-2 pb-2 border-bottom border-dark position-relative item item-left" style="font-size:1.0rem;">  
+                        <div class="d-md-inline-block d-none position-absolute pt-0" style="font-size:0.7rem;">                                                          
+                            <!-- <i class="w3-indigo fa fa-exchange-alt fa-rotate-90 px-2 py-1 rounded pointer item-switch" ></i>                                            -->
+                            <!-- <i class="w3-green fa fa-compress-alt px-1 py-2 rounded pointer item-join" ></i>                                            -->
+                            <!-- <label class="w3-indigo px-2 py-2 m-0 rounded pointer item-split font-weight-bold" >Split</label> -->
+                        </div>
+                        
+                        <!-- <p class="ml-md-5 item-name"></p> -->
+                        <p class="item-name font-weight-bold pt-1"></p>
+
+                    </div>
+                    
+                    <div class="col-md-7 col-lg-6 col-md-2 px-0 border-bottom border-dark item item-right">
+                        <div class="row h-100 m-0 p-0 pb-2 text-center">
+                            <div class="col-6 pl-2 pt-2 d-block d-md-none border-bottom border-dark font-weight-bold text-right">Estimated Cost </div>
+                            <div class="col-6 pl-2 pt-2 d-block d-md-none border-bottom border-dark font-weight-bold text-right">Actual Cost </div>
+                            
+
+                            <div class="col-6 pl-2 pt-2 font-weight-bold text-nowrap text-right position-relative" >
+                                <label class="text-primary item-cost pt-1">$0</label>
+                            </div>
+                            <div class="col-6 pl-2 pt-2 font-weight-bold text-nowrap text-right position-relative" >
+                                <input class="app-input item-cost-actual" data-classes="float-right" data-style="width:120px;" type="number" min="0"/>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                    <div class="col-12 py-3 d-block d-md-none item-sep"></div>
+                
+
+                </template>
+                
+                
+                <div  class="form-row mt-3 "> 
+
+                
+                    <div class="col-md-6 col-lg-6 pb-2 pr-4 text-left font-weight-bold">
+                        <input type="text" placeholder="Search for Item" class="float-left  item-filter" style="width:80%" />
+                        <i class="fa fa-times w3-text-red p-2 rounded pointer item-filter-reset float-left ml-1" style="font-size:1rem;"></i>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-6 col-md-2 d-none d-md-block px-0">
+                        <div class="row m-0 p-0 text-center">
+                            <div class="col-5 pl-2 font-weight-bold border-bottom border-dark  text-right">Estimated Cost </div>
+                            <div class="col-6 pl-2 font-weight-bold border-bottom border-dark  text-right">Actual Cost </div>
+                            <div class="col-1 pl-2 " >
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="position-relative" style="height:300px; overflow:auto;">
+                    <div  class="form-row mt-3 mx-0 item-list" > 
+
+                    
+                        
+
+                    </div> 
+                </div>
+
+                
+                
+
+                <div class="invalid-global-feedback d-none text-sm text-danger mt-3 mb-0 font-weight-bold">* Please check errors before proceeding !</div>
+        
+
+
+                
+
+
+
+                <!-- MODAL BODY END -->    
+            </div> 
+
+            <form class="needs-validation" novalidate> 
+            <div class="modal-footer"> 
+                <button type="button" class="btn btn-sm btn-danger action-cancel" data-dismiss="modal"  qompta-tr="cancel">Cancel</button> 
+                <button type="submit" class="btn btn-sm btn-success text-white action-submit"  qompta-tr="save">Save</button> 
+            </div> 
+            </form> 
+
+            <?php echo print_js(['clients', 'models']); ?>
+            <script>
+                function <?=$arand;?>_init(){
+                    var root = $('#<?=$arand;?>_modal');
+                    var all_items = <?= json_encode($vars['items']); ?>,
+                        model = <?= json_encode($vars['model']); ?>,
+                        editor_variable_name = root.data('editor-var'), 
+                        filtered = [];
+
+
+
+                    // containing actual cost elements
+                    var actual_costs = <?= json_encode(check_val($vars, 'actual_costs', [])); ?>;
+                    if(objEmpty(actual_costs))actual_costs = {};
+                    
+                    // update editor data to be saved
+                    update_global(editor_variable_name, actual_costs);
+
+                    
+                    var items = [];
+                    
+
+                    //var items = [];
+                    var list = root.find('.item-list'),
+                        year_select = root.find('.items-year');
+
+                    var reset_filter = function(withAppenItems){
+                        
+                                            filtered = [];
+                                            root.find('.item-filter').val('');
+
+                                            if(withAppenItems)append_items();
+                                        }
+
+
+                    // add filtering
+                    var filter_timeout = null;
+                    root.find('.item-filter-reset').click(function(){ clearTimeout(filter_timeout); event.preventDefault(); reset_filter(true); });
+                    root.find('.item-filter').on("input change", function(){
+                        var filter = this.value;
+                        clearTimeout(filter_timeout);
+                        filter_timeout = setTimeout(function(){ 
+                                            filtered = [];
+                                            for(var i=0; i<items.length; i++){
+                                                
+                                                if((items[i].name.toLowerCase().indexOf(filter.toLowerCase()) !== -1))continue;
+                                                filtered.push(i);
+                                            }
+                                            
+                                            append_items();
+
+                                         }, 200);
+                    });
+                    
+                    //list.on("scroll", function(e){ console.log($(this).scrollTop()); });
+
+
+
+
+
+                    // update data
+                    var update_data = function(e){
+                        
+                        e = $(e);
+
+                        var redundancy_at = e.data('redundancy_at');
+                        var item_id = e.data('id');
+                        var actual_cost = Math.ceil(e.val());
+
+
+                        if(redundancy_at === undefined || item_id === undefined)return;
+
+                        if(actual_cost <= 0){
+                            if(actual_costs[redundancy_at] && actual_costs[redundancy_at][item_id]){
+                                delete actual_costs[redundancy_at][item_id];
+
+                                if(objEmpty(actual_costs[redundancy_at]))
+                                    delete actual_costs[redundancy_at];
+                            }
+                            
+                        }else{
+
+                            if(actual_costs[redundancy_at] == undefined)actual_costs[redundancy_at] = {};
+                            actual_costs[redundancy_at][item_id] = actual_cost;
+
+                        }
+
+                        
+                        update_global(editor_variable_name, actual_costs);
+                        
+                        
+                    }
+
+                    // append each item and add listeners
+                    var append_item = function(index, year){
+                        
+                        // get item by index, and template
+                        var item = items[index],
+                            tmpl = $(root.find('.item-tmpl').html());
+
+
+                        // get values
+                        item.redundancy_at = parseFloat(item.redundancy_at);
+                        item.cost = parseFloat(item.cost);
+                        item.actual_cost = parseFloat(item.actual_cost);
+                        
+
+                        // get current number if related to other items
+                        var prefix = "";              
+
+                        tmpl.find('.item-name').attr('data-id', item.id).html(ucfirst(item.name, true));
+
+                        tmpl.find('.item-cost').html(formatMoney(item.cost, 0));
+                        tmpl.find('.item-cost-actual').data({'id':item.id, 'redundancy_at':item.redundancy_at}).val(item.actual_cost).on('input', function(){ update_data(this); });
+                        
+                    
+                        
+
+                        //inp.val('');
+                                                                    
+                        init_ui(tmpl);
+                                                
+                        list.append(tmpl);
+    
+                    }
+
+                    var item_compare = function ( a, b ) {
+                            
+
+                            return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+
+                            // sort by remaining life
+                            var r1 = parseFloat(a.remaining_life), r2 = parseFloat(b.remaining_life);
+                            if ( r1 < r2 ){
+                                return -1;
+                            }
+                            if ( r1 > r2 ){
+                                return 1;
+                            }
+                            return 0;
+                    }
+
+                    // append all items to list
+                    var append_items = function(clear = true){
+                        
+                        if(clear)list.html('');
+
+
+                        // sort items
+                        items.sort( item_compare );
+                        
+                        var year = parseInt(year_select.val());
+
+                        var new_item = -1;
+
+                        // filter items by search text
+                        for(var index=0; index<items.length; index++){
+                            
+                            if(filtered.indexOf(index) != -1)continue;
+
+                            // is new item added via inputs
+                            if(items[index].new != undefined){ new_item = index; delete items[index].new; }
+                            
+                            append_item(index, year);
+                        }
+
+                        /*
+                        var new_element = list.find('.item[data-index="'+new_item+'"]');     
+                                         
+                        if(new_element.length > 0){
+                            var position = new_element.first().position().top + list.scrollTop();
+                            list.parent().animate({
+                                scrollTop: position,                                
+                            }, 700);
+
+                            var prev_color = new_element.css('color');
+
+                            new_element.css({'background-color':'var(--orange)', 'color':'#fff'});
+                            setTimeout(function(){
+                                new_element.animate({
+                                                    backgroundColor: "#fff",  
+                                                    color: prev_color,                              
+                                                }, 500);
+                            }, 1100)
+                                        
+                        }
+                        */
+                
+
+                    }
+
+                    // get info from inputs and add to items
+                    var add_new_item = function(){
+                        
+                        var item = {},
+                            inputs = root.find('.item-input');
+                            
+                        for(var i=0; i<inputs.length; i++){
+                            // get input
+                            var inp = inputs.eq(i), key = inp.data('key'), val = inp.val() || '';
+
+                            // check empty
+                            if((key == 'name' || key == 'cost') && !val){error('Please enter a valid <b>'+inp.data('field')+'</b> !', '', default_error_alert_timeout); return;}
+                            item[key] =  val;
+
+                            // format
+                            if(key != 'name')
+                                val = key == 'cost' ? formatMoney(val) : formatNumber(val, 0);                                                        
+                            
+                        }
+
+                        item.new = true;
+                        
+                        items.push(item);
+                        inputs.val('');
+                        inputs.filter('.item-focus').focus();
+
+                        reset_filter();
+                        append_items();
+                    }
+
+                    
+                    // add item on enter or button add
+                    // root.find('.item-input').keydown(function(event){ if(event.keyCode == 13){event.preventDefault; add_new_item(); return false;} });
+                    // root.find('#item_add').click(add_new_item);
+
+                    
+                    var fiscal_year = parseInt(model.fiscal_year || 1);
+                    for(var i=0; i<parseInt(model.period || 0); i++){
+                        fillSelect(year_select, {t:(fiscal_year+i)+"", v:i}, true);
+                    }
+
+                    year_select.change(function(){
+                        
+                        var year = parseInt(this.value);
+
+                        items = [];
+                        
+                        // console.log('Year '+year);
+                        for(const item of all_items){
+                            // console.log(item);
+                            var remaining = parseInt(item.remaining_life),
+                                redundancy = parseInt(item.redundancy),
+                                is_occuring = (year-remaining);
+                                
+                                
+                            is_occuring = is_occuring >= 0 && is_occuring % redundancy == 0;
+                                
+                                
+                            console.log(item.name, is_occuring);
+                            if(is_occuring){
+                                var redundancy = (year-remaining)/redundancy;
+                                
+                                // console.log(item.name, redundancy, year);
+                                items.push({"id":item.id, "name":item.name, "redundancy_at":redundancy, "cost":parseInt(item.cost), "actual_cost":( actual_costs[redundancy] && actual_costs[redundancy][item.id] || 0)});
+                            }
+                        }
+
+                        append_items();
+                        
+                        // console.log('-----------\n');
+
+
+                    }).change();
+
+                    
+                    var model_utils = new ModelItems();
+                    root.find('.items-reset').click(function(){ 
+
+                        confirm('Are you sure you want to <b>Reset All Costs</b> ?', 'Reset All Costs', null, 
+                                function(action){ 
+                                    if(action != 'ok')return; 
+                                    model_utils.reset_actual(model.id, function(resp){ 
+                                        
+                                        success('Actual Costs resetted !', '', default_success_alert_timeout);
+
+                                        actual_costs = {};
+                                        items = [];
+
+                                        year_select.val(0).change();
+
+                                    }); });
+
+                    }).toggleClass('d-none', objEmpty(actual_costs));
+                    
+                }
+
+                <?=$arand;?>_init();
+                
+                
+                //init_ui(".modal", function(ev, val){console.log(ev, val)} );
+            </script>
+
+        </div> 
+        </div> 
+    </div>

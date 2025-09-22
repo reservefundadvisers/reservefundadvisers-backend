@@ -1,0 +1,718 @@
+
+:root {
+    --simulation_options_top:  10px; /* 120px; */
+    --simulation_options_width: 500px;
+    --simulation_options_height: 640px;
+    --simulation_bar_height_transition_dur: height 0.25s linear ;
+}
+
+
+/* header */
+
+.simulation-calculation-table.tabulator .tabulator-header .tabulator-col{   
+    height: 100px !important;
+    width: 120px;
+}
+
+.simulation-calculation-table.tabulator .tabulator-header .tabulator-col .tabulator-col-content .tabulator-col-title {   
+    white-space: break-spaces !important;
+    text-align: center;
+}
+
+.simulation-calculation-table.tabulator-col.purple{
+    background-color: #673ab7 !important;
+    color: #fff!important;
+}
+
+
+.simulation-calculation-table.tabulator-col.green{
+    background-color: #4CAF50 !important;
+    color: #fff!important;
+}
+
+.simulation-calculation-table.tabulator-col.amber{
+    background-color: #ffc107 !important;
+    color: #000!important;
+}
+
+.simulation-calculation-table.tabulator-col.red{
+    background-color: var(--danger) !important;
+    color: #fff;
+}
+
+
+.simulation-calculation-table.tabulator-col.ltim{
+    background-color: #8ac28c !important;
+    color: #000000!important;
+}
+
+/* ***** */
+
+
+
+
+/* Cells */
+
+.simulation-calculation-table.tabulator-cell.cell-bold{
+    font-weight: bold !important;
+}
+
+.simulation-calculation-table.tabulator-cell{
+    text-align: right;
+    padding-right: 10px !important;
+    border-right: 1px solid lightGray !important;
+}
+
+.tabulator-cell.cell-left{
+    text-align: left;
+}
+
+.tabulator-cell.cell-green{
+    background-color: #4CAF50;
+    color: #fff;
+}
+
+.tabulator-cell.cell-amber{
+    background-color: #ffc107;
+    color: #000;
+}
+
+.tabulator-cell.cell-purple{
+    background-color: #673ab7;
+    color: #fff;
+}
+
+
+.tabulator-cell.cell-red{
+    background-color: var(--danger);
+    color: #fff;
+}
+
+.tabulator-cell.cell-ltim{
+    background-color: #8ac28c;
+    color: #000000;
+}
+
+
+
+.tabulator-cell.cell-text-green{
+    color: #4CAF50;
+}
+
+.tabulator-cell.cell-text-amber{
+    color: #ffc107;
+}
+
+.tabulator-cell.cell-text-purple{
+    color: #673ab7;
+}
+
+
+.tabulator-cell.cell-text-red{
+    color: var(--danger);
+}
+
+.tabulator-cell.cell-text-ltim{
+    color: #8ac28c;
+}
+
+/* ***** */
+
+
+/* Tabs */
+
+.simulation-tab-nav-group{
+    color: black;
+    white-space: nowrap !important;
+    /* flex-wrap: nowrap;
+    overflow: hidden;
+    position: relative; */
+    padding: 0.5rem 0rem !important;
+}
+
+
+.simulation-tab-nav-group-left{
+    position: absolute;
+    padding: 0rem 0.8rem;
+    padding-top: 0.8rem;
+    /* border-radius: 25%; */
+    background: white;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    margin:0;
+    cursor: pointer;
+    border-right: 1px solid var(--dark);
+}
+.simulation-tab-nav-group-left:hover{
+    color:var(--blue);
+}
+.simulation-tab-nav-group-right{
+    position: absolute;
+    padding: 0rem 0.8rem;
+    padding-top: 0.8rem;
+    /* border-radius: 25%; */
+    background: white;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    margin:0;
+    cursor: pointer;
+    border-left: 1px solid var(--dark);
+    
+}
+.simulation-tab-nav-group-right:hover{
+    color:var(--blue);
+    border-radius: 15px;
+}
+
+.simulation-tab-nav{
+    
+    border: none !important;
+    border-bottom: 1px solid var(--dark) !important;
+    margin-right:0.2rem !important;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.simulation-tab-nav.active{
+    
+    background-color: var(--primary) !important;
+    color: var(--white) !important;
+    /* border-color: #dddfeb #dddfeb #fff !important; */
+    /* font-weight: normal !important; */
+}
+
+
+.simulation-tab-nav.ltim {
+    background-color: var(--green);
+    border-bottom: none;
+    color: white;    
+    font-weight: normal;
+}
+
+
+
+/* ***** */
+
+
+
+/* Model Association */
+.simulation-association-btn{
+
+    width:100%;
+    border: 1px solid gray;
+    border-radius: 0.5rem;
+
+    box-shadow: 0 0.15rem 0.6rem 0 rgba(58, 59, 69, 0.15) !important;
+
+    padding: 0.5rem 0.5rem;
+
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    
+}
+
+.simulation-association-btn:hover{
+    cursor: pointer;
+    background-color: var(--green);
+    color: white;
+}
+
+.simulation-model-btn{
+
+    width:100%;
+    border: 1px solid gray;
+    border-radius: 0.5rem;
+
+    box-shadow: 0 0.15rem 0.6rem 0 rgba(58, 59, 69, 0.15) !important;
+
+    padding: 0.5rem 0.5rem;
+
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary);
+    
+}
+
+.simulation-model-btn:hover{
+    cursor: pointer;
+    background-color: var(--green);
+    color: white;
+}
+
+
+.simulation-options{
+    
+    width: var(--simulation_options_width); 
+    /* height: var(--simulation_options_height);  */
+    top:var(--simulation_options_top); 
+    left:0; 
+    z-index:3; 
+    bottom: 24px;
+    display:none;
+    
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+    
+    /* display:flex; 
+    flex-direction:column; 
+    bottom: 24px; */
+}
+
+.simulation-options-50{
+    min-width: var(--simulation_options_width); 
+    max-width: 50%;
+    width: unset;
+}
+
+.simulation-options-60{
+    min-width: var(--simulation_options_width); 
+    max-width: 60%;
+    width: unset;
+}
+
+.simulation-options-75{
+    min-width: var(--simulation_options_width); 
+    max-width: 75%;
+    width: unset;
+}
+
+.simulation-options-full{
+    min-width: var(--simulation_options_width); 
+    max-width: 100%;
+    width: unset;
+}
+
+@media screen and (max-zoom: 75%) {
+    .simulation-options-75{
+        min-width: var(--simulation_options_width); 
+        max-width: 50%;
+        width: unset;
+    }
+}
+/* ***** */
+
+
+
+
+
+/* Timeline */
+
+#simulation_timeline.pad{
+    padding-left: calc( var(--simulation_options_width) + 20px);
+}
+
+
+
+.simulation-timeline-col{
+    border-radius: 10px;
+    cursor: pointer;
+    padding-top:0.5rem;
+    padding-bottom:0.5rem;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+}
+.simulation-timeline-col:hover{
+    background-color: #eee;
+}
+.simulation-timeline-col.active{
+    background-color: #ccc;
+}
+
+/* Year Circle */
+.simulation-timeline-year{
+    background: white;
+    color:black;
+    padding: 0rem 1rem !important;
+    border-radius: 10px !important;
+    font-size:0.8rem;
+}
+.simulation-timeline-year.managed{
+    background: var(--orange);
+    color:white;
+}
+.simulation-timeline-year-start{
+    border-radius: 8px 0px 0px 8px;
+}
+.simulation-timeline-year-end{
+    border-radius: 0px 8px 8px 0px;
+}
+
+
+/* Value Text */
+.simulation-timeline-value-text{
+    background-color: white;
+    border-radius: 10px;
+    top:0;
+    left:0;
+    right:0;
+    margin:auto;
+    z-index:1;
+    padding: 0rem 0.5rem;
+}
+.simulation-timeline-col[data-positive="true"]:hover .simulation-timeline-value-text,
+.simulation-timeline-col[data-positive="true"].active .simulation-timeline-value-text {
+    background-color: #4CAF50;
+    color: white !important;
+}
+.simulation-timeline-col[data-positive="false"]:hover .simulation-timeline-value-text,
+.simulation-timeline-col[data-positive="false"].active .simulation-timeline-value-text{
+    background-color: var(--danger);
+    color: white !important;
+}
+
+/* Positive */
+.simulation-timeline-positive-bar{
+    width:55%;
+    background: #4CAF50;
+    border-radius: 8px;
+    z-index:1;
+    visibility:hidden;
+    position: absolute;
+    transition: var(--simulation_bar_height_transition_dur);
+    overflow:hidden;
+    /* bottom:0; */
+    
+}
+.simulation-timeline-positive-bar-ghost{
+    width:55%;
+    outline:0.2rem solid #155217;
+    border-radius: 8px;
+    z-index:1;
+    position: absolute;
+    transition: var(--simulation_bar_height_transition_dur);
+    /* visibility:hidden; */
+
+    
+}
+.simulation-timeline-positive-bar-ltim{
+    width:100%;
+    height: 0%;
+    background-color: #9c27b0;        
+}
+.simulation-timeline-positive-line{
+    position:absolute;
+    background: #4CAF50;
+    width:0.2rem;
+    bottom:0;
+    height:6.5rem;
+    left:0;
+    right:0;
+    margin:auto;
+    visibility:hidden;
+    
+}
+
+/* Negative */
+.simulation-timeline-negative-bar{
+    width:55%;
+    background: var(--danger);
+    border-radius: 8px;
+    z-index:1;
+    visibility:hidden;
+    position: absolute;
+    transition: var(--simulation_bar_height_transition_dur);
+    /* bottom:0; */
+    
+}
+.simulation-timeline-negative-bar-ghost{
+    width:55%;
+    outline:0.2rem solid #641a1a;
+    border-radius: 8px;
+    z-index:1;
+    position: absolute;
+    transition: var(--simulation_bar_height_transition_dur);
+    /* visibility:hidden; */
+
+    
+}
+.simulation-timeline-negative-line-t-even{
+    position:absolute;
+    background: var(--danger);
+    width:0.2rem;
+    bottom:0;
+    height:4.6rem;
+    left:0;
+    right:0;
+    margin:auto;
+    visibility:hidden;
+    
+}
+.simulation-timeline-negative-line-t-odd{
+    position:absolute;
+    background: var(--danger);
+    width:0.2rem;
+    bottom:0;
+    height:2.6rem;
+    left:0;
+    right:0;
+    margin:auto;
+    visibility:hidden;
+    
+}
+.simulation-timeline-negative-line-b{
+    position:absolute;
+    background: var(--danger);
+    width:0.2rem;
+    top:0;
+    height:2.5rem;
+    left:0;
+    right:0;
+    margin:auto;
+    visibility:hidden;
+    
+}
+
+/* CASE 1: When Value is Positive, hide all negative classes */
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-negative-bar{ visibility:hidden; }
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-negative-line-t-even{ visibility:hidden; }
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-negative-line-t-odd{ visibility:hidden; }
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-negative-line-b{ visibility:hidden; }
+
+/* CASE 1: When Value is Positive, show all positive classes */
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-positive-bar{ visibility:visible; }
+.simulation-timeline-col[data-positive="true"] .simulation-timeline-positive-line{ visibility:visible; }
+
+
+/* CASE 2: When Value is Negative, hide all positive classes */
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-positive-bar{ visibility:hidden; }
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-positive-line{ visibility:hidden; }
+
+/* CASE 2: When Value is Negative, show all negative classes */
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-negative-bar{ visibility:visible; }
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-negative-line-t-even{ visibility:visible; }
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-negative-line-t-odd{ visibility:visible; }
+.simulation-timeline-col[data-positive="false"] .simulation-timeline-negative-line-b{ visibility:visible; }
+
+
+/* CASE 3: When Prev Value is Positive and New is Negative, show all negative classes, and positive as outline with line */
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-negative-bar{ visibility:visible; }
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-negative-line-t-even{ visibility:visible; }
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-negative-line-t-odd{ visibility:visible; }
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-negative-line-b{ visibility:visible; }
+
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-positive-bar{ visibility:hidden; /* background-color: transparent; border:0.2rem solid #4CAF50; */ }
+.simulation-timeline-col[data-prev-positive="true"] .simulation-timeline-positive-line{ visibility:visible; background: var(--danger);}
+
+
+/* CASE 4: When Prev Value is Negative and New is Positive, show all positive classes, and negative as outline with line */
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-negative-bar{ visibility:hidden; /* background-color: transparent; border:0.2rem solid var(--danger); */ }
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-negative-line-t-even{ visibility:visible;  background: #4CAF50; }
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-negative-line-t-odd{ visibility:visible;  background: #4CAF50;}
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-negative-line-b{ visibility:visible;  background: #4CAF50; }
+
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-positive-bar{ visibility:visible;}
+.simulation-timeline-col[data-prev-positive="false"] .simulation-timeline-positive-line{ visibility:visible;}
+
+
+
+/* Monthly Fees Timeline */
+.simulation-timeline-mf{
+    padding: 4rem 0rem 3.2rem 0rem;
+    
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+}
+
+.simulation-timeline-mf-col{
+    border-radius: 4px;
+    cursor: pointer;
+    padding:0.6rem 1.0rem;
+    box-sizing: border-box;
+    width:4rem;
+    height:4rem;
+    transform: rotate(180deg);
+    position: relative;
+}
+
+.simulation-timeline-mf-year{
+    text-align: center;
+    font-weight: bold;
+    font-size: 1rem;
+    transform: rotate(180deg);
+    top:-1.2rem;
+    left:0;
+    right:0;
+    margin: auto;
+    position: absolute;
+}
+
+.simulation-timeline-mf-col:hover{
+    background: #eee;
+}
+
+.simulation-timeline-mf-bar{
+    width:50%;
+    background: #f5d85a;
+    border-radius: 0px 2px 2px 0px;
+    transition: var(--simulation_bar_height_transition_dur);
+}
+.simulation-timeline-mf-bar.simulation-timeline-mf-auto{
+    background: #4CAF50;
+}
+
+.simulation-timeline-mf-perc{
+    background-color: white;
+    border-radius: 10px;
+    bottom:-1.6rem;
+    left:0;
+    right:0;
+    margin:auto;
+    z-index:1;
+    padding: 0rem 0.5rem;    
+    position: absolute;
+    transform: rotate(180deg);
+}
+.simulation-timeline-mf-perc-top{
+    bottom:-2.7rem;
+}
+.simulation-timeline-mf-perc-text{
+    color: #c9ac2e !important;
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+.simulation-timeline-mf-perc-text.simulation-timeline-mf-auto{
+    color: #4CAF50 !important;
+}
+
+
+.simulation-timeline-mf-value{
+    background-color: white;
+    border-radius: 10px;
+    top:-2.6rem;
+    left:0;
+    right:0;
+    margin:auto;
+    z-index:1;
+    padding: 0rem 0.5rem;    
+    position: absolute;
+    transform: rotate(180deg);
+    /*visibility: hidden;*/
+}
+.simulation-timeline-mf-col:hover .simulation-timeline-mf-value{
+    visibility: visible;
+}
+.simulation-timeline-mf-value-top{
+    top:-3.7rem;
+}
+.simulation-timeline-mf-value-text{
+    color: #c9ac2e !important;
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+.simulation-timeline-mf-value-text.simulation-timeline-mf-auto{
+    color: #4CAF50 !important;
+}
+
+
+/* Timeline Buttons */
+.year-left{
+    cursor: pointer;
+    padding: 0.1rem 0.5rem;
+    font-weight: bold;
+    border-radius: 15px;
+    float:none; /* left; */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+}
+.year-left:hover{    
+    background-color: var(--danger);
+    color:white;
+}
+.year-right{
+    cursor: pointer;
+    padding: 0.1rem 0.5rem;
+    font-weight: bold;
+    border-radius: 15px;
+    float:none; /* right; */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+}
+.year-right:hover{    
+    background-color: var(--blue);
+    color:white;
+}
+
+/* ***** */
+
+
+
+
+
+
+
+/* Show Buckets */
+
+.simulation-buckets{
+    width:100%;
+    height:fit-content;
+    padding:1rem 1rem;
+
+    text-align: center;
+}
+
+.simulation-bucket-col{
+    border-radius: 10px;
+    cursor: pointer;
+    padding-top:0.5rem;
+    padding-bottom:0.5rem;
+    display: inline-block;
+    height:fit-content;
+    width:8rem;
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ */
+    user-select: none;
+}
+.simulation-bucket-col:hover{
+    background-color: #eee;
+}
+.simulation-bucket-col.active{
+    background-color: #ccc;
+}
+
+.simulation-bucket-bar{
+    width:100%;
+    height: 8rem;
+    padding: 0.5rem 1rem 2rem 1rem;
+    
+    transform: rotate(180deg);
+}
+
+
+.simulation-bucket{
+    background: #4CAF50;
+    border-radius: 3px;
+    height:0%;
+    transition: var(--simulation_bar_height_transition_dur);
+ 
+    position: relative;
+}
+
+
+.simulation-bucket-ratio{
+    position: absolute;
+    bottom: -2.5rem;
+    left: 0; right: 0;
+    margin: auto;
+
+    font-size: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    transform: rotate(180deg);
+
+}
+
+#nav-monthly-fees #deficit-box-tabContent  {
+    height: 100% !important;
+}
+/* ********* */
