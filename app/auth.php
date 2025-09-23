@@ -135,9 +135,18 @@ if(isset($_POST['cmd'])){
     if($cmd == 'login'){
 
         $res = $auth->login($_POST['username'], $_POST['password']);
+        
+        if ($res !== FALSE) {
+            // set session for user
+            $sessionHash = isset($_COOKIE['auth_session']) ? $_COOKIE['auth_session'] : null;
 
-        if($res !== FALSE)
-            die(json_encode(['success' => $res]));
+            die(json_encode([
+                'success'   => true,
+                'user'      => $_POST['username'],
+                'sessionid' => $sessionHash,
+                'cookie'    => "auth_session=" . $sessionHash
+            ]));
+        }
         else 
             die(json_encode(['error' => $auth->errormsg[0]]));
     
