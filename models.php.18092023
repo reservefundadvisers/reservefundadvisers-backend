@@ -1,0 +1,213 @@
+<?php
+
+include_once('app/init.php');
+include_once('app/auth.php');
+include_once('app/global_func.php');
+
+auth_handle_login();
+auth_handle_user();
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Models - <?php echo $app_name; ?></title>
+
+    <!-- Header -->        
+    <?php echo print_header(); ?>
+    <!-- End of Header -->
+
+    
+
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+            <?php echo print_sidebar(); ?>
+        <!-- End Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                    <?php //echo print_topbar(); ?>
+                <!-- End of Topbar -->
+
+
+
+
+
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid models">
+
+                    <!-- Page Heading -->
+                    <div class="d-sm-flex align-items-center justify-content-start mb-2 mt-2">
+                        
+                        <div class="d-inline-block w-100 w-sm-30">
+                            <button id="sidebarToggleTop" class="btn text-primary  mr-3" style="margin-top: -10px;">
+                                <i class="fa fa-bars"></i> Menu
+                            </button>
+                            
+                            <span class="h3 mb-0 text-gray-800" style="line-height: 100%;">Models  (<span class="models_count">0</span>)</span>
+                        </div>
+
+                        <div class="d-inline-block">
+                            <div class="app-input-group mt-1 d-inline-block" style="width:280px; background:inherit;">
+                                <span class="app-input-label"></span>
+                                <div class="app-input-box">
+                                    <input type="text" class="app-input" data-key="search" data-icon="search button" data-icon-action="search" 
+                                            data-icon-classes="search_btn" data-classes="mt-1 d-inline-block" style="background:inherit;" 
+                                            data-style="width:240px; background:inherit;">
+                                    <span class="app-input-helper"></span>
+                                    <div class="invalid-feedback"> Invalid !</div>
+                                    <i class="m-0 p-0 fa fas fa-search pointer search_btn "></i>
+                                </div>
+                            </div>
+                            
+                             <label onclick="models.edit()" class="btn btn-sm btn-primary"><i class="fa fa-plus ml-1"></i> New</label>       
+                        </div>
+                                    
+                        <label class="ml-sm-auto btn btn-sm w3-blue d-none">Start Tour</label>
+                        
+                    </div>
+
+                    <div class="card shadow mb-4 " id="">
+                        <div class="card-header ">
+                            
+                            <div class="w-100">
+                                <button class="d-inline-block btn btn-sm btn-danger shadow-sm  m-1" onclick="models.delete()"><i
+                                        class="fas  fa-trash btn-icon text-white" ></i> <span class="btn-text" >Delete Selection</span> <i class="ml-1"></i>(<b><span class=" models_select_count" data-zero="empty">0</span></b>)</button>
+                                        
+                                <div class="d-inline-block float-right text-right m-1 mt-xs-3 w-xs-100 ">
+                                    <div class="dropdown">
+
+                                    
+                                        <button class="btn btn-sm bg-primary shadow-sm ml-1 " id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="false" aria-expanded="false"><i
+                                                class="fas  fa-cog btn-icon text-white" ></i> <span class="btn-text"></span></button>
+                                    
+                                        <div class="dropdown-menu dropdown-menu-right " id="columnToggle" aria-labelledby="dropdownMenuButton">
+                                            
+                                        </div>
+
+                                    </div>
+                                            
+                                </div>
+                                        
+                            </div>
+                            
+
+                        </div>
+
+
+
+
+                        <div class="card-body ">
+                            <div class="table-responsive" style="min-height:300px;">
+                                
+                                
+                                <table class="table-primary models_table invisible start-toggled" cellspacing="0" id="" style="">
+                                    <thead>
+                                        <tr>
+                                         
+                                            <th 
+                                                tabulator-cssClass="row_select pl-1 pt-2"
+                                                tabulator-formatter="rowSelection"
+                                                tabulator-titleFormatter="rowSelection"
+                                                tabulator-hozAlign="center"
+                                                tabulator-headerSort="false"
+                                                tabulator-headerHozAlign="Center"
+                                                tabulator-minWidth="50"
+                                                tabulator-maxWidth="50"
+                                                tabulator-resizable="false"
+                                                tabulator-frozen="true"></th>
+
+                                            <th tabulator-field="action" tabulator-headerSort="false" tabulator-hozAlign="center" tabulator-headerHozAlign="Center" tabulator-frozen="true" tabulator-minWidth="50" tabulator-maxWidth="50">...</th>
+                                            <th tabulator-field="row_num"  tabulator-headerHozAlign="center" tabulator-hozAlign="center" tabulator-minWidth="40" tabulator-width="60" qompta-tr="">#</th>
+                                            
+                                            <th tabulator-field="name" tabulator-headerFilter="input" tabulator-headerFilterLiveFilter="false" tabulator-minWidth="160" >Name</th>
+                                            <th tabulator-field="association" tabulator-headerFilter="input" tabulator-headerFilterLiveFilter="false" tabulator-minWidth="160" >Association</th>
+                                            <th tabulator-field="reserve_items" >Items</th>
+                                            <!-- <th tabulator-field="inv_strategy" >Investment Strategy</th> -->
+                                            <th tabulator-field="housing" >Housing Units</th>
+                                            <th tabulator-field="starting_amount" >Starting Amount</th>
+                                            <th tabulator-field="monthly_fees"  tabulator-headerSort="false">Monthly Fees</th>
+                                            <th tabulator-field="monthly_fees_rate"  tabulator-headerSort="false" tabulator-cssClass="togglable">MF Yearly Increase</th>
+                                            <th tabulator-field="inflation_rate"  tabulator-headerSort="false" tabulator-cssClass="togglable">Inflation Rate</th>
+                                            <th tabulator-field="period"  tabulator-headerSort="false">Period (Years)</th>
+                                            <th tabulator-field="bank_rate"  tabulator-cssClass="togglable" >Bank Rate</th>
+                                            <th tabulator-field="loan_years"  tabulator-headerSort="false" tabulator-cssClass="togglable">Years of Loan</th>
+                                            <th tabulator-field="fiscal_year" tabulator-headerFilter="input" tabulator-headerFilterLiveFilter="false"  >Fiscal Year</th>
+                                            <th tabulator-field="updated_at" tabulator-cssClass="togglable">Last Update</th>
+
+                                            <!-- <th tabulator-field="active" tabulator-hozAlign="center" tabulator-headerHozAlign="Center" >Enabled</th> -->
+                                            
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-sm">
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End of Main Content -->
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; <?php echo $app_name; ?> 2021</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+
+        </div>
+        <!-- End of Content Wrapper -->
+
+    </div>
+    <!-- End of Page Wrapper -->
+
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    
+    <!-- Footer -->        
+    <?php echo print_footer(); ?>
+    <!-- End of Footer -->
+
+    <!-- JS -->        
+    <?php echo print_js(); ?>
+    <!-- End of JS -->
+
+
+    <script>
+        var models = init_models('body');
+    </script>
+
+</body>
+
+</html>

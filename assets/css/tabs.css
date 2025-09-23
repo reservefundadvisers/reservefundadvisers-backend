@@ -1,0 +1,40 @@
+/***
+Bootstrap Line Tabs by @keenthemes
+A component of Metronic Theme - #1 Selling Bootstrap 3 Admin Theme in Themeforest: http://j.mp/metronictheme
+Licensed under MIT
+***/
+
+/* Tabs panel */
+.tab-panel {
+    padding: 10px;
+  }
+  
+  /* Default mode */
+  .tab-nav > .nav-tabs {
+    border: none;
+    margin: 0px;
+  }
+  .tab-nav > .nav-tabs > a {
+    border: 0;
+    margin-right: 0;
+    color: #737373;
+  }
+  .tab-nav > .nav-tabs > a > i {
+    color: #a6a6a6;
+  }
+  .tab-nav > .nav-tabs > a.open, .tab-nav > .nav-tabs > a:hover {
+    border-bottom: 4px solid #fbcdcf;
+  }
+  .tab-nav > .nav-tabs > a.active {
+    border-bottom: 4px solid var(--secondary);
+    font-weight: bold;
+    color: var(--secondary);
+  }
+
+  .tab-panel > .tab-content {
+    margin-top: 0px;
+    background-color: none;
+    border: 0;
+    border-top: 1px solid #fbcdcf;
+    padding: 15px;
+  }

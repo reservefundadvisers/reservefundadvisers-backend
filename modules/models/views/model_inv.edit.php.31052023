@@ -1,0 +1,94 @@
+<div class="modal fade" id="<?=$arand;?>_modal" data-backdrop="false" data-keyboard="false" style="background:rgba(0,0,0,0.2)" tabindex="-1" role="dialog" aria-labelledby="editorModalLabel" aria-hidden="true"> 
+        <div class="modal-dialog modal-dialog-centered" role="document"> 
+        <div class="modal-content shadow"> 
+            <div class="modal-header pb-2"> 
+            <h5 class="modal-title" style="font-size:20px;" qompta-tr="user">Model Investment Strategy</h5> 
+            <button type="button" class="close action-cancel" data-dismiss="modal" aria-label="Close"> 
+                <span aria-hidden="true">×</span> 
+            </button> 
+            </div> 
+
+            <form class="needs-validation" novalidate> 
+            <div class="modal-body pt-0">  
+
+
+
+
+                <!-- MODAL BODY -->
+
+
+
+                <div  class="form-row mt-2"> 
+                            
+                    <div class="col-12 h6 font-weight-bold">
+                        1st Strategy
+                    </div>                                  
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" maxlength="4" step="any" class="app-input editor-input" data-key="inv_strategy/0/rate" data-field="Intrest Rate" />
+                    </div>  
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" max="100" step="any" class="app-input editor-input" data-key="inv_strategy/0/perc" data-field="% of Wallet" />
+                    </div>  
+                                 
+                    <div class="col-12 h6 font-weight-bold mt-3">
+                        2nd Strategy
+                    </div>                                  
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" maxlength="4" step="any" class="app-input editor-input" data-key="inv_strategy/1/rate" data-field="Intrest Rate" />
+                    </div>  
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" max="100" step="any" class="app-input editor-input" data-key="inv_strategy/1/perc" data-field="% of Wallet" />
+                    </div>  
+                    
+                    <div class="col-12 h6 font-weight-bold mt-3">
+                        3rd Strategy
+                    </div>      
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" maxlength="4" step="any" class="app-input editor-input" data-key="inv_strategy/2/rate" data-field="Intrest Rate" />
+                    </div>  
+                    <div class="col-sm-6 border-bottom border-dark mb-1 pb-1">
+                        <input type="number" value="0" step="0.01" min="0" max="100" step="any" class="app-input editor-input" data-key="inv_strategy/2/perc" data-field="% of Wallet" />
+                    </div>  
+
+                    
+
+                </div> 
+                
+
+                <div class="invalid-global-feedback d-none text-sm text-danger mt-3 mb-0 font-weight-bold">* Please check errors before proceeding !</div>
+        
+
+
+                
+
+
+
+                <!-- MODAL BODY END -->    
+            </div> 
+
+            <div class="modal-footer"> 
+                <button type="button" class="btn btn-sm btn-danger action-cancel" data-dismiss="modal"  qompta-tr="cancel">Cancel</button> 
+                <button type="submit" class="btn btn-sm btn-success text-white action-submit"  qompta-tr="save">Save</button> 
+            </div> 
+            </form> 
+
+            <script>
+                function <?=$arand;?>_init(){
+                    var root = $('#<?=$arand;?>_modal');
+                    var data = <?php echo json_encode($vars); ?>;
+
+                    var strategy = data.inv_strategy || {};
+
+
+                    fill_editor(root, {inv_strategy: strategy});
+                }
+
+                <?=$arand;?>_init();
+                
+                
+                //init_ui(".modal", function(ev, val){console.log(ev, val)} );
+            </script>
+
+        </div> 
+        </div> 
+    </div>

@@ -1,0 +1,8 @@
+[17-Jun-2023 17:32:02 UTC] PHP Warning:  scandir(../../..//home/orloffadvisors/public_html/simulator/modules/simulation/js): Failed to open directory: No such file or directory in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php on line 3
+[17-Jun-2023 17:32:02 UTC] PHP Warning:  scandir(): (errno 2): No such file or directory in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php on line 3
+[17-Jun-2023 17:35:02 UTC] PHP Warning:  scandir(../app/Simulation.class.php): Failed to open directory: Not a directory in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php on line 3
+[17-Jun-2023 17:35:02 UTC] PHP Warning:  scandir(): (errno 20): Not a directory in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php on line 3
+[17-Jun-2023 17:35:22 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function file_get_content() in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/orloffadvisors/public_html/simulator/modules/simulation/js/test.php on line 3

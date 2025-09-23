@@ -1,0 +1,1 @@
+,AW/AW,,10.02.2022 01:48,file:///C:/Users/AW/AppData/Roaming/LibreOffice/4;
