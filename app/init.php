@@ -15,14 +15,14 @@ include_once('config.class.php');
 use Simplon\Mysql\Mysql;
 use Simplon\Mysql\PDOConnector;
 
-require $app_root . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 
 //------------------
 // ERROR REPORTING
 //------------------
 //error_reporting(0); 
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 //ini_set('display_startup_errors', 0);
 ini_set("log_errors", 1);
 //error_log( "Hello, errors!" );

@@ -5,8 +5,8 @@
 // Variables
 //-------------------------
 
-$app_root = "/home/orloffadvisors/public_html/simulator";
-$base_url = "https://simulator.reservefundadvisers.com";
+$app_root = "".dirname(__DIR__)."";
+$base_url = "http://localhost:8000";
 $base_web = "";
 
 $noreply_email = "louis@reservefundadvisers.com";
@@ -54,8 +54,8 @@ $modules_dir = "$app_root/modules";
 // ------------------------
 
 $db_config['host'] = "127.0.0.1";
-$db_config['user'] = "orloff_db";
-$db_config['pass'] = "duI?Tlh!tYj!";
+$db_config['user'] = "root";
+$db_config['pass'] = "";
 $db_config['name'] = "orloff";
 
 
