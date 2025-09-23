@@ -1,0 +1,17 @@
+{
+    "name": "absdwordpress2/reservefundadvisers-backend",
+    "autoload": {
+        "psr-4": {
+            "Absdwordpress2\\ReservefundadvisersBackend\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "hitenchotaliya-ab",
+            "email": "hc@abovestandard.dk"
+        }
+    ],
+    "require": {
+        "simplon/mysql": "^3.1"
+    }
+}
