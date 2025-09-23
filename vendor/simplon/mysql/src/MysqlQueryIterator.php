@@ -46,7 +46,7 @@ class MysqlQueryIterator implements \Iterator
     /**
      * @return mixed
      */
-    function current()
+    function current(): mixed
     {
         return $this->data;
     }

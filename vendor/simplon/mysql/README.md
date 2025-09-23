@@ -76,7 +76,7 @@ In constrast to the prior method CRUD is more structured with `store` and `model
 $store = new NamesStore($dbConn);
 
 $model = $store->read(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_NAME, 'Peter')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_NAME, 'Peter')
 );
 
 //
@@ -375,13 +375,7 @@ The following query examples will be a rewrite of the aforementioned ```direct a
 ```php
 namespace Test\Crud;
 
-use Simplon\Mysql\Crud\CrudModelInterface;
-use Simplon\Mysql\Crud\CrudStore;
-use Simplon\Mysql\MysqlException;
-use Simplon\Mysql\QueryBuilder\CreateQueryBuilder;
-use Simplon\Mysql\QueryBuilder\DeleteQueryBuilder;
-use Simplon\Mysql\QueryBuilder\ReadQueryBuilder;
-use Simplon\Mysql\QueryBuilder\UpdateQueryBuilder;
+use Simplon\Mysql\CreateQueryBuilder;use Simplon\Mysql\CrudModelInterface;use Simplon\Mysql\CrudStore;use Simplon\Mysql\DeleteQueryBuilder;use Simplon\Mysql\MysqlException;use Simplon\Mysql\ReadQueryBuilder;use Simplon\Mysql\UpdateQueryBuilder;
 
 /**
  * @package Test\Crud
@@ -498,7 +492,7 @@ class NamesStore extends CrudStore
 
 namespace Test\Crud;
 
-use Simplon\Mysql\Crud\CrudModel;
+use Simplon\Mysql\CrudModel;
 
 /**
  * @package Test\Crud
@@ -600,7 +594,7 @@ Returns a `name model` or `NULL` if nothing could be matched.
 
 ```php
 $model = $store->readOne(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_NAME, 'Peter')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_NAME, 'Peter')
 );
 
 echo $model->getId(); // prints user id
@@ -610,7 +604,7 @@ You can make use of operators from the `addCondition`:
 
 ```php
 $model = $store->readOne(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_AGE, 20, '>')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_AGE, 20, '>')
 );
 
 echo $model->getId(); // prints user id
@@ -622,7 +616,7 @@ Returns an array of `name models` or `NULL` if nothing could be matched.
 
 ```php
 $models = $store->read(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_NAME, 'Peter')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_NAME, 'Peter')
 );
 
 echo $models[0]->getId(); // prints user id from first matched model
@@ -634,7 +628,7 @@ The following example shows how to create a new store entry.
 
 ```php
 $model = $store->create(
-    (new CreateQueryBuilder())->setModel(
+    CreateQueryBuilder::create()->setModel(
         (new NameModel())
             ->setName('Johnny')
             ->setAge(22)
@@ -652,7 +646,7 @@ The following example shows how to update an existing store entry.
 //
 
 $model = $store->readOne(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_NAME, 'Peter')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_NAME, 'Peter')
 );
 
 //
@@ -666,7 +660,7 @@ $model->setAge(36);
 //
 
 $model = $store->update(
-    (new UpdateQueryBuilder())
+    UpdateQueryBuilder::create()
         ->setModel($model)
         ->addCondition(NameModel::COLUMN_ID, $model->getId())
 );
@@ -682,7 +676,7 @@ The following example shows how to delete an existing store entry.
 //
 
 $model = $store->readOne(
-    (new ReadQueryBuilder())->addCondition(NameModel::COLUMN_NAME, 'Peter')
+    ReadQueryBuilder::create()->addCondition(NameModel::COLUMN_NAME, 'Peter')
 );
 
 //
@@ -690,7 +684,7 @@ $model = $store->readOne(
 //
 
 $store->delete(
-    (new DeleteQueryBuilder())
+    DeleteQueryBuilder::create()
         ->addCondition(NameModel::COLUMN_ID, $model->getId())
 )
 ```
