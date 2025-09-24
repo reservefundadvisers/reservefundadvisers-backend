@@ -1,5 +1,12 @@
 <?php
 
+    // $allowed_origin = "http://192.168.1.24:5143/";
+    // header("Access-Control-Allow-Origin: ".$allowed_origin);
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Credentials: true");
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, auth_session, cookie");
+
     include_once('../../../app/init.php');
     include_once('../../../app/global_func.php');
 
