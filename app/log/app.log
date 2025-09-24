@@ -52580,3 +52580,78 @@ Stack trace:
 [23-Sep-2025 14:31:34 Europe/Berlin] e3e1021c8c6f4c116eb8f17515f20c1c
 [23-Sep-2025 14:33:31 Europe/Berlin] e69f76e32ae0853ad5ac3896b7aec759
 [23-Sep-2025 14:38:49 Europe/Berlin] c775e98a839bb6c6e344d23900c3fc29
+[23-Sep-2025 14:48:47 Europe/Berlin] 40aba70cf1ceff83ff209ad87b3211e1
+[23-Sep-2025 14:49:15 Europe/Berlin] fe8b9eb43f981dfd24d62fdcc5543feb
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 14:58:43 Europe/Berlin] PHP Warning:  Undefined variable $total_covered in C:\xampp\htdocs\reservefundadvisers-backend\modules\simulation\app\Simulation.class.php on line 2802
+[23-Sep-2025 15:01:09 Europe/Berlin] 02be348c1d70948792baa9c852895750
+[24-Sep-2025 05:55:36 Europe/Berlin] 0726063fb9a215398c26b87ff153a91c
+[24-Sep-2025 06:02:49 Europe/Berlin] PHP Warning:  Undefined array key "auth_session" in C:\xampp\htdocs\reservefundadvisers-backend\app\auth.class.php on line 69
+[24-Sep-2025 06:16:20 Europe/Berlin] 53e207a2941d7823c81b0017c5dfcc04

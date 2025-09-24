@@ -43,6 +43,12 @@ class Auth
 
 		$this->session = false;
 		
+		$header = isset($_SERVER['HTTP_AUTH_SESSION']) ? $_SERVER['HTTP_AUTH_SESSION'] : '';
+		        
+		if(!empty($header)){
+			$_COOKIE['auth_session'] = $header;
+		}
+
 		// Has Auth Cookie
 		if(isset($_COOKIE['auth_session'])){
 			
