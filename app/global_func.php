@@ -921,7 +921,30 @@ function generate_id() {
     return $randomString;
 }
 
+/**
+ * Write a log to a file
+ * 
+ * @param string $log The log message to write
+ * 
+ * This function writes a log message to a file named "rfa_log.log" in the "log" directory.
+ * The log message is prefixed with a timestamp in the format "Y-m-d H:i:s".
+ */
+function rfa_create_log($log)
+{
+    // Define a fixed log file path (inside project "log" folder)
+    $logFile = __DIR__ . '/log/rfa_log.log';
 
+    // Create log directory if not exists
+    if (!file_exists(dirname($logFile))) {
+        mkdir(dirname($logFile), 0777, true);
+    }
 
+    // Add timestamp for readability
+    $date = date('Y-m-d H:i:s');
+    $message = "[$date] $log" . PHP_EOL;
+
+    // Append log to file
+    file_put_contents($logFile, $message, FILE_APPEND);
+}
 
 ?>

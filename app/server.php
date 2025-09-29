@@ -56,7 +56,7 @@ $modules_dir = "$app_root/modules";
 $db_config['host'] = "127.0.0.1";
 $db_config['user'] = "root";
 $db_config['pass'] = "";
-$db_config['name'] = "orloff";
+$db_config['name'] = "orloff_updated";
 
 
 
