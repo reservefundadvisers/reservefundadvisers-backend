@@ -3,7 +3,7 @@
         'name' => 'absdwordpress2/reservefundadvisers-backend',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '333980b7a6218d6dab2e7b962a6191df06b0d6c6',
+        'reference' => 'b58bd0f2827b3058367fb7b987d85fab66c28a5f',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'absdwordpress2/reservefundadvisers-backend' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '333980b7a6218d6dab2e7b962a6191df06b0d6c6',
+            'reference' => 'b58bd0f2827b3058367fb7b987d85fab66c28a5f',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
