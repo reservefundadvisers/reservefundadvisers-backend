@@ -109,6 +109,14 @@ class Mysql
     /**
      * @return bool
      */
+    public function isInTransaction(): bool
+    {
+        return $this->pdo->inTransaction();
+    }
+
+    /**
+     * @return bool
+     */
     public function transactionCommit(): bool
     {
         return $this->pdo->commit();
