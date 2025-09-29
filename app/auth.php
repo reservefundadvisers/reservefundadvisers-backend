@@ -1,7 +1,22 @@
 <?php
 
-    header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Credentials: true");
+    // Dynamic CORS origin handling
+    $allowed_origins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
+    ];
+    
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $origin);
+        header("Access-Control-Allow-Credentials: true");
+    } else {
+        // Fallback for development - be cautious with this in production
+        header("Access-Control-Allow-Origin: *");
+        // Note: Cannot use credentials with wildcard
+    }
     header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, auth_session, cookie");
     
