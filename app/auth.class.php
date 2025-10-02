@@ -150,6 +150,13 @@ class Auth
 		if(!$this->islogged())
 		{
 
+			 if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
+				$email = $username;
+			 }
+			 else{
+				$email = '';
+			 }
+
 			// Input verification :
 			if(strlen($username) == 0) { $this->errormsg[] = $lang[$loc]['auth']['login_username_empty']; return false; }
 			elseif(strlen($username) > 50) { $this->errormsg[] = $lang[$loc]['auth']['login_username_long']; return false; }
@@ -167,10 +174,10 @@ class Auth
 				$query = $this->mysqli->prepare("	SELECT users.id, (CASE WHEN clients.active IS NULL THEN users.active WHEN clients.active = 1 AND users.active = 1 THEN 1 ELSE 0 END) AS user_active 
 													FROM users 
 													LEFT JOIN clients ON clients.id = users.client_id AND users.client_id IS NOT NULL
-													WHERE username=? AND password=? ");
+													WHERE (users.username = ? OR users.email = ?) AND password=? ");
 				//log_info($this->mysqli->error);
 
-				$query->bind_param("ss", $username, $password);
+				$query->bind_param("sss", $username, $email, $password);
 				$query->bind_result($uid, $isactive);
 				$query->execute();
 				$query->store_result();
