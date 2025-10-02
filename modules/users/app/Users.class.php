@@ -22,7 +22,8 @@ class Users
             case 'edit': $response = $this->edit($data); break;
             case 'save': $response = $this->save($data); break;     
             case 'delete': $response = $this->delete($data); break;  
-            case 'set': $response = $this->set($data); break;            
+            case 'set': $response = $this->set($data); break;    
+            case 'profile': $response = $this->getProfile($data); break;        
         }
 
         return $response;
@@ -201,6 +202,22 @@ class Users
 
         return set_property($usersTable, $data);
 
+    }
+
+    /**
+     * Returns user profile session information.
+     *
+     * @param array $data Unused parameter.
+     *
+     * @return array User profile session information or error message.
+     */
+    public function getProfile($data){
+        global $auth;
+        
+        $user_info = $auth->sessioninfo();
+        if(empty($user_info))return ['error' => 'User not found'];
+
+        return $user_info;
     }
 
     public function username_exists($username, $id = null){
