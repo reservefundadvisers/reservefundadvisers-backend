@@ -261,7 +261,7 @@ auth_handle_user();
 
                                 
                                     
-                                    <div class="w-100 d-block d-xl-none px-2 align-center" align="center" style="" data-tour-name="main" data-tour-step="17" data-tour-last="true" data-tour-hide-size="xl">
+                                    <div class="w-100 d-block d-xl-none px-2 align-center" data-tour-name="main" data-tour-step="17" data-tour-last="true" data-tour-hide-size="xl">
                                         <div class="w-100 mb-2" style="height:30px;">
                                             <strong class="h6">Year Summary</strong>
                                             <!-- <div class="w-100 h5 font-weight-bold w3-text-deep-orange deficit-almost-erased d-none">You've almost erased the deficit !</div>
@@ -334,7 +334,7 @@ auth_handle_user();
                                     <div class="ltim-option w-100 font-weight-bold h5 w3-text-green text-center py-2" data-tour-name="main" data-tour-step="15" data-tour-remove-classes="d-none">Working in LTIM Mode</div>
 
 
-                                    <div class="w-100 w-xl-50 float-xl-left tab-content p-2 pl-4" id="deficit-box-tabContent" style="min-height:500px; overflow-auto;" data-tour-name="main" data-tour-step="16">
+                                    <div class="w-100 w-xl-50 float-xl-left tab-content p-2 pl-4" id="deficit-box-tabContent" style="min-height:500px; overflow:auto;" data-tour-name="main" data-tour-step="16">
 
 
                                         <!-- Spendings -->
