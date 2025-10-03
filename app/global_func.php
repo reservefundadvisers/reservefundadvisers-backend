@@ -922,6 +922,27 @@ function generate_id() {
 }
 
 /**
+ * Generates a random OTP (One-Time Password) of a given length.
+ *
+ * The OTP is generated from a string of numbers (0-9) and is of a fixed length.
+ * The length of the OTP can be specified as a parameter, otherwise it defaults to 6.
+ *
+ * @param int $length The length of the OTP to generate. Defaults to 6.
+ * @return string The generated OTP.
+ */
+function generate_otp($length = 6) {
+    $characters = '0123456789';
+    $randomString = '';
+  
+    for ($i = 0; $i < $length; $i++) {
+        $index = rand(0, strlen($characters) - 1);
+        $randomString .= $characters[$index];
+    }
+  
+    return $randomString;
+}
+
+/**
  * Write a log to a file
  * 
  * @param string $log The log message to write

@@ -218,13 +218,30 @@ if(isset($_POST['cmd'])){
     // sign up
     else if($cmd == 'signup'){
 
-        $res = $auth->signup($_POST, $signup_err, $signup_success);
+        $res = $auth->new_signup($_POST, $signup_err, $signup_success);
 
         if($res)
             die(json_encode(['success' => $signup_success]));
         else 
             die(json_encode(['error' => $signup_err]));
 
+    }
+
+    else if($cmd == 'otp_validate'){
+
+        $res = $auth->validate_otp($_POST);
+
+        if($res){
+            $sessionHash = isset($_COOKIE['auth_session']) ? $_COOKIE['auth_session'] : null;
+
+            die(json_encode([
+                'success'   => ['success' => $lang[$loc]['auth']['signup_otp_validated']],
+                'sessionid' => $sessionHash,
+                'cookie'    => "auth_session=" . $sessionHash
+            ]));
+        }
+        else 
+            die(json_encode(['error' => $auth->errormsg[0]]));
     }
 
 }
