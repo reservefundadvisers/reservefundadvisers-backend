@@ -1,2 +1,3 @@
-rfa
-rfa_log.log 
+/rfa
+/vendor/
+.env
