@@ -154,6 +154,15 @@ $lang['en']['auth']['signup_company_error'] = "Please enter a valid <b>Company N
 $lang['en']['auth']['signup_email_error'] = "Please enter a valid <b>Email</b> !";
 $lang['en']['auth']['signup_email_exists'] = "This <b>Email</b> already exists !";
 $lang['en']['auth']['signup_password_error'] = "Please enter a valid <b>Password</b>, Should be at least 6 characters long ";
+$lang['en']['auth']['signup_fn_error'] = "Please enter a valid <b>First Name</b> !";
+$lang['en']['auth']['signup_ln_error'] = "Please enter a valid <b>Last Name</b> !";
+$lang['en']['auth']['signup_phone_error'] = "Please enter a valid <b>Phone Number</b> !";
+$lang['en']['auth']['signup_otp_validated'] = "OTP validated successfully !";
+$lang['en']['auth']['signup_otp_error'] = "Please enter a valid <b>OTP Code</b> !";
+$lang['en']['auth']['signup_otp_invalid'] = "The <b>OTP Code</b> is invalid !";
+$lang['en']['auth']['signup_otp_expired'] = "The <b>OTP</b> has expired, please request a new one !";
+$lang['en']['auth']['signup_otp_attempts'] = "You have exceeded the maximum number of attempts, please request a new <b>OTP</b> !";
+$lang['en']['auth']['signup_otp_sent'] = "An <b>OTP Code</b> has been sent to your email address, please enter it to complete the sign up process !";
 
 // fr (French) :
 
@@ -278,5 +287,20 @@ $lang['fr']['auth']['logactivity_action_empty'] = "Erreur rencontrée !";
 $lang['fr']['auth']['logactivity_action_short'] = "Erreur rencontrée !";
 $lang['fr']['auth']['logactivity_action_long'] = "Erreur rencontrée !";
 $lang['fr']['auth']['logactivity_addinfo_long'] = "Erreur rencontrée !";
+
+$lang['fr']['auth']['signup_error'] = "Erreur lors de l'inscription !";
+$lang['fr']['auth']['signup_success'] = "Inscription réussie !";
+$lang['fr']['auth']['signup_order_error'] = "ID de commande invalide !";
+$lang['fr']['auth']['signup_subscription_error'] = "Veuillez choisir un abonnement !";
+$lang['fr']['auth']['signup_payment_error'] = "Erreur lors de la génération du paiement !";
+$lang['fr']['auth']['signup_assoc_error'] = "Veuillez entrer un <b>Nom d'Association</b> valide !";
+$lang['fr']['auth']['signup_company_error'] = "Veuillez entrer un <b>Nom d'Entreprise</b> valide !";
+$lang['fr']['auth']['signup_email_error'] = "Veuillez entrer un <b>Email</b> valide !";
+$lang['fr']['auth']['signup_email_exists'] = "Cet <b>Email</b> existe déjà !";
+$lang['fr']['auth']['signup_password_error'] = "Veuillez entrer un <b>Mot de passe</b> valide, il doit contenir au moins 6 caractères";
+$lang['fr']['auth']['signup_fn_error'] = "Veuillez entrer un <b>Prénom</b> valide !";
+$lang['fr']['auth']['signup_ln_error'] = "Veuillez entrer un <b>Nom de famille</b> valide !";
+$lang['fr']['auth']['signup_phone_error'] = "Veuillez entrer un <b>Numéro de téléphone</b> valide !";
+
 
 ?>
