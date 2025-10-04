@@ -775,7 +775,7 @@ class Auth
 					'email'=>$email, 
 					'username'=>$email, 
 					'password'=>$password, 
-					'role'=>'user', 
+					'role'=>'client_admin', 
 					'position_id'=>$position_id,
 					'mobile_number'=>$mobile_number];
 
