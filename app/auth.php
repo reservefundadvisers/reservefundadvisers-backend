@@ -170,7 +170,14 @@ if(isset($_POST['cmd'])){
             die(json_encode(['error' => $auth->errormsg[0]]));
     
     // login resend validation code
-    }else if($cmd == 'resend_auth'){
+    } else if($cmd == 'logout'){
+
+         if($auth->islogged()){       
+            $auth->deletesession();    
+        }
+        die(json_encode(['success' => true]));
+    }
+    else if($cmd == 'resend_auth'){
 
         $res = $auth->generate_auth();
 
