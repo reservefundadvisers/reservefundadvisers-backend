@@ -43,8 +43,10 @@ class ClientPositions
 
         }else{
             
-            if(!is_valid($data, 'client_id'))
-                return ['error'=>$this->errors['client_id']];
+            if(!is_valid($data, 'client_id')){
+                // If client_id is not provided, return all positions
+                return get_elements($clientPositionsTable, [], "*", "ORDER BY row ASC");
+            }
 
             $conds['*client_id'] = $data['client_id'];
             $conds['raw'] = ('client_id = :client_id OR client_id IS NULL');

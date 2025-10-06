@@ -5,15 +5,19 @@
 
     include_once('ClientUsers.class.php');
     include_once('ClientPositions.class.php');
+    $request = check_request();
 
-    // check if logged in and validated 
-    if(!$auth->isValidated()){
-        // send response
-        $db->close();
-        die_response(['error' => 'Unauthorized Access']);
+    // Allow public access for get_position and get_positions commands
+    if(!(isset($request['cmd']) && ($request['cmd'] === 'get_position' || $request['cmd'] === 'get_positions'))) {
+        // check if logged in and validated 
+        if(!$auth->isValidated()){
+            // send response
+            $db->close();
+            die_response(['error' => 'Unauthorized Access']);
+        }
     }
 
-    // script response array
+    // script response array    
     $response = [];
 
     $className = 'ClientUsers';
@@ -29,8 +33,6 @@
                         'set' => ['admin', 'manager', 'company_admin']
                     ];
 
-    $request = check_request();
-
     ob_end_clean();
 
     if(!isset($request['cmd'])){
@@ -41,12 +43,16 @@
 
         $cmd = $request['cmd']; unset($request['cmd']);
 
-        // check if current user is allowed to execute a command
-        if(isset($allowed_cmd[$cmd]) && array_has($allowed_cmd[$cmd], $auth->role()) === false){
-            $response = ['error' => 'Unauthorized operation'];
-        
-        }else{
-            
+        // Allow public access for get_position and get_positions commands
+        if($cmd !== 'get_position' && $cmd !== 'get_positions') {
+            // check if current user is allowed to execute a command
+            if(isset($allowed_cmd[$cmd]) && array_has($allowed_cmd[$cmd], $auth->role()) === false){
+                $response = ['error' => 'Unauthorized operation'];
+            }else{
+                $handler = new $className();
+                $response = $handler->process($cmd, $request);
+            }
+        } else {
             $handler = new $className();
             $response = $handler->process($cmd, $request);
         }
