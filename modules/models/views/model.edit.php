@@ -228,7 +228,7 @@
 
 
                                         var model_data_start = 3;
-                                        var model_items_start = 18;
+                                        var model_items_start = 19;
 
                                         var process_model = function(){
 
@@ -266,7 +266,9 @@
                                                     model_items.push({      "name":cells[0].trim(), 
                                                                             "redundancy":parseInt(cells[1].replace(/\D/g, '')), 
                                                                             "remaining_life":parseInt(cells[2].replace(/\D/g, '')), 
-                                                                            "cost":parseFloat(cells[3].replace(/\D/g, ''))
+                                                                            "cost":parseFloat(cells[3].replace(/\D/g, '')),
+                                                                            "estimated_cost": parseFloat(cells[5].replace(/[^\d.]/g, '')),
+                                                                            "actual_cost": parseFloat(cells[6].replace(/[^\d.]/g, ''))
                                                                 });
 
                                                 }

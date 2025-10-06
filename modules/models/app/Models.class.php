@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../../../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 class Models
 {  
 	
@@ -109,12 +113,135 @@ class Models
     }
 
     public function save($data){
-        global $auth, $modelsTable;
+        global $auth, $modelsTable, $modelItemsTable;
 
-        $checkFor = ['client_id', 'housing', 'starting_amount', 'monthly_fees'];
-        
-        if(is_valid($data, 'id'))
-            if(!belongs_to_client($modelsTable, $data['id'], false, true))return ['error' => $this->errors['not_allowed'] ]; 
+        // Check if file is uploaded
+        if(isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK){
+            // Handle file upload
+            $fileTmpPath = $_FILES['file']['tmp_name'];
+            $fileName = $_FILES['file']['name'];
+            $fileSize = $_FILES['file']['size'];
+            $fileType = $_FILES['file']['type'];
+
+            // Validate file type (Excel or CSV)
+            $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
+            if(!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)){
+                return ['error' => 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.'];
+            }
+
+            // Parse the file
+            try {
+                $spreadsheet = IOFactory::load($fileTmpPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray();
+
+                if(count($rows) < 20){
+                    return ['error' => 'File is too short. Expected at least 20 rows.'];
+                }
+
+                // Extract model data from actual sheet layout
+                $model_data = ['client_id' => $data['client_id']];
+                $label_to_key = [
+                    'Model Name' => 'name',
+                    'Housing Units' => 'housing',
+                    'Starting Amount' => 'starting_amount',
+                    'Monthly fees' => 'monthly_fees',
+                    'Mnthly fees Yearly Increase (%)' => 'monthly_fees_rate',
+                    'Inflation rate (%)' => 'inflation_rate',
+                    'Bank Income Intrest Rate (%)' => 'bank_int_rate',
+                    'Loan Intrest Rate (%)' => 'bank_rate',
+                    'Loan Terms' => 'loan_years',
+                    'Simulation Period' => 'period',
+                    'Model Fiscal Year' => 'fiscal_year',
+                    'Annual SIRS Fees' => 'annual_sirs_fees',
+                    'Total Reserve Fees On Hand' => 'total_reserve_fees_onhand',
+                    'Annual Reserve Fees' => 'annual_reserve_fees',
+                    'Total SIRS Funds On Hand' => 'total_sirf_fund_onhand'
+                ];
+
+                for($i = 1; $i <= 18; $i++){
+                    if($i >= count($rows)) break;
+                    $cells = $rows[$i];
+                    if(count($cells) < 2) continue;
+                    $label = trim($cells[0]);
+                    $value = $cells[1];
+                    if(isset($label_to_key[$label])){
+                        $key = $label_to_key[$label];
+                        if($key == 'name'){
+                            $model_data[$key] = trim($value);
+                        }else{
+                            $model_data[$key] = floatval(preg_replace('/[^\d.]/', '', $value));
+                        }
+                    }
+                }
+
+                // Extract model items from actual sheet layout
+                $model_items = [];
+                for($i = 20; $i < count($rows); $i++){
+                    $cells = $rows[$i];
+                    if(count($cells) < 7) continue;
+                    if(empty(trim($cells[0])) && empty(trim($cells[1])) && empty(trim($cells[2])) && empty(trim($cells[3]))) continue;
+                    $item = [
+                        'name' => trim($cells[0]),
+                        'expected_life' => intval(preg_replace('/\D/', '', $cells[1])),
+                        'remaining_life' => intval(preg_replace('/\D/', '', $cells[2])),
+                        'cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
+                        'is_sirs' => intval(preg_replace('/\D/', '', $cells[4])),
+                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
+                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[6]))
+                    ];
+                    if(!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 || $item['cost'] > 0){
+                        $model_items[] = $item;
+                    }
+                }
+
+                // Set auth client_id if needed
+                if($auth->checkRoleType('client')){
+                    $model_data['client_id'] = $auth->clientId();
+                }
+
+                // Validate model data
+                $checkFor = ['client_id', 'housing', 'name'];
+                $ret = check_missing($checkFor, $model_data, $this->errors);
+                if($ret !== true) return $ret;
+
+                $model_data['fiscal_year'] = check_val($model_data, 'fiscal_year', date('Y', time()));
+
+                // Save model
+                $model_id = save_element($modelsTable, $model_data);
+                if($model_id === false){
+                    return ['error' => 'Failed to save model.'];
+                }
+
+                // Save model items
+                if(!empty($model_items)){
+                    foreach($model_items as &$item){
+                        $item['model_id'] = $model_id;
+                    }
+                    // 
+                    foreach($model_items as $item){
+                        save_element($modelItemsTable, $item);
+                    }
+                }
+
+                return ['success' => $model_id];
+
+            } catch (Exception $e) {
+                return ['error' => 'Failed to parse file: ' . $e->getMessage()];
+            }
+
+        }else{
+            // Original logic for JSON data
+            $checkFor = ['client_id', 'housing', 'annual_sirs_fees', 'total_reserve_fees_onhand','annual_reserve_fees','total_sirf_fund_onhand'];
+            /**
+             * allow null for these fields according to requirements(new figma)
+             *
+             * currently this array is not used
+             */
+            $allow_null = ['starting_amount', 'monthly_fees',];
+
+            if(is_valid($data, 'id'))
+                if(!belongs_to_client($modelsTable, $data['id'], false, true))return ['error' => $this->errors['not_allowed'] ];
 
         if($auth->checkRoleType('client')){
             $data['client_id'] = $auth->clientId();
@@ -132,8 +259,8 @@ class Models
             return ['error' => ''];    
         else
             return ['success' => $ret_id];
+        }
     }
-
 
     
 

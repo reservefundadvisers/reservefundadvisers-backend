@@ -113,7 +113,74 @@ class Models
 
         
         $model_id = $data['model_id'];
-        $items = check_val($data, 'items', []);
+
+        // Check if file is uploaded
+        if(isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK){
+            $fileTmpPath = $_FILES['file']['tmp_name'];
+            $fileName = $_FILES['file']['name'];
+            $fileType = $_FILES['file']['type'];
+
+            // Validate file type (Excel or CSV)
+            $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
+            if(!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)){
+                return ['error' => 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.'];
+            }
+
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fileTmpPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray();
+
+                $model_items = [];
+                for($i = 1; $i < count($rows); $i++){
+                    $cells = $rows[$i];
+                    if(count($cells) < 7) continue;
+                    if(empty(trim($cells[0])) && empty(trim($cells[1])) && empty(trim($cells[2])) && empty(trim($cells[3]))) continue;
+                    $item = [
+                        'name' => trim($cells[0]),
+                        'redundancy' => intval(preg_replace('/\D/', '', $cells[1])),
+                        'remaining_life' => intval(preg_replace('/\D/', '', $cells[2])),
+                        'cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
+                        'is_sirs' => intval(preg_replace('/\D/', '', $cells[4])),
+                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
+                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[6]))
+                    ];
+                    if(!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 || $item['cost'] > 0){
+                        $model_items[] = $item;
+                    }
+                }
+
+                // Delete old items
+                $old_items = get_elements($modelItemsTable, ['model_id'=>$model_id]);
+                $items_to_delete = array();
+                foreach($old_items as $item){
+                    array_push($items_to_delete, $item['id']);
+                }
+
+                $ret_id = true;
+
+                // Save new items
+                foreach($model_items as $item){
+                    $item['model_id'] = $model_id;
+                    $ret_id = save_element($modelItemsTable, $item);
+                }
+
+                // Delete removed items
+                delete_elements_by_id($modelItemsTable, $items_to_delete);
+
+                if($ret_id === false)
+                    return ['error' => ''];
+
+                set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
+                return ['success' => ''];
+
+            } catch (Exception $e) {
+                return ['error' => 'Failed to parse file: ' . $e->getMessage()];
+            }
+
+        }else{
+            // Original logic for JSON data
+            $items = check_val($data, 'items', []);
 
         
         $old_items = get_elements($modelItemsTable, ['model_id'=>$data['model_id']]);
@@ -136,6 +203,8 @@ class Models
             if(!is_numeric($item['redundancy']))$item['redundancy'] = 0;
             if(!is_numeric($item['remaining_life']))$item['remaining_life'] = 0;
             if(!is_numeric($item['cost']))$item['cost'] = 0;
+            if(!is_numeric($item['estimated_cost']))$item['estimated_cost'] = 0;
+            if(!is_numeric($item['actual_cost']))$item['actual_cost'] = 0;
 
 
             $ret_id = save_element($modelItemsTable, $item);
@@ -151,6 +220,7 @@ class Models
         
         set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
         return ['success' => ''];
+        }
     }
 
     
