@@ -251,6 +251,17 @@ if(isset($_POST['cmd'])){
             die(json_encode(['error' => $auth->errormsg[0]]));
     }
 
+    else if($cmd == 'otp_resend'){
+
+        $res = $auth->resend_otp();
+
+        if($res)
+            die(json_encode(['success' => $lang[$loc]['auth']['signup_otp_resent']]));
+        else 
+            die(json_encode(['error' => $auth->errormsg[0]]));
+    }
+
+    
 }
 
 

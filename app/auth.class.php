@@ -924,6 +924,47 @@ class Auth
 		}
 	}
 
+	function resend_otp() {
+		include("config.php");
+		include("lang.php");
+		include('mail.php');
+
+		$user_id = check_val($_POST, 'user_id');
+
+		if (empty($user_id)) {
+			$this->errormsg[] = 'User ID cannot be empty';
+			return false;
+		}
+
+		$user_details = get_element('users', ['row'=>$user_id]);
+		
+		if(!empty($user_details)){
+			$email = $user_details['email'];
+			$first_name = $user_details['fn'];
+			$last_name = $user_details['ln'];
+		}
+		else{
+			$this->errormsg[] = 'User not found';
+			return false;
+		}
+
+		if(function_exists('sendOtpEmail')){
+
+			$otp = generate_otp();
+			$response = sendOtpEmail($email, $first_name.' '.$last_name, $otp);
+
+			if($response) {
+				$this->insert_otp($user_id, $otp);
+				$this->successmsg[] = 'OTP email sent successfully';
+				return true;
+			} else {
+				$this->errormsg[] = 'Failed to send OTP email';
+				return false;
+			}
+		}
+
+		return false;
+	}
 	
 	/*
 	* Check if logged !
