@@ -171,7 +171,7 @@ class Clients
                             'email'=>$data['admin_email'], 
                             'password'=>check_val($data, 'admin_password'), 
                             'role'=>$this->type . '_admin', 
-                            'position_id'=>'boardmember',
+                            'position_id'=>'US7EIBCL7II9FK8YNZESG2O031',
                             'client_id'=> $client_id];
 
             $ret = $clientUsers->save($admin_user);

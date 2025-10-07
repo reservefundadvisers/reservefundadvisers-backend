@@ -680,7 +680,7 @@ class Auth
 							'email'=>check_val($data, 'admin_email'), 
 							'password'=>check_val($data, 'admin_password'), 
 							'role'=>check_val($data, 'type', 'client') . '_admin', 
-							'position_id'=>'boardmember',
+							'position_id'=>'US7EIBCL7II9FK8YNZESG2O031',
 							'client_id'=> $client_id];
 
 
