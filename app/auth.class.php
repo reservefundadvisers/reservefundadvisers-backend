@@ -740,6 +740,7 @@ class Auth
 		$password = check_val($data, 'password');
 		$first_name = check_val($data, 'first_name');
 		$last_name = check_val($data, 'last_name');
+		$country_code = check_val($data, 'country_code');
 		$mobile_number = check_val($data, 'mobile_number');
 
 		if(empty($position_id)){
@@ -760,6 +761,9 @@ class Auth
 		}else if(empty($mobile_number)){
 			$error = $lang[$loc]['auth']['signup_mobile_error'];
 			return false;
+		}else if(empty($country_code)){
+			$error = $lang[$loc]['auth']['signup_mobile_error'];
+			return false;
 		}
 
 		// check if email already exists
@@ -777,11 +781,12 @@ class Auth
 					'password'=>$password, 
 					'role'=>'client_admin', 
 					'position_id'=>$position_id,
+					'country_code'=>$country_code,
 					'mobile_number'=>$mobile_number];
 
-		$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, phone, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		$hashed_password = $this->hashpass($password);
-		$query->bind_param("ssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['mobile_number'], $user_active);
+		$query->bind_param("sssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user_active);
 		$query->execute();
 		$user_id = $this->mysqli->insert_id;
 		$query->close();
