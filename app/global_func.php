@@ -943,6 +943,93 @@ function generate_otp($length = 6) {
 }
 
 /**
+ * Handles a file upload and saves it to a specified directory.
+ *
+ * @param array $fileInput The file input data, either as a single file or an array of files.
+ * @param string $uploadDir The directory to save the uploaded file to. Defaults to 'uploads/'.
+ *
+ * @return array An associative array containing the success status, a public path to the uploaded file (if successful), and a message.
+ */
+function handle_file_upload($fileInput, $uploadDir = 'uploads/') {
+    // --- Configuration ---
+    $maxSize = 2 * 1024 * 1024; // 2 MB
+    $allowedExtensions = ['jpeg', 'jpg', 'png'];
+    $allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+    // --- Get absolute root path ---
+    $rootDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . '/';
+    $uploadPath = $rootDir . trim($uploadDir, '/\\') . '/';
+
+    // --- Ensure upload directory exists ---
+    if (!is_dir($uploadPath)) {
+        mkdir($uploadPath, 0777, true);
+    }
+
+    // --- Handle input format ---
+    if (is_array($fileInput) && isset($fileInput['name'])) {
+        $file = $fileInput; // single file
+    } else {
+        $firstKey = array_key_first($fileInput);
+        $file = $fileInput[$firstKey];
+    }
+
+    if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
+        return [
+            'success' => false,
+            'message' => 'No file uploaded or upload error occurred.'
+        ];
+    }
+
+    $fileName = basename($file['name']);
+    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    // --- Validate extension ---
+    if (!in_array($extension, $allowedExtensions)) {
+        return [
+            'success' => false,
+            'message' => 'Invalid file type. Only JPEG and PNG are allowed.'
+        ];
+    }
+
+    // --- Validate MIME type ---
+    $fileMime = mime_content_type($file['tmp_name']);
+    if (!in_array($fileMime, $allowedMimeTypes)) {
+        return [
+            'success' => false,
+            'message' => 'Invalid file content. Only JPEG and PNG images are allowed.'
+        ];
+    }
+
+    // --- Validate file size ---
+    if ($file['size'] > $maxSize) {
+        return [
+            'success' => false,
+            'message' => 'File too large. Maximum size is 2 MB.'
+        ];
+    }
+
+    // --- Generate unique name & move file ---
+    $newFileName = uniqid('img_', true) . '.' . $extension;
+    $targetPath = $uploadPath . $newFileName;
+
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        // Return web-accessible relative path
+        $publicPath = '/' . trim($uploadDir, '/\\') . '/' . $newFileName;
+
+        return [
+            'success' => true,
+            'path' => $publicPath,
+            'message' => 'File uploaded successfully.'
+        ];
+    } else {
+        return [
+            'success' => false,
+            'message' => 'Failed to move uploaded file.'
+        ];
+    }
+}
+
+/**
  * Write a log to a file
  * 
  * @param string $log The log message to write

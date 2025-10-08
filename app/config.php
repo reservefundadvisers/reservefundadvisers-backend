@@ -109,6 +109,9 @@ $simVersionTable = 'simulation_versions';
 $configTable = 'config';
 $checkoutsTable = 'checkouts';
 
+//File upload directory
+$upload_dir_association = 'uploads/associations/';
+
 $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_model'=>1, 'hold'=>1, 'opt'=>['pd', 'pm']],
                             // 'cdars'=>['name'=>'CD Account Registry Service (CDARS)', 'show_model'=>1, 'hold'=>1, 'opt'=>['pd', 'pm']],
                             'tb'=>['name'=>'Treasury Bonds (T-Bonds)', 'show_model'=>1, 'hold'=>1, 'opt'=>['pd', 'pm']],
@@ -120,7 +123,7 @@ $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_m
 $db_table_cols = [ 
 
                     $usersTable => ['id', 'username', 'password', 'role', 'client_id', 'position_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'opt-in', 'active', 'created_at'],
-                    $clientsTable => ['id', 'association', 'company', 'company_id', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
+                    $clientsTable => ['id', 'association', 'company', 'company_id','media', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
                     $clientPositionsTable => ['row', 'id', 'value', 'client_id'], 
                     $modelsTable => ['row', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirf_fund_onhand' ,'active', 'updated_at', 'created_at'],
                     $modelItemsTable => ['row', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'is_sirs'],

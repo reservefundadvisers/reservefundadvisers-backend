@@ -122,7 +122,15 @@ class Clients
     }
 
     public function save($data){
-        global $auth, $clientsTable;
+        global $auth, $clientsTable, $upload_dir_association;
+
+        // Upload the file
+        $image_upload = handle_file_upload($_FILES['profile_picture'], $upload_dir_association);
+
+        if ($image_upload['success'] === true) {
+            $image_path = $image_upload['path'];
+            $data['media'] = $image_path;
+        }
 
         $checkFor = ['phone', 'zip', 'city', 'state'];
 
@@ -134,7 +142,9 @@ class Clients
             $checkFor = array_merge($checkFor, ['admin_fn', 'admin_ln', 'admin_email']);            
             
             // add client id
-            $data['company_id'] = $auth->checkRoleType('company') ? $auth->clientId() : NULL;
+            if(empty($data['company_id'])){
+                $data['company_id'] = $auth->checkRoleType('company') ? $auth->clientId() : NULL;
+            }
 
         }else{
             
