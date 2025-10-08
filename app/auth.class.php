@@ -762,7 +762,7 @@ class Auth
 			$error = $lang[$loc]['auth']['signup_mobile_error'];
 			return false;
 		}else if(empty($country_code)){
-			$error = $lang[$loc]['auth']['signup_mobile_error'];
+			$error = $lang[$loc]['auth']['signup_country_code_error'];
 			return false;
 		}
 
