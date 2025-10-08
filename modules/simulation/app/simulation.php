@@ -1,27 +1,5 @@
 <?php
 
-    // $allowed_origin = "http://192.168.1.24:5143/";
-    // header("Access-Control-Allow-Origin: ".$allowed_origin);
-    // Dynamic CORS origin handling
-    $allowed_origins = [
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'http://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
-    ];
-    
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: " . $origin);
-        header("Access-Control-Allow-Credentials: true");
-    } else {
-        // Fallback for development - be cautious with this in production
-        header("Access-Control-Allow-Origin: *");
-        // Note: Cannot use credentials with wildcard
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, auth_session, cookie");
-
     include_once('../../../app/init.php');
     include_once('../../../app/global_func.php');
 
