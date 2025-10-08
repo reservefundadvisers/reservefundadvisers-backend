@@ -1,7 +1,5 @@
 <?php
 
-    echo __DIR__;
-
     include_once('../../../app/init.php');
     include_once('../../../app/global_func.php');
 

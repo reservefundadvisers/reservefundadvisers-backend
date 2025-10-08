@@ -1,4 +1,5 @@
 <?php
+ob_start(); // start output buffering if not already started
 
 include_once('global_func.php');
 include_once('global_utils.php');
@@ -69,7 +70,14 @@ $auth = new Auth();
 
 //$configuration = new Configuration();
 
-
+//------------------
+// Safe output buffer handler
+//------------------
+register_shutdown_function(function () {
+    if (ob_get_length()) {
+        @ob_end_flush(); // send the buffered output to the client
+    }
+});
 
 
 ?>
