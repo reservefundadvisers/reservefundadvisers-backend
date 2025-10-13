@@ -24,7 +24,6 @@ class ClientUsers
         }
 
         if(endsWith($cmd, '_position_roles')){
-            rfa_create_log('get_position_roles entered');
             $clientPositionRoles = new ClientPositionRoles();
             return $clientPositionRoles->process(str_replace('_position_role', '', $cmd), $data);
         }

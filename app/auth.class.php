@@ -968,8 +968,7 @@ class Auth
 
 			if($purpose == 'signup') {
 				// Create new session skipping auth
-				$uid = get_element('users', ['row'=>$user_id], 'id');
-				$this->newsession($uid['id'], true);	
+				$this->newsession($user_id, true);	
 			}
 
 			return true;
