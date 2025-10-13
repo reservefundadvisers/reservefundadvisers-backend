@@ -956,7 +956,7 @@ class Auth
 
 			// Update user active status
 			$active = 1; // Activate user
-			$updateUser = $this->mysqli->prepare("UPDATE users SET active=? WHERE row=? LIMIT 1");
+			$updateUser = $this->mysqli->prepare("UPDATE users SET active=? WHERE id=? LIMIT 1");
 			$updateUser->bind_param("ss", $active, $user_id);
 			$updateUser->execute();
 			$updateUser->close();

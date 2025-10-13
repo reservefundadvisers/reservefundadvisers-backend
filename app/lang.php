@@ -19,6 +19,7 @@ $lang['en']['auth']['login_incorrect'] = "Username / Password is incorrect !";
 $lang['en']['auth']['login_attempts_remaining'] = "%d attempts remaining !";
 $lang['en']['auth']['login_account_inactive'] = "Account is disabled !";
 $lang['en']['auth']['login_success'] = "You are now logged in !";
+$lang['en']['auth']['logout_success'] = "You are now logged out !";
 $lang['en']['auth']['login_already'] = "You are already logged in !";
 $lang['en']['auth']['login_fail'] = "You are not logged in !";
 

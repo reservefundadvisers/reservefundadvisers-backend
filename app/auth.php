@@ -155,7 +155,7 @@ if(isset($_POST['cmd'])){
          if($auth->islogged()){       
             $auth->deletesession();    
         }
-        die(json_encode(['success' => true]));
+        return send_json_response( true, 200, $lang[$loc]['auth']['logout_success'] );
     }
     else if($cmd == 'resend_auth'){
 
