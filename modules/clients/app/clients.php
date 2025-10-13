@@ -22,7 +22,7 @@
     // commands permissions
     $allowed_cmd =  [
                         'load_company' => ['admin', 'manager'],
-                        'get_company' => ['admin', 'manager'],
+                        'get_company' => ['admin', 'manager', 'company_admin', 'client_admin'],
                         'edit_company' => ['admin', 'manager'],
                         'save_company' => ['admin', 'manager'],
                         

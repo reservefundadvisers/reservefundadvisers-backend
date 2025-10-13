@@ -95,7 +95,7 @@ class Clients
         if($is_pagination)
             return ['last_page'=>$pages, 'data'=>$results, 'total'=>$total];
         else
-            return $results;
+            return send_json_response(true, 200, $this->success['success'], ['data' => $results]);
         
     }
 
@@ -236,7 +236,7 @@ class Clients
         
 
         if(!empty($res))return ['error' => $res];
-        else return ['success' => ''];
+        else return send_json_response(true, 200, $this->success['deleted'], ['count'=>$count]);
 
     }
     
@@ -277,6 +277,8 @@ class Clients
     private $success = [
                         "saved" => "Client saved !",
                         "updated" => "Client updated !",
+                        'success' => "Success !",
+                        "deleted" => "Client deleted !",
                         ];
 
 }

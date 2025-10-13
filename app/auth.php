@@ -147,7 +147,7 @@ if(isset($_POST['cmd'])){
             ]));
         }
         else 
-            die(json_encode(['error' => $auth->errormsg[0]]));
+            return send_json_response( false, 400, $auth->errormsg[0]);
     
     // login resend validation code
     } else if($cmd == 'logout'){
