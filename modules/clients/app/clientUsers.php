@@ -5,6 +5,7 @@
 
     include_once('ClientUsers.class.php');
     include_once('ClientPositions.class.php');
+    include_once('ClientPositionRoles.php');
     $request = check_request();
 
     // Allow public access for get_position and get_positions commands

@@ -23,6 +23,12 @@ class ClientUsers
             return $clientPositions->process(str_replace('_position', '', $cmd), $data);
         }
 
+        if(endsWith($cmd, '_position_roles')){
+            rfa_create_log('get_position_roles entered');
+            $clientPositionRoles = new ClientPositionRoles();
+            return $clientPositionRoles->process(str_replace('_position_role', '', $cmd), $data);
+        }
+
         switch($cmd){
             case 'get': $response = $this->list($data); break;
             case 'edit': $response = $this->edit($data); break;
@@ -143,7 +149,7 @@ class ClientUsers
             $auth->generate_reset($data['username']);
         }
 
-        return ['success' => $ret_id];
+        return send_json_response(true, 200, $this->sucess['created'], ['id'=>$ret_id]);
     }
 
 
@@ -238,5 +244,7 @@ class ClientUsers
                         
     private $color = [  "admin" => "purple",
                         "manager" => "deep-orange"   ];
+
+    private $sucess = [ "created" => "The User has been created successfully !" ];
 
 }
