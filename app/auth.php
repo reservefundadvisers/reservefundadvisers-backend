@@ -208,37 +208,41 @@ if(isset($_POST['cmd'])){
         $res = $auth->new_signup($_POST, $signup_err, $signup_success);
 
         if($res)
-            die(json_encode(['success' => $signup_success]));
+            send_json_response(true, 201, $signup_success, ['user_id' => $res]);
         else 
-            die(json_encode(['error' => $signup_err]));
+            send_json_response(false, 400, $signup_err);
 
     }
 
-    else if($cmd == 'otp_validate'){
+    else if($cmd == 'validate_otp'){
 
         $res = $auth->validate_otp($_POST);
 
         if($res){
             $sessionHash = isset($_COOKIE['auth_session']) ? $_COOKIE['auth_session'] : null;
-
-            die(json_encode([
-                'success'   => ['success' => $lang[$loc]['auth']['signup_otp_validated']],
-                'sessionid' => $sessionHash,
-                'cookie'    => "auth_session=" . $sessionHash
-            ]));
+		    $purpose = check_val($_POST, 'purpose', 'verification');
+           
+             if ($purpose == 'signup' && $sessionHash) {
+                send_json_response(true, 200, $lang[$loc]['auth']['signup_otp_validated'], [
+                    'sessionid' => $sessionHash,
+                    'cookie'    => "auth_session=" . $sessionHash
+                ]);
+            } else {
+                send_json_response(true, 200, $lang[$loc]['auth']['signup_otp_validated']);
+            }
         }
         else 
-            die(json_encode(['error' => $auth->errormsg[0]]));
+            send_json_response(false, 400, $auth->errormsg[0]);
     }
 
-    else if($cmd == 'otp_resend'){
+    else if($cmd == 'send_otp'){
 
-        $res = $auth->resend_otp();
+        $res = $auth->send_otp();
 
         if($res)
-            die(json_encode(['success' => $lang[$loc]['auth']['signup_otp_resent']]));
+            send_json_response(true, 200, $lang[$loc]['auth']['signup_otp_sent']);
         else 
-            die(json_encode(['error' => $auth->errormsg[0]]));
+           send_json_response(false, 400, $auth->errormsg[0]);
     }
 
     

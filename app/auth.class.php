@@ -728,13 +728,14 @@ class Auth
 	 * @param string &$url URL variable for redirect after signup.
 	 * @return bool|array Returns false if any errors occur or if the user data is invalid, otherwise returns a JSON response with a success flag and the user ID.
 	 */
-	function new_signup( $data, &$error, &$url){
+	function new_signup( $data, &$error, &$success_message){
 		include("config.php");
 		include("lang.php");
 		include('mail.php');
 
 		$user_active = 0; // after signup user is inactive until email verification
 
+		$uid = check_val($data, 'uid'); // check if this is update request
 		$position_id = check_val($data, 'position_id');
 		$email = check_val($data, 'email');
 		$password = check_val($data, 'password');
@@ -766,65 +767,105 @@ class Auth
 			return false;
 		}
 
+		$email_conds = ['email'=>$email]; 
+		$mobile_conds = ['phone'=>$mobile_number, 'country_code'=>$country_code];
+		if(!empty($uid)){
+			$email_conds['!id'] = $uid;
+			$mobile_conds['!id'] = $uid;
+		}
+
 		// check if email already exists
-		if(exists($usersTable, ['email'=>$email])){
+		if(exists($usersTable, $email_conds)){
 			$error = $lang[$loc]['auth']['signup_email_exists'];
 			return false;
 		}
 
-		// create user
-		$user = [ 	'id'=>generate_id('users'),
-					'first_name'=>$first_name, 
-					'last_name'=>$last_name, 
-					'email'=>$email, 
-					'username'=>$email, 
-					'password'=>$password, 
-					'role'=>'client_admin', 
-					'position_id'=>$position_id,
-					'country_code'=>$country_code,
-					'mobile_number'=>$mobile_number];
-
-		$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-		$hashed_password = $this->hashpass($password);
-		$query->bind_param("sssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user_active);
-		$query->execute();
-		$user_id = $this->mysqli->insert_id;
-		$query->close();
-
-		if($user_id === false){
-			$error = $lang[$loc]['auth']['signup_error'];
+		// check if mobile number already exists
+		if(exists($usersTable, $mobile_conds)){
+			$error = $lang[$loc]['auth']['signup_mobile_exists'];
 			return false;
 		}
 
-		$this->errormsg = array();
-		$this->successmsg = array();
-
-		if(function_exists('sendOtpEmail')){
-
-			$otp = generate_otp();
-			$response = sendOtpEmail($user['email'], $user['first_name'].' '.$user['last_name'], $otp);
-
-			if($response) {
-				$this->insert_otp($user_id, $otp);
-				$this->successmsg[] = 'OTP email sent successfully';
-			} else {
-				$this->errormsg[] = 'Failed to send OTP email';
-			}
+		if(!exists($clientPositionsTable, ['id'=>$position_id])){
+			$error = $lang[$loc]['auth']['signup_position_invalid'];
+			return false;
 		}
 
+		// create user
+		$user = [
+			'id'=>generate_id('users'),
+			'first_name'=>$first_name, 
+			'last_name'=>$last_name, 
+			'email'=>$email, 
+			'username'=>$email, 
+			'password'=>$password, 
+			'role'=>'client_admin', 
+			'position_id'=>$position_id,
+			'country_code'=>$country_code,
+			'mobile_number'=>$mobile_number];
 
-		return die(json_encode(['success'=>true, 'user_id'=>$user_id]));
+			$hashed_password = $this->hashpass($password);
+		
+		if(!empty($uid)){
+
+			$query = $this->mysqli->prepare("UPDATE users 
+				SET fn=?, ln=?, email=?, username=?, password=?, position_id=?, country_code=?, phone=? 
+				WHERE id=?");
+
+			$query->bind_param(
+				"ssssssssi",
+				$user['first_name'],
+				$user['last_name'],
+				$user['email'],
+				$user['username'],
+				$hashed_password,
+				$user['position_id'],
+				$user['country_code'],
+				$user['mobile_number'],
+				$uid
+			);
+			$query->execute();
+			$success_message = $lang[$loc]['auth']['signup_user_update_success'] ?? "The User details updated successfully";
+			return $uid;
+		}else{
+
+			$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			
+			$query->bind_param("sssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user_active);
+			$query->execute();
+			$affected_id = $this->mysqli->insert_id;
+			$query->close();
+
+			if($affected_id === false){
+				$error = $lang[$loc]['auth']['signup_error'];
+				return false;
+			}
+	
+			$cond['raw'] = $affected_id; 
+
+			$user_details = get_element($usersTable, ['row' => $affected_id]);
+
+			$this->errormsg = array();
+			$this->successmsg = array();
+			
+			$this-> successmsg[] = $lang[$loc]['auth']['signup_success'];
+			$success_message = $lang[$loc]['auth']['signup_success'];
+			
+			return $user_details['id'] ?? $affected_id;
+		}
 	}
 
 	/**
-	 * Inserts a one-time password (OTP) record in the database.
+	 * Inserts a new one-time password (OTP) record into the database.
 	 *
-	 * @param int $id The user ID associated with the OTP.
-	 * @param string $otp The one-time password (OTP) value.
+	 * @param int $id The ID of the user to associate the OTP with.
+	 * @param string $otp The OTP value to insert.
+	 * @param string $purpose The purpose of the OTP (e.g. 'signup', 'verification').
+	 * @param string $type The type of OTP (e.g. 'email', 'sms', 'call).
 	 *
 	 * @return bool True if the OTP record is inserted successfully, false otherwise.
 	 */
-	function insert_otp($id, $otp) {
+	function insert_otp($id, $otp, $purpose = 'verification', $type = 'email') {
 		include("config.php");
 		include("lang.php");
 
@@ -837,8 +878,8 @@ class Auth
 
 		$status = 'pending';
 
-		$query = $this->mysqli->prepare( "INSERT INTO otp (user_id, otp_value, created_at, expires_at, status) VALUES (?, ?, ?, ?, ?)");
-		$query->bind_param("sssss", $id, $otp, $created_at, $expires_at, $status);
+		$query = $this->mysqli->prepare( "INSERT INTO otp (user_id, otp_value, created_at, expires_at, status, reason, type) VALUES (?, ?, ?, ?, ?, ?, ?)" );
+		$query->bind_param("sssssss", $id, $otp, $created_at, $expires_at, $status, $purpose, $type);
 		$execute_result = $query->execute();
 		$query->close();
 
@@ -885,6 +926,7 @@ class Auth
 
 		$user_id = check_val($_POST, 'user_id');
 		$otp = check_val($_POST, 'otp');
+		$purpose = check_val($_POST, 'purpose', 'verification'); // default purpose is verification
 
 		if (empty($user_id) || empty($otp)) {
 			$this->errormsg[] = 'User ID or OTP cannot be empty';
@@ -894,7 +936,7 @@ class Auth
 		// Select OTP row where user_id, otp_value, status = 'pending' and expires_at > UTC_TIMESTAMP()
 		$query = $this->mysqli->prepare("
 			SELECT * FROM otp
-			WHERE user_id = ? AND otp_value = ? AND status = 'pending' AND expires_at > UTC_TIMESTAMP()
+			WHERE user_id = ? AND otp_value = ? AND status = 'pending'
 			LIMIT 1
 		");
 		$query->bind_param("ss", $user_id, $otp);
@@ -903,7 +945,14 @@ class Auth
 		$query->close();
 
 		if ($result && $result->num_rows > 0) {
-			// OTP is valid and not expired
+			$otp_data = $result->fetch_assoc();
+			// OTP is valid
+
+			// Check if OTP is expired
+        	if (strtotime($otp_data['expires_at']) < strtotime(gmdate("Y-m-d H:i:s"))) {
+				$this->errormsg[] = 'OTP has expired';
+				return false;
+			}
 
 			// Update user active status
 			$active = 1; // Activate user
@@ -914,61 +963,88 @@ class Auth
 
 			// Mark OTP as used
 			$usedStatus = 'used';
-			$otpId = $result->fetch_assoc()['id']; 
+			$otpId = $otp_data['id']; 
 			$this->update_otp_status($otpId, $usedStatus);
 
-			// Create new session skipping auth
-			$uid = get_element('users', ['row'=>$user_id], 'id');
-			$this->newsession($uid['id'], true);	
+			if($purpose == 'signup') {
+				// Create new session skipping auth
+				$uid = get_element('users', ['row'=>$user_id], 'id');
+				$this->newsession($uid['id'], true);	
+			}
 
 			return true;
 		} else {
 			// OTP invalid or expired
-			$this->errormsg[] = 'Invalid or expired OTP';
+			$this->errormsg[] = 'The OTP is invalid';
 			return false;
 		}
 	}
 
-	function resend_otp() {
+	function send_otp() {
 		include("config.php");
 		include("lang.php");
 		include('mail.php');
 
 		$user_id = check_val($_POST, 'user_id');
+		$type = check_val($_POST, 'type' , 'email'); // default type is client	
+		$purpose = check_val($_POST, 'purpose', 'verification'); // default purpose is verification
 
 		if (empty($user_id)) {
 			$this->errormsg[] = 'User ID cannot be empty';
 			return false;
 		}
 
-		$user_details = get_element('users', ['row'=>$user_id]);
-		
-		if(!empty($user_details)){
-			$email = $user_details['email'];
-			$first_name = $user_details['fn'];
-			$last_name = $user_details['ln'];
+		// --- Fetch user details ---
+		$user_details = get_element('users', ['id' => $user_id]);
+		if (empty($user_details)) {
+			$this->errormsg[] = 'The User is not found';
+			return false;
 		}
-		else{
-			$this->errormsg[] = 'User not found';
+		
+		$email = $user_details['email'];
+		$first_name = $user_details['fn'];
+		$last_name = $user_details['ln'];
+		$phone = $user_details['phone'] ?? '';
+		$country_code = $user_details['country_code'] ?? '';
+
+		$otp = generate_otp();
+		$response = $this->insert_otp($user_id, $otp , $purpose, $type);
+
+		if(!$response){
+			$this->errormsg[] = 'The OTP Failed to generate.';
 			return false;
 		}
 
-		if(function_exists('sendOtpEmail')){
+		$sent = false;
+		$message = '';
+		
+		// --- Choose OTP sending channel ---
+		switch ($type) {
+			case 'email':
+				if (function_exists('sendOtpEmail')) {
+					$sent = sendOtpEmail($email, "$first_name $last_name", $otp);
+					$message = 'OTP has been sent successfully via email.';
+				}
+				break;
 
-			$otp = generate_otp();
-			$response = sendOtpEmail($email, $first_name.' '.$last_name, $otp);
-
-			if($response) {
-				$this->insert_otp($user_id, $otp);
-				$this->successmsg[] = 'OTP email sent successfully';
-				return true;
-			} else {
-				$this->errormsg[] = 'Failed to send OTP email';
+			default:
+				$this->errormsg[] = 'The OTP type is Invalid.';
 				return false;
-			}
 		}
 
-		return false;
+			// --- Return response ---
+		if ($sent) {
+			send_json_response(true, 200, $message, [
+				'user_id' => $user_id,
+				'purpose' => $purpose,
+				'type' => $type
+		]);
+		} else {
+			$this->errormsg[] = 'Failed to send OTP via ' . strtoupper($type);
+			send_json_response(false, 400, $this->errormsg[0]);
+		}
+
+		return $sent;
 	}
 	
 	/*

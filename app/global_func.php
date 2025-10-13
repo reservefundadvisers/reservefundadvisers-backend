@@ -1030,6 +1030,37 @@ function handle_file_upload($fileInput, $uploadDir = 'uploads/') {
 }
 
 /**
+ * Send a consistent JSON response for all API endpoints
+ *
+ * @param bool   $status   true for success, false for failure
+ * @param int    $code     HTTP status code (e.g. 200, 400, 201)
+ * @param string $message  A readable message for the frontend
+ * @param array  $payload  Optional data or error details
+ */
+function send_json_response($status, $code, $message, $payload = null) {
+    http_response_code($code);
+
+    $response = [
+        'code'   => $code,
+        'status' => $status,
+    ];
+
+    if ($status === true) {
+        $response['data'] = [
+            'message' => $message
+        ];
+        if (!empty($payload)) {
+            // Merge any extra data (e.g. user info)
+            $response['data'] = array_merge($response['data'], $payload);
+        }
+    } else {
+        $response['error'] = is_array($payload) ? $payload : ['message' => $message];
+    }
+
+    die(json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+
+/**
  * Write a log to a file
  * 
  * @param string $log The log message to write

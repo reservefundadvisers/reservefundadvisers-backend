@@ -195,7 +195,7 @@ class Clients
         
         
 
-        return ['success' => $client_id];
+        return send_json_response(true, 200, $this->success['saved'], ['client_id'=>$client_id]);
     }
 
 
@@ -272,6 +272,11 @@ class Clients
                         "zip" => "<b>Zip Code</b> invalid !",
                         "city" => "<b>City</b> invalid !",
                         "state" => "<b>State</b> invalid !",
+                        ];
+                        
+    private $success = [
+                        "saved" => "Client saved !",
+                        "updated" => "Client updated !",
                         ];
 
 }
