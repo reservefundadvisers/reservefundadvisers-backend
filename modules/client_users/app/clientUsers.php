@@ -10,7 +10,9 @@
     if(!$auth->isValidated()){
         // send response
         $db->close();
-        die_response(['error' => 'Unauthorized Access']);
+        // die_response(['error' => 'Unauthorized Access']);
+        send_json_response(false, 401, 'Unauthorized Access');
+        die();
     }
 
     // script response array

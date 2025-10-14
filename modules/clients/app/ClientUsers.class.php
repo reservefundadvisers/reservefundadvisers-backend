@@ -78,7 +78,7 @@ class ClientUsers
         if($is_pagination)
             return ['last_page'=>$total, 'data'=>$results, 'total'=>$count['count']];
         else
-            return $results;
+            return send_json_response(true, 200, $this->success['success'], ['data' => $results]);
         
     }
 
@@ -148,7 +148,7 @@ class ClientUsers
             $auth->generate_reset($data['username']);
         }
 
-        return send_json_response(true, 200, $this->sucess['created'], ['id'=>$ret_id]);
+        return send_json_response(true, 200, $this->success['success'], ['id'=>$ret_id]);
     }
 
 
@@ -180,8 +180,13 @@ class ClientUsers
         $count = count($data[$checkFor]) - count($res);
         
 
-        if(!empty($res))return ['error' => $res];
-        else return ['success' => ''];
+
+        if(!empty($res)){
+             return send_json_response(false, 404 , $this->errors['not_found'], ['id' => $res]);
+        }
+        else {
+            return send_json_response(true, 200, $this->success['delete_success'], ['id' => $data['id']]);
+        }
 
     }
     
@@ -237,13 +242,16 @@ class ClientUsers
                         "self" => "Operation not allowed on this user",
                         "password_short" => "<b>Password</b> must be at least 6 characters !",
                         "client_id" => "Please choose a <b>Client</b> first !",
-                        "unspecified" => "Please choose a <b>User</b> first !"   ];
+                        "unspecified" => "Please choose a <b>User</b> first !" ,
+                        "not_found" => "No <b>Users</b> found !" ];
 
     private $tr = [     "password_reset" => "<b>Password Reset</b> link has been sent to the User's <u>Email</u> !"];
                         
     private $color = [  "admin" => "purple",
                         "manager" => "deep-orange"   ];
 
-    private $sucess = [ "created" => "The User has been created successfully !" ];
+    private $success = ["created" => "Created successfully !" , 
+                        'success' => "Successfully !" , 
+                        'delete_success' => "Deleted successfully !" ];
 
 }

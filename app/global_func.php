@@ -444,7 +444,7 @@ function delete_elements_by_id($table, $conds){
         }
     }else{
         if($db->delete($table, ['id' => $conds]) === false){
-            array_push($errors, $cond);
+            array_push($errors, $conds);
         }
     }
     

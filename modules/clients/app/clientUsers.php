@@ -14,7 +14,9 @@
         if(!$auth->isValidated()){
             // send response
             $db->close();
-            die_response(['error' => 'Unauthorized Access']);
+            // die_response(['error' => 'Unauthorized Access']);
+            send_json_response(false, 401, 'Unauthorized Access');
+            die();
         }
     }
 
@@ -26,11 +28,11 @@
 
     // commands permissions
     $allowed_cmd =  [
-                        'get' => ['admin', 'manager', 'company_admin'],
+                        'get' => ['admin', 'manager', 'company_admin','client_admin'],
                         'view' => ['admin', 'manager', 'company_admin'],
-                        'edit' => ['admin', 'manager', 'company_admin'],
-                        'save' => ['admin', 'manager', 'company_admin'],
-                        'delete' => ['admin', 'manager', 'company_admin'],
+                        'edit' => ['admin', 'manager', 'company_admin' ,'client_admin'],
+                        'save' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'delete' => ['admin', 'manager', 'company_admin', 'client_admin'],
                         'set' => ['admin', 'manager', 'company_admin']
                     ];
 

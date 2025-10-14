@@ -215,9 +215,9 @@ class Users
         global $auth;
         
         $user_info = $auth->sessioninfo();
-        if(empty($user_info))return ['error' => 'User not found'];
+        if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
 
-        return $user_info;
+        return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
     }
 
     public function username_exists($username, $id = null){
@@ -239,7 +239,8 @@ class Users
                         "password" => "<b>Password</b> invalid !",
                         "role" => "<b>Role</b> invalid !",
                         "self" => "Operation not allowed on this user",
-                        "password_short" => "<b>Password</b> must be at least 6 characters !"   ];
+                        "password_short" => "<b>Password</b> must be at least 6 characters !" ,
+                        "not_found" => "User profile not found !"];
 
     private $tr = [     "admin" => "administrator",
                         "manager" => "manager"   ];

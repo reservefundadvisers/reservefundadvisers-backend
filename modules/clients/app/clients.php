@@ -10,7 +10,9 @@
     if(!$auth->isValidated()){
         // send response
         $db->close();
-        die_response(['error' => 'Unauthorized Access']);
+        // die_response(['error' => 'Unauthorized Access']);
+        send_json_response(false, 401, 'Unauthorized Access');
+        die();
     }
 
     // script response array
@@ -27,9 +29,9 @@
                         'save_company' => ['admin', 'manager'],
                         
                         'load_client' => ['admin', 'manager', 'company_admin'],
-                        'get_client' => ['admin', 'manager', 'company_admin', 'company_user'],
+                        'get_client' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
                         'edit_client' => ['admin', 'manager', 'company_admin'],
-                        'save_client' => ['admin', 'manager', 'company_admin'],
+                        'save_client' => ['admin', 'manager', 'company_admin', 'client_admin'],
                         'delete' => ['admin', 'manager', 'company_admin'],
                         'set' => ['admin', 'manager', 'company_admin']
                     ];
