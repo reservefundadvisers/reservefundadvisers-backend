@@ -111,15 +111,21 @@ class ClientUsers
     public function save($data, $withEmail = true){
         global $auth, $usersTable, $clientsTable, $client_roles;
 
-        if(!is_valid($data, 'client_id') || !exists($clientsTable, ['id'=>$data['client_id']]))
-            return ['error' => $this->errors['client_id']];
+        if(!is_valid($data, 'client_id') || !exists($clientsTable, ['id'=>$data['client_id']])){
+
+            $error = 'Missing Field ';
+            $error .= is_valid($data, 'client_id') ? 'Client ID' : 'Client ID';
+            
+            return send_json_response(false, 400, $error);
+        }
 
         $checkFor = [ /*'username',*/ 'position_id', 'email', 'fn', 'ln', 'role'];
-       
     
         $ret = check_missing($checkFor, $data, $this->errors); 
-        if($ret !== true)
-            return $ret;
+        if($ret !== true){
+            $ret['message'] = 'Missing required fields !';
+            return send_json_response(false, 400, null, [ $ret ]);
+        }
         
 
         $data['role'] = array_has($client_roles, $data['role']) ? $data['role'] : 'client_user'; 
@@ -128,8 +134,11 @@ class ClientUsers
         $data['username'] = $data['email'];
 
         if($this->username_exists($data['username'], check_val($data, 'id')))
+        {
             // return ['error' =>  $this->errors['username_exists'] ];
-            return ['error' =>  $this->errors['email_exists'] ];
+            // return ['error' =>  $this->errors['email_exists'] ];
+            return send_json_response(false, 400, $this->errors['email_exists']);
+        }
 
         // hash password
         
@@ -141,8 +150,10 @@ class ClientUsers
         
         $ret_id = save_element($usersTable, $data);
 
-        if($ret_id === false)
-            return ['error' => ''];    
+        if($ret_id === false){
+            // return ['error' => ''];   
+            send_json_response(false, 400, $this->errors['internal_error']); 
+        }
                 
         if(!is_valid($data, 'id') && $withEmail){
             $auth->generate_reset($data['username']);
@@ -227,25 +238,26 @@ class ClientUsers
     }
 
 
-    private $errors = [ "id" => "<b>User</b> is invalid !",
-                        "association" => "<b>Association Name</b> invalid !",
-                        "fn" => "<b>First Name</b> invalid !",
-                        "ln" => "<b>Last Name</b> invalid !",
-                        "position_id" => "<b>Position</b> invalid !",
-                        "username" => "<b>Username</b> invalid !",
-                        "username_exists" => "<b>Username</b> already exists !",
-                        "email_exists" => "<b>Email</b> already assigned !",
-                        "email" => "<b>Email</b> invalid !",
-                        "password" => "<b>Password</b> invalid !",
-                        "password_reset" => "<b>Password Reset</b> couldn't be generated !",
-                        "role" => "<b>User Role</b> invalid !",
+    private $errors = [ "id" => "User is invalid !",
+                        "association" => "Association Name invalid !",
+                        "fn" => "First Name invalid !",
+                        "ln" => "Last Name invalid !",
+                        "position_id" => "Position invalid !",
+                        "username" => "Username invalid !",
+                        "username_exists" => "Username already exists !",
+                        "email_exists" => "Email already assigned !",
+                        "email" => "Email invalid !",
+                        "password" => "Password invalid !",
+                        "password_reset" => "Password Reset couldn't be generated !",
+                        "role" => "User Role invalid !",
                         "self" => "Operation not allowed on this user",
-                        "password_short" => "<b>Password</b> must be at least 6 characters !",
-                        "client_id" => "Please choose a <b>Client</b> first !",
-                        "unspecified" => "Please choose a <b>User</b> first !" ,
-                        "not_found" => "No <b>Users</b> found !" ];
+                        "password_short" => "Password must be at least 6 characters !",
+                        "client_id" => "Please choose a Client first !",
+                        "unspecified" => "Please choose a User first !" ,
+                        "not_found" => "No Users found !",
+                        'internal_error' => 'Internal Error !' ];
 
-    private $tr = [     "password_reset" => "<b>Password Reset</b> link has been sent to the User's <u>Email</u> !"];
+    private $tr = [     "password_reset" => "Password Reset link has been sent to the User's <u>Email</u> !"];
                         
     private $color = [  "admin" => "purple",
                         "manager" => "deep-orange"   ];

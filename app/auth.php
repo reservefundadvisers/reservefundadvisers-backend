@@ -138,12 +138,20 @@ if(isset($_POST['cmd'])){
         if ($res !== FALSE) {
             // set session for user
             $sessionHash = isset($_COOKIE['auth_session']) ? $_COOKIE['auth_session'] : null;
+            $user_info = $auth->sessioninfo();
 
+            // die(json_encode([
+            //     'success'   => true,
+            //     'user'      => $_POST['username'],
+            //     'sessionid' => $sessionHash,
+            //     'cookie'    => "auth_session=" . $sessionHash
+            // ]));
             send_json_response(true, 200, $lang[$loc]['auth']['login_success'], [
                     'data' => [
                         'user'      => $_POST['username'],
                         'sessionid' => $sessionHash,
-                        'cookie'    => "auth_session=" . $sessionHash
+                        'cookie'    => "auth_session=" . $sessionHash ,
+                        'user_info' => $user_info ? $user_info : null
                     ]
                 ]);
         }
