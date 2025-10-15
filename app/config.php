@@ -133,6 +133,9 @@ $simDeficitLTIMTable = 'simulation_deficit_ltim';
 $simRulesTable = 'simulation_rules';
 $simVersionTable = 'simulation_versions';
 
+$banksTable = 'banks';
+$bankTypesTable = 'bank_type';
+
 $configTable = 'config';
 $checkoutsTable = 'checkouts';
 
@@ -163,7 +166,11 @@ $db_table_cols = [
                     $simRulesTable => ['row', 'id', 'model_id', 'user_id', 'rules'],
                     $simVersionTable => ['row', 'id', 'model_id', 'user_id', 'name', 'note', 'can_view', 'can_load', 'data', 'created_at'],
                     $configTable => ['row', 'id', 'param', 'value'], 
-                    $checkoutsTable => ['row', 'id', 'order', 'type', 'details', 'status', 'created_at']
+                    $checkoutsTable => ['row', 'id', 'order', 'type', 'details', 'status', 'created_at'],
+
+                    $banksTable => ["row_id", "id", "type_id", "user_id", "bank_name", "bank_address", "contact_person", "contact_person_phone", "contact_person_email", 
+                                    "contact_person_designation", "duration_in_months", "interest_rate", "minimum_amount", "remarks", "created_at", "updated_at",],
+                    $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at']
                 ];
 
 
