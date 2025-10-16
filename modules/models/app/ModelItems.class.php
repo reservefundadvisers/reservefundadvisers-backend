@@ -105,10 +105,19 @@ class Models
     public function save($data){
         global $auth, $modelItemsTable, $modelsTable, $simActualTable, $simSplitsTable, $simDeficitTable, $simSplitsLTIMTable, $simDeficitLTIMTable;
 
-        if(!is_valid($data, 'model_id'))return ['error'=>$this->errors['model_id']];
-        if(!exists($modelsTable, ['id'=>$data['model_id']]))return ['error'=>$this->errors['missing']];
+        if(!is_valid($data, 'model_id')) {
+            // return ['error'=>$this->errors['model_id']];
+            return send_json_response(false, 400, $this->errors['model_id']);
+        } 
+        if(!exists($modelsTable, ['id'=>$data['model_id']])) {
+            // return ['error'=>$this->errors['missing']];
+            return send_json_response(false, 400, $this->errors['missing']);
+        } 
 
-        if(!belongs_to_client($modelsTable, $data['model_id'], false, true))return ['error'=>$this->errors['not_allowed']];
+        if(!belongs_to_client($modelsTable, $data['model_id'], false, true)) {
+            // return ['error'=>$this->errors['not_allowed']];
+            return send_json_response(false, 400, $this->errors['not_allowed']);
+        } 
 
 
         
@@ -203,8 +212,13 @@ class Models
             if(!is_numeric($item['redundancy']))$item['redundancy'] = 0;
             if(!is_numeric($item['remaining_life']))$item['remaining_life'] = 0;
             if(!is_numeric($item['cost']))$item['cost'] = 0;
-            if(!is_numeric($item['estimated_cost']))$item['estimated_cost'] = 0;
-            if(!is_numeric($item['actual_cost']))$item['actual_cost'] = 0;
+
+            if (isset($item['estimated_cost'])) {
+                if(!is_numeric($item['estimated_cost']))$item['estimated_cost'] = 0;
+            }
+            if (isset($item['actual_cost'])) {
+                if(!is_numeric($item['actual_cost']))$item['actual_cost'] = 0;
+            }
 
 
             $ret_id = save_element($modelItemsTable, $item);
@@ -215,11 +229,14 @@ class Models
         
         
 
-        if($ret_id === false)
-            return ['error' => ''];    
+        if($ret_id === false){
+            // return ['error' => ''];    
+            return send_json_response(false, 404, $this->errors['not_found']);
+        }
         
-        set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
-        return ['success' => ''];
+        $response = set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
+        
+        return send_json_response(true, 200, $response);
         }
     }
 
@@ -382,7 +399,7 @@ class Models
     
     
     public function set($data){
-        global $auth, $modelItemsTable;
+        global $auth, $modelItemsTable , $modelsTable;
 
         if(!is_valid($data, 'id')){
             return ['error' => ''];

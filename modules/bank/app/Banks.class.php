@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../../../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 class Banks
 {
 
@@ -39,7 +43,7 @@ class Banks
         global $banksTable;
         
         $banks = get_elements($banksTable, [], '*');
-        if(!$banks) return send_json_response(false, 400, $this->errors['not_found']);
+        if (!$banks) return send_json_response(false, 400, $this->errors['not_found']);
 
         return send_json_response(true, 200, $this->success['sucess'], ['bank types' => $banks]);
     }
@@ -54,41 +58,134 @@ class Banks
     {
         global $auth, $bankTypesTable, $usersTable, $banksTable;
 
-        $checkFor = ['user_id', 'type_id','bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation', 'duration_in_months', 'interest_rate', 'minimum_amount', 'remarks'];
+        $user_id = $data["user_id"];
+        $type_id = $data["type_id"];
 
-        $res = check_missing($checkFor, $data, $this->errors);
-        if ($res !== true) {
-            $res['message'] = 'Missing required fields !';
-             return send_json_response(false, 400, null, [ $res ]);
+        // Handle the uploaded file
+        if (isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK) {
+            $fileTmpPath = $_FILES['file']['tmp_name'];
+            $fileName = $_FILES['file']['name'];
+            $fileType = $_FILES['file']['type'];
+
+            // Validate file type (Excel or CSV)
+            $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
+            if (!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)) {
+                return send_json_response(false, 400, $this->errors['file_type']);
+            }
+
+            try {
+                // Load the file
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fileTmpPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray();
+
+                // Initialize array to store the parsed data
+                $bank_data = [];
+                for ($i = 1; $i < count($rows); $i++) {
+                    $cells = $rows[$i];
+
+                    // Skip empty rows or rows with insufficient data
+                    if (count($cells) < 10 || (empty(trim($cells[0])) && empty(trim($cells[1])))) continue;
+
+                    // Extract the data for each row
+                    $bank = [
+                        'bank_name' => trim($cells[0]),
+                        'duration_in_months' => intval(preg_replace('/\D/', '', $cells[1])),
+                        'bank_address' => trim($cells[2]),
+                        'contact_person' => trim($cells[3]),
+                        'contact_person_phone' => trim($cells[4]),
+                        'contact_person_email' => trim($cells[5]),
+                        'contact_person_designation' => trim($cells[6]),
+                        'interest_rate' => floatval(preg_replace('/[^\d.]/', '', $cells[7])),
+                        'minimum_amount' => floatval(preg_replace('/[^\d.]/', '', $cells[8])),
+                        'remarks' => trim($cells[9]),
+                    ];
+
+                    // Optional: Validate the bank data (e.g., ensure minimum amount and interest rate are set)
+                    if (!empty($bank['bank_name']) && $bank['interest_rate'] > 0 && $bank['minimum_amount'] > 0) {
+                        $bank_data[] = $bank;
+                    }
+                }
+
+                // Validate bank type and user
+                if (!exists($bankTypesTable, ['id' => $type_id])) {
+                    return send_json_response(false, 400, 'Bank type not found!');
+                }
+                if (!exists($usersTable, ['id' => $user_id])) {
+                    return send_json_response(false, 400, 'User not found!');
+                }
+
+                // Save the extracted bank data
+                foreach ($bank_data as $bank) {
+
+                    // Prepare the bank data to be saved
+                    $bank_id = generate_id();
+                    $bank['id'] = $bank_id;
+                    $bank['user_id'] = $user_id;
+                    $bank['type_id'] = $type_id;
+
+                    // Save the bank information to the database
+                    $result = save_element($banksTable, $bank);
+
+                    if ($result === false) {
+                        return send_json_response(false, 500, 'Failed to save bank data');
+                    }
+                }
+
+                // If successful, return the success response
+                return send_json_response(true, 200, 'Successfully saved bank data', ['data' => $bank_data]);
+            } catch (Exception $e) {
+                return send_json_response(false, 500, 'Error processing file: ' . $e->getMessage());
+            }
+        } else {
+
+            $checkFor = ['user_id', 'type_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation', 'duration_in_months', 'interest_rate', 'minimum_amount', 'remarks'];
+
+            $res = check_missing($checkFor, $data, $this->errors);
+            if ($res !== true) {
+                $res['message'] = 'Missing required fields !';
+                return send_json_response(false, 400, null, [$res]);
+            }
+
+            // check if bank type already exists
+            if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
+                $error = 'Bank type not found !';
+                return send_json_response(false, 400, $error);
+            }
+
+            // check if user exists
+            if (!exists($usersTable, ['id' => $data['user_id']])) {
+                $error = 'User not found !';
+                return send_json_response(false, 400, $error);
+            }
+
+            $bank_id = generate_id();
+            $data['id'] = $bank_id;
+
+            $bank_id = save_element($banksTable, $data);
+
+            if ($bank_id === false) {
+                return send_json_response(false, 500, $this->errors['save']);
+            }
+
+            return send_json_response(true, 200, $this->success['sucess'], ['id' => $bank_id]);
         }
 
-        // check if bank type already exists
-        if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
-            $error = 'Bank type not found !';
-            return send_json_response(false, 400, $error);
-        }
+        // If no file was uploaded or the file has an error
+        return send_json_response(false, 400, 'File upload error');
+    }
+    public function delete($data)
+    {
+        global $banksTable;
 
-        // check if user exists
-        if (!exists($usersTable, ['id' => $data['user_id']])) {
-            $error = 'User not found !';
-            return send_json_response(false, 400, $error);
-        }
-
-        $bank_id = generate_id();
-        $data['id'] = $bank_id;
-
-        $bank_id = save_element($banksTable, $data);
+        $bank_id = $data['id'];
+        $bank_id = delete_elements_by_id($banksTable, $bank_id);
 
         if ($bank_id === false) {
             return send_json_response(false, 500, $this->errors['save']);
         }
 
         return send_json_response(true, 200, $this->success['sucess'], ['id' => $bank_id]);
-    }
-
-    public function delete($data)
-    {
-        return true;
     }
 
     public function set($data)
@@ -99,6 +196,7 @@ class Banks
     private $errors = [
         "not_found" => "Data not found !",
         'save' => 'Unable to save data !',
+        'file_type' => 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.',
     ];
 
     private $success = [

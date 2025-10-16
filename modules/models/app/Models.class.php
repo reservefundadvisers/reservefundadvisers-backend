@@ -76,7 +76,7 @@ class Models
         $results = get_elements_join($modelsTable, $conds,
                                         "LEFT JOIN $clientsTable ON $clientsTable.id = $modelsTable.client_id
                                          LEFT JOIN $simDeficitTable ON $simDeficitTable.model_id = $modelsTable.id",
-                                        "$modelsTable.*, IF(COUNT($modelsTable.id) - 1 > 0, 1, 0) AS has_simulation, CASE WHEN $clientsTable.association IS NOT NULL THEN $clientsTable.association ELSE 'unspecified' END AS association ", " GROUP BY $modelsTable.id ORDER BY $modelsTable.row DESC".check_val($pagination, 'query'));
+                                        "$modelsTable.*, IF(COUNT($modelsTable.id) - 1 > 0, 1, 0) AS has_simulation, CASE WHEN $clientsTable.association IS NOT NULL THEN $clientsTable.association ELSE 'unspecified' END AS association ", " GROUP BY $modelsTable.id ORDER BY $modelsTable.row_id DESC".check_val($pagination, 'query'));
 
         
         if($is_pagination)
@@ -323,7 +323,10 @@ class Models
         $count = count($data['id']) - count($res);
         
 
-        if(!empty($res))return ['error' => $res];
+        if(!empty($res)){
+
+            return ['error' => $res];
+        } 
         else return ['success' => ''];
 
     }

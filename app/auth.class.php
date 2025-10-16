@@ -843,7 +843,7 @@ class Auth
 	
 			$cond['raw'] = $affected_id; 
 
-			$user_details = get_element($usersTable, ['row' => $affected_id]);
+			$user_details = get_element($usersTable, ['row_id' => $affected_id]);
 
 			$this->errormsg = array();
 			$this->successmsg = array();

@@ -68,7 +68,7 @@ class ClientUsers
 
         $results = get_elements_join($usersTable, $conds,
                                      "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id = $usersTable.position_id",
-                                     format_select($usersTable, "*", ['row', 'password']) . ", $clientPositionsTable.value AS position ", " GROUP BY $usersTable.id ORDER BY $usersTable.row DESC".check_val($pagination, 'query'));
+                                     format_select($usersTable, "*", ['row_id', 'password']) . ", $clientPositionsTable.value AS position ", " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
 
         $self_id = $auth->uid();
         foreach($results as &$result){
@@ -94,7 +94,7 @@ class ClientUsers
         $element = [];
         if(is_valid($data, 'id')){
             if(!belongs_to_client($usersTable, $data['id']))return ['error' => $this->errors['not_allowed'] ]; 
-            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row', 'password']));
+            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row_id', 'password']));
         }
             
 

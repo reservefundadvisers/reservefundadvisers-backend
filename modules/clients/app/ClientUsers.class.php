@@ -71,7 +71,7 @@ class ClientUsers
 
         $results = get_elements_join($usersTable, $conds,
                                 "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id = $usersTable.position_id",
-                                format_select($usersTable, "*", ['row', 'password']).", $clientPositionsTable.value AS position", " GROUP BY $usersTable.id ORDER BY $usersTable.row DESC".check_val($pagination, 'query'));
+                                format_select($usersTable, "*", ['row_id', 'password']).", $clientPositionsTable.value AS position", " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
         /* ******* */
        
 
@@ -94,7 +94,7 @@ class ClientUsers
         
         $element = [];
         if(is_valid($data, 'id')){
-            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row', 'password']));
+            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row_id', 'password']));
             $element['client_type'] = explode('_', $element['role'])[0];
 
         }else if(is_valid($data, 'client_id')){

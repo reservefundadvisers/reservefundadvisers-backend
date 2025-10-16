@@ -37,21 +37,21 @@ class ClientPositions
         if(is_valid($data, 'id')){
             if(!belongs_to_client($clientPositionsTable, $data['id'], true))return ['error'=>'not_allowed'];
             $conds['id'] = $data['id'];
-            $clients_by_id = get_elements($clientPositionsTable, $conds, "*", "ORDER BY row ASC");
+            $clients_by_id = get_elements($clientPositionsTable, $conds, "*", "ORDER BY row_id ASC");
 
             return send_json_response(true, 200, '', ['positions' => $clients_by_id]);
 
         }else{
             
             if(!is_valid($data, 'client_id')){
-                $clients = get_elements($clientPositionsTable, [], "*", "ORDER BY row ASC");
+                $clients = get_elements($clientPositionsTable, [], "*", "ORDER BY row_id ASC");
                 // If client_id is not provided, return all positions
                 return send_json_response(true, 200, '', ['positions' => $clients]);
             }
 
             $conds['*client_id'] = $data['client_id'];
             $conds['raw'] = ('client_id = :client_id OR client_id IS NULL');
-            $clients_by_client_id = get_elements($clientPositionsTable, $conds, "*", "ORDER BY row ASC");
+            $clients_by_client_id = get_elements($clientPositionsTable, $conds, "*", "ORDER BY row_id ASC");
 
             return send_json_response(true, 200, '', ['positions' => $clients_by_client_id]);
         

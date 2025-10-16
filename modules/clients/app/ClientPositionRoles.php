@@ -36,20 +36,20 @@ class ClientPositionRoles
         if (is_valid($data, 'id')) {
 
             $conds['id'] = $data['id'];
-            $position_roles_by_id  = get_elements($clientPositionRolesTable, $conds, "*", "ORDER BY row ASC");
+            $position_roles_by_id  = get_elements($clientPositionRolesTable, $conds, "*", "ORDER BY row_id ASC");
 
             return send_json_response(true, 200, $this->success['sucess'], ['position_roles' => $position_roles_by_id]);
         } else {
 
             if (!is_valid($data, 'client_position_id')) {
-                $all_position_roles = get_elements($clientPositionRolesTable, [], "*", "ORDER BY row ASC");
+                $all_position_roles = get_elements($clientPositionRolesTable, [], "*", "ORDER BY row_id ASC");
                 return send_json_response(true, 200, $this->success['sucess'], ['position_roles' => $all_position_roles]);
             }
 
             if (exists($clientPositionsTable, ['id' => $data['client_position_id']])) {
                 $conds['*client_position_id'] = $data['client_position_id'];
                 $conds['raw'] = ('client_position_id = :client_position_id OR client_position_id IS NULL');
-                $position_roles_by_position_id = get_elements($clientPositionRolesTable, $conds, "*", "ORDER BY row ASC");
+                $position_roles_by_position_id = get_elements($clientPositionRolesTable, $conds, "*", "ORDER BY row_id ASC");
 
                 return send_json_response(true, 200, $this->success['sucess'], ['position_roles' => $position_roles_by_position_id]);
             }

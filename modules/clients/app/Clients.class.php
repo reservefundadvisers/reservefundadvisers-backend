@@ -89,7 +89,7 @@ class Clients
                                      "LEFT JOIN $usersTable ON $usersTable.client_id = $clientsTable.id AND $usersTable.client_id IS NOT NULL
                                       LEFT JOIN $clientsTable company_t ON company_t.id = $clientsTable.company_id",
                                      "$clientsTable.*, IFNULL(company_t.company, $clientsTable.company) AS company",
-                                     "GROUP BY $clientsTable.id ORDER BY row DESC ".check_val($pagination, 'query'));
+                                     "GROUP BY $clientsTable.id ORDER BY row_id DESC ".check_val($pagination, 'query'));
         
 
         if($is_pagination)

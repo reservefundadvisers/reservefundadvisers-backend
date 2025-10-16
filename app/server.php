@@ -53,11 +53,15 @@ $modules_dir = "$app_root/modules";
 // MySQL Configuration :
 // ------------------------
 
-$db_config['host'] = "127.0.0.1";
-$db_config['user'] = "root";
-$db_config['pass'] = "";
-$db_config['name'] = "orloff_updated";
+$db_config['host'] = $_ENV['DB_HOST'] ?? "localhost";
+$db_config['user'] = $_ENV['DB_USER'] ?? "root";
+$db_config['pass'] = $_ENV['DB_PASS'] ?? "";
+$db_config['name'] = $_ENV['DB_NAME'] ?? "orloff_row_updated";
 
+// $db_config['host'] = "127.0.0.1";
+// $db_config['user'] = "root";
+// $db_config['pass'] = "";
+// $db_config['name'] = "orloff_updated";
 
 
 
