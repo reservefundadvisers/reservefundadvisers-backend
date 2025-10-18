@@ -61,7 +61,7 @@ class Users
         }
 
         $results = get_elements($usersTable, $conds,
-                                format_select($usersTable, "*", ['row', 'password']), " GROUP BY $usersTable.id ORDER BY $usersTable.row DESC".check_val($pagination, 'query'));
+                                format_select($usersTable, "*", ['row_id', 'password']), " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
 
         $self_id = $auth->uid();
         foreach($results as &$result){
@@ -86,7 +86,7 @@ class Users
 
         $element = [];
         if(is_valid($data, 'id'))
-            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row', 'password']));
+            $element = get_element($usersTable, ['id' => $data['id']], format_select($usersTable, "*", ['row_id', 'password']));
 
 
         view($this->module_name, 'user.edit.php', $element);

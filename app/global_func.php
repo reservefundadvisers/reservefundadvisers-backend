@@ -308,7 +308,7 @@ function get_element($table, $conds=[], $select = "*", $extra = ""){
     if($results === null)$results = array();
     
     foreach($results as $key => $value){
-        unset($results['row']);
+        unset($results['row_id']);
         if($value === null)$results[$key] = "";
     }
 
@@ -339,7 +339,7 @@ function get_element_query($query, $conds=[]){
 
     
     foreach($results as $key => $value){
-        unset($results['row']);
+        unset($results['row_id']);
         //if($value === null)$row[$key] = "";
     }
     
@@ -364,7 +364,7 @@ function get_elements($table, $conds=[], $select = "*", $extra = "", $whereType 
 
     foreach($results as &$row){
         foreach($row as $key => $value){
-            unset($row['row']);
+            unset($row['row_id']);
             if($value === null)$row[$key] = "";
         }
     }
@@ -389,7 +389,7 @@ function get_elements_join($table, $conds=[], $join, $select = "*", $extra = "")
 
     foreach($results as &$row){
         foreach($row as $key => $value){
-            unset($row['row']);
+            unset($row['row_id']);
             if($value === null)$row[$key] = "";
         }
     }
@@ -413,7 +413,7 @@ function get_element_join($table, $conds=[], $join, $select = "*", $extra = ""){
     if($results === null)$results = array();
 
     foreach($results as $key => $value){
-        unset($results['row']);
+        unset($results['row_id']);
         if($value === null)$results[$key] = "";
     }
     

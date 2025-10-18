@@ -3331,7 +3331,7 @@ class Simulation
             "LEFT JOIN $usersTable ON $usersTable.id = $simVersionTable.user_id",
             format_select($simVersionTable, '*', ['user_id', 'data']) .
             ", IF(user_id IS NOT NULL AND user_id = :user_id, 1, 0) owned, $usersTable.fn, $usersTable.ln",
-            'ORDER BY row DESC'
+            'ORDER BY row_id DESC'
         );
 
         return $versions;

@@ -39,11 +39,11 @@ class ClientPositions
             if(!belongs_to_client($clientPositionsTable, $data['id'], true))return ['error'=>'not_allowed'];
             $conds['id'] = $data['id'];
 
-            return get_elements($clientPositionsTable, $conds, "*", "ORDER BY row ASC");
+            return get_elements($clientPositionsTable, $conds, "*", "ORDER BY row_id ASC");
 
         }else{
 
-            return get_elements($clientPositionsTable, $conds, "id, value, IF(client_id IS NULL, 0, 1) AS can_edit", "ORDER BY row ASC");
+            return get_elements($clientPositionsTable, $conds, "id, value, IF(client_id IS NULL, 0, 1) AS can_edit", "ORDER BY row_id ASC");
         
         }
         
