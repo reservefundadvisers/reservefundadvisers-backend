@@ -54,8 +54,8 @@ $modules_dir = "$app_root/modules";
 // ------------------------
 
 $db_config['host'] = $_ENV['DB_HOST'] ?? "localhost";
-$db_config['user'] = $_ENV['DB_USER'] ?? "root";
-$db_config['pass'] = $_ENV['DB_PASS'] ?? "";
+$db_config['user'] = $_ENV['DB_USER'] ?? "reservefundadvisers";
+$db_config['pass'] = $_ENV['DB_PASS'] ?? "Reservefundadvisers@123";
 $db_config['name'] = $_ENV['DB_NAME'] ?? "orloff_row_updated";
 
 // $db_config['host'] = "127.0.0.1";
