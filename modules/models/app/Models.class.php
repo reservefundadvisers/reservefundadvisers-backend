@@ -301,12 +301,16 @@ class Models
         $res = array();
 
         if(!is_valid($data, 'id')){
-            return ['error' => ''];
+            // return ['error' => ''];
+            return send_json_response(false, 400, $this->errors['model_id']);
         }
 
         foreach($data['id'] as $id){
-            if(!belongs_to_client($modelsTable, $id, false, true))
-                return ['error' => $this->errors['not_allowed'] ];
+            if(!belongs_to_client($modelsTable, $id, false, true)){
+
+                return send_json_response(false, 400, $this->errors['not_allowed']);
+                // return ['error' => $this->errors['not_allowed'] ];
+            }
         }
 
         
@@ -323,9 +327,13 @@ class Models
         $count = count($data['id']) - count($res);
         
 
-        if(!empty($res))return ['error' => $res];
-        else return ['success' => ''];
-
+        if(!empty($res)){
+            // return ['error' => $res];
+            return send_json_response(false, 400, $res);
+        } else {
+            return send_json_response(true, 200, $this->errors['deleted']);
+            // return ['success' => ''];
+        } 
     }
     
     
@@ -334,7 +342,8 @@ class Models
         global $auth, $modelsTable;
 
         if(!is_valid($data, 'id')){
-            return ['error' => ''];
+            // return ['error' => ''];
+            return send_json_response(false, 400, $this->errors['model_id']);
         }
 
         if(!belongs_to_client($modelsTable, $data['id'], false, true))return ['error' => $this->errors['not_allowed'] ];
