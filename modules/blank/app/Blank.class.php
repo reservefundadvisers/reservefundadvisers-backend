@@ -37,7 +37,7 @@ class Simulation
         if(!is_valid($data, 'model_id'))return ['error'=>$this->errors['model_id']];
         if(!exists($modelsTable, ['id'=>$data['model_id']]))return ['error'=>$this->errors['missing']];
 
-        if(!belongs_to_client($modelsTable, $modelsTable$data['model_id']))return ['error'=>'not_allowed'];
+        if(!belongs_to_client($modelsTable, $modelsTable,$data['model_id']))return ['error'=>'not_allowed'];
         
         $model = get_element($modelsTable, ['id'=>$data['model_id']]);
         $model_items = get_elements($modelItemsTable, ['model_id'=>$data['model_id']]);
