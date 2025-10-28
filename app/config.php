@@ -135,6 +135,7 @@ $simVersionTable = 'simulation_versions';
 
 $banksTable = 'banks';
 $bankTypesTable = 'bank_type';
+$bankDetailsTables = 'bank_details';
 
 $configTable = 'config';
 $checkoutsTable = 'checkouts';
@@ -168,9 +169,10 @@ $db_table_cols = [
                     $configTable => ['row_id', 'id', 'param', 'value'], 
                     $checkoutsTable => ['row_id', 'id', 'order', 'type', 'details', 'status', 'created_at'],
 
-                    $banksTable => ["row_id", "id", "type_id", "user_id", "bank_name", "bank_address", "contact_person", "contact_person_phone", "contact_person_email", 
-                                    "contact_person_designation", "duration_in_months", "interest_rate", "minimum_amount", "remarks", "created_at", "updated_at",],
-                    $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at']
+                    $banksTable => ["row_id", "id", "type_id", "user_id", "bank_name", "bank_address", "bank_address_2", "bank_city", "bank_state", "bank_zip", "contact_person", "contact_person_phone", "contact_person_email", 
+                                    "contact_person_designation", "created_at", "updated_at",],
+                    $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at'],
+                    $bankDetailsTables => ['row_id', 'id', 'bank_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
                 ];
 
 
