@@ -151,10 +151,10 @@ class Clients
             
             // allow management company when id is specified
             if($auth->checkRoleType('company') && !exists($clientsTable, ['id'=>$data['id'], 'company_id'=>$auth->clientId()]))
-                return ['error' => $this->errors['not_allowed'] ]; 
+                return send_json_response(false, 403, $this->errors['not_allowed']); 
         }
 
-        $ret = check_missing($checkFor, $data, $this->errors); if($ret !== true)return $ret;
+        $ret = check_missing($checkFor, $data, $this->errors); if($ret !== true)return send_json_response(false, 400, $ret['error']);
 
         // client type and company type
         if($isNew){
@@ -173,7 +173,7 @@ class Clients
         $client_id = save_element($clientsTable, $data);
 
         if($client_id === false)
-            return ['error' => ''];    
+            return send_json_response(false, 500, $this->errors['not_allowed']);    
 
         if($isNew){
 
