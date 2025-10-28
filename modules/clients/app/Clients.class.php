@@ -138,10 +138,10 @@ class Clients
         if($this->type == 'client')array_push($checkFor, 'association');
 
         $isNew = !is_valid($data, 'id');
-    
+
         if($isNew){
-            $checkFor = array_merge($checkFor, ['admin_fn', 'admin_ln', 'admin_email']);            
-            
+            // Admin details are no longer required
+
             // add client id
             if(empty($data['company_id'])){
                 $data['company_id'] = $auth->checkRoleType('company') ? $auth->clientId() : NULL;
@@ -175,13 +175,13 @@ class Clients
         if($client_id === false)
             return send_json_response(false, 500, $this->errors['not_allowed']);    
 
-        if($isNew){
+        if($isNew && isset($data['admin_fn']) && isset($data['admin_ln']) && isset($data['admin_email'])){
 
-            $admin_user = [ 'fn'=>$data['admin_fn'], 
-                            'ln'=>$data['admin_ln'], 
-                            'email'=>$data['admin_email'], 
-                            'password'=>check_val($data, 'admin_password'), 
-                            'role'=>$this->type . '_admin', 
+            $admin_user = [ 'fn'=>$data['admin_fn'],
+                            'ln'=>$data['admin_ln'],
+                            'email'=>$data['admin_email'],
+                            'password'=>check_val($data, 'admin_password'),
+                            'role'=>$this->type . '_admin',
                             'position_id'=>'US7EIBCL7II9FK8YNZESG2O031',
                             'client_id'=> $client_id];
 
