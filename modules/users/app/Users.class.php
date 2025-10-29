@@ -103,6 +103,8 @@ class Users
     
         $ret = check_missing($checkFor, $data, $this->errors); if($ret !== true)return $ret;
 
+        //added comment to remove undefine variable warning
+        $client_roles = '';
 
 
         // check if role is allowed client role, to avoid creating system users
@@ -212,10 +214,13 @@ class Users
      * @return array User profile session information or error message.
      */
     public function getProfile($data){
-        global $auth;
-        
+        global $auth, $usersTable;
+
         $user_info = $auth->sessioninfo();
         if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
+
+        $user_data = get_element($usersTable, ['id' => $user_info['uid']], 'position_id');
+        $user_info['position_id'] = $user_data['position_id'];
 
         return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
     }

@@ -42,15 +42,15 @@ class ClientUsers
 
 
     public function list($data){
-        global $auth, $usersTable, $clientPositionsTable, $roles_name, $roles_badge;
+        global $auth, $usersTable, $clientPositionsTable, $clientPositionRolesTable, $roles_name, $roles_badge;
 
-        
+
         if(!is_valid($data, 'client_id'))return ['error' => $this->errors['client_id']];
 
         /* CONDS */
         // check if an id is given
         $conds = format_conds($data, "( $usersTable.fn LIKE :search OR $usersTable.ln LIKE :search OR $usersTable.username LIKE :search OR
-                                        $clientPositionsTable.value LIKE :search OR $usersTable.email LIKE :search OR $usersTable.phone LIKE :search )");
+                                        $clientPositionsTable.value LIKE :search OR $clientPositionRolesTable.value LIKE :search OR $usersTable.email LIKE :search OR $usersTable.phone LIKE :search )");
 
         $conds[',role'] = ['client_admin', 'client_user', 'company_admin', 'company_user'];
         $conds['client_id'] = $data['client_id'];
@@ -64,22 +64,22 @@ class ClientUsers
 
         if($is_pagination){
             $count = get_element_join(  $usersTable, $conds,
-                                    "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id $usersTable.position_id",
-                                    "COUNT(id) AS count" );            
+                                    "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id = $usersTable.position_id LEFT JOIN $clientPositionRolesTable ON $clientPositionRolesTable.id = $usersTable.position_role_id",
+                                    "COUNT(id) AS count" );
             if(isset($count['count']))$total = (int)(intval($count['count'])/$pagination['size'])+1;
         }
 
         $results = get_elements_join($usersTable, $conds,
-                                "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id = $usersTable.position_id",
-                                format_select($usersTable, "*", ['row_id', 'password']).", $clientPositionsTable.value AS position", " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
+                                "LEFT JOIN $clientPositionsTable ON $clientPositionsTable.id = $usersTable.position_id LEFT JOIN $clientPositionRolesTable ON $clientPositionRolesTable.id = $usersTable.position_role_id",
+                                format_select($usersTable, "*", ['row_id', 'password']).", $clientPositionsTable.value AS position, $clientPositionRolesTable.value AS position_role", " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
         /* ******* */
-       
+
 
         if($is_pagination)
             return ['last_page'=>$total, 'data'=>$results, 'total'=>$count['count']];
         else
             return send_json_response(true, 200, $this->success['success'], ['data' => $results]);
-        
+
     }
 
     public function view($data){
