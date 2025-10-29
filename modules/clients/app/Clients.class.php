@@ -91,6 +91,17 @@ class Clients
                                      "$clientsTable.*, IFNULL(company_t.company, $clientsTable.company) AS company",
                                      "GROUP BY $clientsTable.id ORDER BY row_id DESC ".check_val($pagination, 'query'));
         
+        // decode association_style for each record
+        if (is_array($results) && !empty($results)) {
+            foreach ($results as $key => $row) {
+                if (!empty($row['association_style'])) {
+                    $decoded = json_decode($row['association_style'], true);
+                    $results[$key]['association_style'] = $decoded;
+                } else {
+                    $results[$key]['association_style'] = []; // fallback
+                }
+            }
+        }
 
         if($is_pagination)
             return ['last_page'=>$pages, 'data'=>$results, 'total'=>$total];
