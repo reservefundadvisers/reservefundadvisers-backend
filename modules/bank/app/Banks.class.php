@@ -40,9 +40,18 @@ class Banks
 
     public function list($data)
     {
-        global $banksTable;
+        global $banksTable, $auth;
+
+        $conds = [];
+        if ($auth->islogged()) {
+            $user_id = $auth->uid();
+            $conds['raw'] = "is_public = 1 OR user_id = :user_id";
+            $conds['user_id'] = $user_id;
+        } else {
+            $conds['is_public'] = true;
+        }
         
-        $banks = get_elements($banksTable, [], '*');
+        $banks = get_elements($banksTable, $conds, '*');
         if (!$banks){
             return send_json_response(false, 400, $this->errors['not_found']);
         } 
