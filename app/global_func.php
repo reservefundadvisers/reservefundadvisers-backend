@@ -588,7 +588,7 @@ function save_element($table, $data){
     
 
     if($update !== false){
-        $data['updated_at'] = time();
+        // $data['updated_at'] = time();
         checkInsertData($data, $table);
         
         try{
@@ -602,7 +602,7 @@ function save_element($table, $data){
     }else{
 
         
-        $data['created_at'] = time();
+        // $data['created_at'] = time();
         checkInsertData($data, $table);
         
         //if(isset($data['id']))unset($data['id']);

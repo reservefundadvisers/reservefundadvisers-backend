@@ -50,13 +50,13 @@ class Banks
         } else {
             $conds['is_public'] = true;
         }
-        
+
         $banks = get_elements($banksTable, $conds, '*');
         if (!$banks){
             return send_json_response(false, 400, $this->errors['not_found']);
-        } 
+        }
 
-        return send_json_response(true, 200, $this->success['sucess'], ['bank types' => $banks]);
+        return send_json_response(true, 200, $this->success['sucess'], ['banks' => $banks]);
     }
 
 
@@ -67,10 +67,10 @@ class Banks
 
     public function save($data)
     {
-        global $auth, $bankTypesTable, $usersTable, $banksTable;
+        global $auth, $bankTypesTable, $usersTable, $banksTable, $upload_dir_banks;
 
         $user_id = $data["user_id"];
-        $type_id = $data["type_id"];
+        // $type_id = $data["type_id"];
 
         // Handle the uploaded file
         if (isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK) {
@@ -98,30 +98,31 @@ class Banks
                     // Skip empty rows or rows with insufficient data
                     if (count($cells) < 10 || (empty(trim($cells[0])) && empty(trim($cells[1])))) continue;
 
-                    // Extract the data for each row
+                    // Extract the data for each row matching the updated table columns
                     $bank = [
                         'bank_name' => trim($cells[0]),
-                        'duration_in_months' => intval(preg_replace('/\D/', '', $cells[1])),
-                        'bank_address' => trim($cells[2]),
-                        'contact_person' => trim($cells[3]),
-                        'contact_person_phone' => trim($cells[4]),
-                        'contact_person_email' => trim($cells[5]),
-                        'contact_person_designation' => trim($cells[6]),
-                        'interest_rate' => floatval(preg_replace('/[^\d.]/', '', $cells[7])),
-                        'minimum_amount' => floatval(preg_replace('/[^\d.]/', '', $cells[8])),
-                        'remarks' => trim($cells[9]),
+                        'bank_address' => trim($cells[1]),
+                        'bank_address_2' => trim($cells[2] ?? ''),
+                        'bank_city' => trim($cells[3] ?? ''),
+                        'bank_state' => trim($cells[4] ?? ''),
+                        'bank_zip' => trim($cells[5] ?? ''),
+                        'contact_person' => trim($cells[6] ?? ''),
+                        'contact_person_phone' => trim($cells[7] ?? ''),
+                        'contact_person_email' => trim($cells[8] ?? ''),
+                        'contact_person_designation' => trim($cells[9] ?? ''),
+                        'media' => null,
                     ];
 
-                    // Optional: Validate the bank data (e.g., ensure minimum amount and interest rate are set)
-                    if (!empty($bank['bank_name']) && $bank['interest_rate'] > 0 && $bank['minimum_amount'] > 0) {
+                    // Validate the bank data (ensure bank_name is not empty)
+                    if (!empty($bank['bank_name'])) {
                         $bank_data[] = $bank;
                     }
                 }
 
-                // Validate bank type and user
-                if (!exists($bankTypesTable, ['id' => $type_id])) {
-                    return send_json_response(false, 400, 'Bank type not found!');
-                }
+                // // Validate bank type and user
+                // if (!exists($bankTypesTable, ['id' => $type_id])) {
+                //     return send_json_response(false, 400, 'Bank type not found!');
+                // }
                 if (!exists($usersTable, ['id' => $user_id])) {
                     return send_json_response(false, 400, 'User not found!');
                 }
@@ -133,7 +134,7 @@ class Banks
                     $bank_id = generate_id();
                     $bank['id'] = $bank_id;
                     $bank['user_id'] = $user_id;
-                    $bank['type_id'] = $type_id;
+                    // $bank['type_id'] = $type_id;
 
                     // Save the bank information to the database
                     $result = save_element($banksTable, $bank);
@@ -150,7 +151,16 @@ class Banks
             }
         } else {
 
-            $checkFor = ['user_id', 'type_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation', 'duration_in_months', 'interest_rate', 'minimum_amount', 'remarks'];
+            $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation'];
+
+            if(!empty($_FILES['media'])){
+            $image_upload = handle_file_upload($_FILES['media'], $upload_dir_banks);
+            // Upload the file
+            if ($image_upload['success'] === true) {
+                $image_path = $image_upload['path'];
+                $data['media'] = $image_path;
+            }
+        }
 
             $res = check_missing($checkFor, $data, $this->errors);
             if ($res !== true) {
@@ -158,11 +168,11 @@ class Banks
                 return send_json_response(false, 400, null, [$res]);
             }
 
-            // check if bank type already exists
-            if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
-                $error = 'Bank type not found !';
-                return send_json_response(false, 400, $error);
-            }
+            // // check if bank type already exists
+            // if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
+            //     $error = 'Bank type not found !';
+            //     return send_json_response(false, 400, $error);
+            // }
 
             // check if user exists
             if (!exists($usersTable, ['id' => $data['user_id']])) {

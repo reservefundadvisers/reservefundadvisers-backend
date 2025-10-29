@@ -41,7 +41,7 @@ class BankTypes
         $bank_types = get_elements($bankTypesTable, [], '*');
         if(!$bank_types) return send_json_response(false, 400, $this->errors['not_found']);
 
-        return send_json_response(true, 200, $this->success['sucess'], ['bank types' => $bank_types]);
+        return send_json_response(true, 200, $this->success['sucess'], ['bank_types' => $bank_types]);
     }
 
 
