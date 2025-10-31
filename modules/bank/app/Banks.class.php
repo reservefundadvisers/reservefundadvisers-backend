@@ -69,8 +69,9 @@ class Banks
     {
         global $auth, $bankTypesTable, $usersTable, $banksTable, $upload_dir_banks;
 
-        $user_id = $data["user_id"];
-        // $type_id = $data["type_id"];
+        // $user_id = $data["user_id"];
+        $user_id = $data['user_id'] ? $data['user_id'] : '';
+        $type_id = $data["type_id"] ? $data["type_id"] : '';
 
         // Handle the uploaded file
         if (isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK) {
@@ -134,7 +135,7 @@ class Banks
                     $bank_id = generate_id();
                     $bank['id'] = $bank_id;
                     $bank['user_id'] = $user_id;
-                    // $bank['type_id'] = $type_id;
+                    //$bank['type_id'] = $type_id;
 
                     // Save the bank information to the database
                     $result = save_element($banksTable, $bank);
@@ -169,19 +170,25 @@ class Banks
             }
 
             // // check if bank type already exists
-            // if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
-            //     $error = 'Bank type not found !';
-            //     return send_json_response(false, 400, $error);
-            // }
+            if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
+                $error = 'Bank type not found !';
+                return send_json_response(false, 400, $error);
+            }
 
             // check if user exists
             if (!exists($usersTable, ['id' => $data['user_id']])) {
                 $error = 'User not found !';
                 return send_json_response(false, 400, $error);
             }
+ 
+            $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
+            if (!is_numeric($contact_person_country_code)) {
+                    return send_json_response(false, 400, 'Country code is not valid.');
+            }
 
             $bank_id = generate_id();
             $data['id'] = $bank_id;
+            $data['type_id'] = $type_id;
 
             $bank_id = save_element($banksTable, $data);
 

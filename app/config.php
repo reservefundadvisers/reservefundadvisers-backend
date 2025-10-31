@@ -170,7 +170,7 @@ $db_table_cols = [
                     $configTable => ['row_id', 'id', 'param', 'value'], 
                     $checkoutsTable => ['row_id', 'id', 'order', 'type', 'details', 'status', 'created_at'],
 
-                    $banksTable => ["row_id", "id", "type_id", "user_id", "media", "bank_name", "bank_address", "bank_address_2", "bank_city", "bank_state", "bank_zip", "contact_person", "contact_person_phone", "contact_person_email",
+                    $banksTable => ["row_id", "id", "type_id", "user_id", "media", "bank_name", "bank_address", "bank_address_2", "bank_city", "bank_state", "bank_zip", "contact_person","contact_person_country_code", "contact_person_phone", "contact_person_email",
                                     "contact_person_designation", "remarks", "is_public", "created_at", "updated_at",],
                     $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at'],
                     $bankDetailsTables => ['row_id', 'id', 'bank_id', 'user_id' ,'type_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
