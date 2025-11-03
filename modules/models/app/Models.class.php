@@ -243,7 +243,7 @@ class Models
             if(is_valid($data, 'id'))
                 if(!belongs_to_client($modelsTable, $data['id'], false, true))return ['error' => $this->errors['not_allowed'] ];
 
-        if($auth->checkRoleType('client')){
+        if($auth->checkRoleType('client') && empty($data['client_id'])){
             $data['client_id'] = $auth->clientId();
         }
 
@@ -258,7 +258,7 @@ class Models
         if($ret_id === false)
             return ['error' => ''];    
         else
-            return ['success' => $ret_id];
+            return send_json_response(true, 200, $this->success['sucess'], ['ID' => $ret_id]);
         }
     }
 
@@ -406,6 +406,9 @@ class Models
                         "housing" => "<b>Housing Units</b> invalid !",
                         "starting_amount" => "<b>starting_amount</b> invalid !",
                         "monthly_fees" => "<b>Monthly Fees</b> invalid !"];
+
+    private $success = [ "sucess" => "Operation completed successfully!",
+                         "deleted" => "Selected model(s) deleted successfully!" ];
 
 
 }

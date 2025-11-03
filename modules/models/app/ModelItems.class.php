@@ -114,10 +114,11 @@ class Models
             return send_json_response(false, 400, $this->errors['missing']);
         } 
 
-        if(!belongs_to_client($modelsTable, $data['model_id'], false, true)) {
-            // return ['error'=>$this->errors['not_allowed']];
-            return send_json_response(false, 400, $this->errors['not_allowed']);
-        } 
+        // if(!belongs_to_client($modelsTable, $data['model_id'], false, true)) {
+        //     // return ['error'=>$this->errors['not_allowed']];
+        //     rfa_create_log("Models::save - Unauthorized access attempt by user " . $auth->uid() . " for model_id " . $data['model_id']);
+        //     return send_json_response(false, 400, $this->errors['not_allowed']);
+        // } 
 
 
         
