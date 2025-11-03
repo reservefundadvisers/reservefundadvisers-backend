@@ -38,19 +38,19 @@ class BankDetail
 
     public function list($data)
     {
-        global $auth, $bankDetailsTables;
+        global $auth, $bankDetailsTables, $banksTable;
 
         if (!$auth->islogged()) {
             return send_json_response(false, 401, 'Unauthorized');
         }
 
         $user_id = $auth->uid();
-        $conds = ['user_id' => $user_id];
 
         if (isset($data['bank_id'])) {
             $conds['bank_id'] = $data['bank_id'];
+            $conds['user_id'] = $user_id;
         }
-
+        
         $bank_details = get_elements($bankDetailsTables, $conds, '*');
         if (!$bank_details) {
             return send_json_response(false, 400, $this->errors['not_found']);

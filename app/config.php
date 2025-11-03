@@ -136,6 +136,7 @@ $simVersionTable = 'simulation_versions';
 $banksTable = 'banks';
 $bankTypesTable = 'bank_type';
 $bankDetailsTables = 'bank_details';
+$bankUsersTable = 'user_banks';
 
 $configTable = 'config';
 $checkoutsTable = 'checkouts';
@@ -174,6 +175,7 @@ $db_table_cols = [
                                     "contact_person_designation", "remarks", "is_public", "created_at", "updated_at",],
                     $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at'],
                     $bankDetailsTables => ['row_id', 'id', 'bank_id', 'user_id' ,'type_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
+                    $bankUsersTable => ['row_id', 'id', 'bank_id', 'user_id', 'created_at', 'updated_at'],
                 ];
 
 
