@@ -393,6 +393,8 @@ auth_disconnect();
             zip_input.on('input change', function(){ update_city_select(this.value); }).change();
 
             subscriber.click(function(){
+                // Temporary disable stripe payment
+                window.location.href = global_base + "/index.php"; return;
 
                 // validation
                 var has_error = false;
@@ -410,7 +412,7 @@ auth_disconnect();
                 if(has_error)return;
 
                 
-                ajax_get_no_loading(global_base+"/subscription.php", {"save":gather_editor(free_form)}, function(resp){
+ajax_get_no_loading(global_base+"/subscription.php", {"save":gather_editor(free_form)}, function(resp){
 
                     if(resp.error != undefined){
                         error(resp.error, '', default_alert_timeout);
