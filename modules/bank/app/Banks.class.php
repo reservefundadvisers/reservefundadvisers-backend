@@ -67,11 +67,14 @@ class Banks
 
     public function save($data)
     {
-        global $auth, $bankTypesTable, $usersTable, $banksTable, $upload_dir_banks;
+        global $auth, $bankTypesTable, $usersTable, $banksTable, $upload_dir_banks, $bankUsersTable;
 
         // $user_id = $data["user_id"];
         $user_id = $data['user_id'] ? $data['user_id'] : '';
+
+        if (!empty($data["type_id"]) && isset($data["type_id"])) {
         $type_id = $data["type_id"] ? $data["type_id"] : '';
+        }
 
         // Handle the uploaded file
         if (isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK) {
@@ -169,10 +172,12 @@ class Banks
                 return send_json_response(false, 400, null, [$res]);
             }
 
-            // // check if bank type already exists
+            if (isset($type_id)) {
+                // check if bank type already exists
             if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
                 $error = 'Bank type not found !';
                 return send_json_response(false, 400, $error);
+                }
             }
 
             // check if user exists
@@ -188,7 +193,9 @@ class Banks
 
             $bank_id = generate_id();
             $data['id'] = $bank_id;
+            if (isset($type_id)) {
             $data['type_id'] = $type_id;
+            }
 
             $bank_id = save_element($banksTable, $data);
 
