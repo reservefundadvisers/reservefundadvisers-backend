@@ -73,7 +73,7 @@ class Banks
         $user_id = $data['user_id'] ? $data['user_id'] : '';
 
         if (!empty($data["type_id"]) && isset($data["type_id"])) {
-        $type_id = $data["type_id"] ? $data["type_id"] : '';
+            $type_id = $data["type_id"] ? $data["type_id"] : '';
         }
 
         // Handle the uploaded file
@@ -158,13 +158,13 @@ class Banks
             $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation'];
 
             if(!empty($_FILES['media'])){
-            $image_upload = handle_file_upload($_FILES['media'], $upload_dir_banks);
-            // Upload the file
-            if ($image_upload['success'] === true) {
-                $image_path = $image_upload['path'];
-                $data['media'] = $image_path;
+                $image_upload = handle_file_upload($_FILES['media'], $upload_dir_banks);
+                // Upload the file
+                if ($image_upload['success'] === true) {
+                    $image_path = $image_upload['path'];
+                    $data['media'] = $image_path;
+                }
             }
-        }
 
             $res = check_missing($checkFor, $data, $this->errors);
             if ($res !== true) {
@@ -174,9 +174,9 @@ class Banks
 
             if (isset($type_id)) {
                 // check if bank type already exists
-            if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
-                $error = 'Bank type not found !';
-                return send_json_response(false, 400, $error);
+                if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
+                    $error = 'Bank type not found !';
+                    return send_json_response(false, 400, $error);
                 }
             }
 
@@ -185,16 +185,16 @@ class Banks
                 $error = 'User not found !';
                 return send_json_response(false, 400, $error);
             }
- 
+
             $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
             if (!is_numeric($contact_person_country_code)) {
-                    return send_json_response(false, 400, 'Country code is not valid.');
+                return send_json_response(false, 400, 'Country code is not valid.');
             }
 
             $bank_id = generate_id();
             $data['id'] = $bank_id;
             if (isset($type_id)) {
-            $data['type_id'] = $type_id;
+                $data['type_id'] = $type_id;
             }
 
             $bank_id = save_element($banksTable, $data);
@@ -202,6 +202,11 @@ class Banks
             if ($bank_id === false) {
                 return send_json_response(false, 500, $this->errors['save']);
             }
+
+            $user_bank = save_element($bankUsersTable, [
+                'bank_id' => $bank_id,
+                'user_id' => $user_id,
+            ]);
 
             return send_json_response(true, 200, $this->success['sucess'], ['id' => $bank_id]);
         }
