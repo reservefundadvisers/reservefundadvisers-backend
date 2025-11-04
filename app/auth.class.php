@@ -813,7 +813,7 @@ class Auth
 				WHERE id=?");
 
 			$query->bind_param(
-				"ssssssssi",
+    			"sssssssss", 
 				$user['first_name'],
 				$user['last_name'],
 				$user['email'],
