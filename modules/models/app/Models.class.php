@@ -256,9 +256,9 @@ class Models
         $ret_id = save_element($modelsTable, $data);
 
         if($ret_id === false)
-            return ['error' => ''];    
+            return send_json_response(false, 500, 'Failed to save model.');
         else
-            return send_json_response(true, 200, $this->success['sucess'], ['ID' => $ret_id]);
+            return send_json_response(true, 200, $this->success['sucess'], ['data' =>['model_id' => $ret_id ] ]);
         }
     }
 

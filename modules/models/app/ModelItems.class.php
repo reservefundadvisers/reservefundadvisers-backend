@@ -237,7 +237,7 @@ class Models
         
         $response = set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
         
-        return send_json_response(true, 200, $response);
+        return send_json_response(true, 200, 'Model Items Created Successfully', ['data' =>['model_id' => $model_id ] ]);
         }
     }
 
