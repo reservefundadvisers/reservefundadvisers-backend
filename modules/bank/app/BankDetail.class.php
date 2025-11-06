@@ -128,6 +128,7 @@ class BankDetail
                     // Define default structure by type
                     if (strtolower($type_name) === 'high yield saving' || strtolower($type_name) === 'hyd') {
                         $defaultFields = [
+                            'group_id' => $group_id,
                             'interest' => null,
                             'minimum_amount' => null,
                             'is_demand_deposit' => null,
@@ -135,6 +136,7 @@ class BankDetail
                         ];
                     } elseif (strtolower($type_name) === 'certificate of deposit' || strtolower($type_name) === 'cd') {
                         $defaultFields = [
+                            'group_id' => $group_id,
                             'duration' => null,
                             'interest' => null,
                             'minimum_amount' => null,
