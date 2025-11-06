@@ -100,26 +100,60 @@ class BankDetail
                     //     'minimum_amount' => $fields['minimum_amount'] ?? '',
                     //     'withdrawal_terms' => $fields['withdrawal_terms'] ?? '',
                     //     'remarks' => $fields['remarks'] ?? ''
-                    // ];
-                    $row = [];
+                    // // ];
+                    // $row = [];
 
-                    if (!empty($fields['duration'])) {
-                        $row['duration'] = $fields['duration'];
-                    }
-                    if (!empty($fields['interest'])) {
-                        $row['interest'] = $fields['interest'];
-                    }
-                    if (!empty($fields['minimum_amount'])) {
-                        $row['minimum_amount'] = $fields['minimum_amount'];
-                    }
-                    if (!empty($fields['withdrawal_terms'])) {
-                        $row['withdrawal_terms'] = $fields['withdrawal_terms'];
-                    }
-                    if (!empty($fields['remarks'])) {
-                        $row['remarks'] = $fields['remarks'];
+                    // if (!empty($fields['duration'])) {
+                    //     $row['duration'] = $fields['duration'];
+                    // }
+                    // if (!empty($fields['interest'])) {
+                    //     $row['interest'] = $fields['interest'];
+                    // }
+                    // if (!empty($fields['minimum_amount'])) {
+                    //     $row['minimum_amount'] = $fields['minimum_amount'];
+                    // }
+                    // if (!empty($fields['withdrawal_terms'])) {
+                    //     $row['withdrawal_terms'] = $fields['withdrawal_terms'];
+                    // }
+                    // if (!empty($fields['panalty'])) {
+                    //     $row['panalty'] = $fields['panalty'];
+                    // }
+                    //  if (!empty($fields['is_demand_deposit'])) {
+                    //     $row['is_demand_deposit'] = $fields['is_demand_deposit'];
+                    // }
+                    // if (!empty($fields['remarks'])) {
+                    //     $row['remarks'] = $fields['remarks'];
+                    // }
+
+                    // Define default structure by type
+                    if (strtolower($type_name) === 'high yield saving' || strtolower($type_name) === 'hyd') {
+                        $defaultFields = [
+                            'interest' => null,
+                            'minimum_amount' => null,
+                            'is_demand_deposit' => null,
+                            'remarks' => null
+                        ];
+                    } elseif (strtolower($type_name) === 'certificate of deposit' || strtolower($type_name) === 'cd') {
+                        $defaultFields = [
+                            'duration' => null,
+                            'interest' => null,
+                            'minimum_amount' => null,
+                            'panalty' => null,
+                            'remarks' => null
+                        ];
+                    } else {
+                        // Fallback: just include what exists
+                        $defaultFields = [];
                     }
 
-                    $grouped[$bank_id][$type_name][] = $row;
+                    // Fill in values from $fields (even if 0)
+                    foreach ($defaultFields as $key => $val) {
+                        if (isset($fields[$key])) {
+                            $defaultFields[$key] = $fields[$key];
+                        }
+                    }
+
+                    $grouped[$bank_id][$type_name][] = $defaultFields;
                 }
             }
         }
@@ -173,23 +207,6 @@ class BankDetail
             return send_json_response(false, 400, 'type is required');
         }
 
-        if ($data['type'] === 'cd') {
-            $checkFor = ['duration', 'interest', 'minimum_amount', 'remarks'];
-            if (isset($data['withdrawal_terms'])) {
-                unset($data['withdrawal_terms']);
-            }
-        } else if ($data['type'] === 'hys') {
-            $checkFor = ['duration', 'interest', 'minimum_amount', 'withdrawal_terms', 'remarks'];
-        } else {
-            return send_json_response(false, 400, 'Invalid type value');
-        }
-
-        $res = check_missing($checkFor, $data, $this->errors);
-        if ($res !== true) {
-            $res['message'] = 'Missing required fields !';
-            return send_json_response(false, 400, null, [$res]);
-        }
-
         if (empty($data['bank_id']) || empty($data['type_id'])) {
             return send_json_response(false, 400, 'bank_id and type_id are required');
         }
@@ -198,63 +215,211 @@ class BankDetail
             return send_json_response(false, 400, 'Bank not found');
         }
 
-        // Expected fields
-        $field_names = ['duration', 'interest', 'minimum_amount', 'withdrawal_terms', 'remarks'];
+        // Handle the uploaded file
+        if (isset($_FILES['file']) && $_FILES['file']['error'] == UPLOAD_ERR_OK) {
+            $fileTmpPath = $_FILES['file']['tmp_name'];
+            $fileName = $_FILES['file']['name'];
+            $fileType = $_FILES['file']['type'];
 
-        // Determine number of rows
-        $total_rows = isset($data['duration']) ? count($data['duration']) : 0;
-        if ($total_rows == 0) {
-            return send_json_response(false, 400, 'No deposit entries found');
-        }
-
-        $inserted_groups = [];
-
-        // Loop through each row (deposit entry)
-        for ($i = 0; $i < $total_rows; $i++) {
-
-            // Per-row required field validation
-            foreach ($checkFor as $required_field) {
-                if (
-                    !isset($data[$required_field][$i]) ||
-                    trim($data[$required_field][$i]) === ''
-                ) {
-                    return send_json_response(false, 400, "Missing required field '{$required_field}' for row " . ($i + 1));
-                }
+            // Validate file type (Excel or CSV)
+            $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
+            if (!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)) {
+                return send_json_response(false, 400, $this->errors['file_type']);
             }
 
-            // Generate a group_id for this deposit row
-            $group_id = generate_id();
+            try {
+                // Load spreadsheet
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fileTmpPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray();
 
-            foreach ($field_names as $field) {
-                if (!isset($data[$field][$i])) continue;
+                if (count($rows) < 2) {
+                    return send_json_response(false, 400, 'No data rows found in the file');
+                }
 
-                $field_value = trim($data[$field][$i]);
-                if ($field_value === '') continue;
+                // Detect the actual header row (skip empty/comment rows)
+                $headerRowIndex = null;
+                foreach ($rows as $i => $r) {
+                    $joined = strtolower(implode(' ', $r));
+                    if (strpos($joined, 'interest') !== false) {
+                        $headerRowIndex = $i;
+                        break;
+                    }
+                }
 
-                $detail_data = [
-                    'id' => generate_id(),
-                    'bank_id' => $data['bank_id'],
-                    'type_id' => $data['type_id'],
-                    'group_id' => $group_id, // reused for each row
-                    'field_name' => $field,
-                    'field_value' => $field_value
+                if ($headerRowIndex === null) {
+                    return send_json_response(false, 400, 'Header row not found in file');
+                }
+
+                $headers = array_map('trim', $rows[$headerRowIndex]);
+
+                // Normalize headers to internal field names
+                $headerMap = [
+                    'duration (in months)' => 'duration',
+                    'apy interest (%)' => 'interest',
+                    'minimum amount ($)' => 'minimum_amount',
+                    'early withdrawl (%)' => 'panalty',
+                    'demand deposit (boolean)' => 'is_demand_deposit',
+                    'remarks' => 'remarks'
                 ];
 
-                $result = save_element($bankDetailsTables, $detail_data);
-                if ($result === false) {
-                    return send_json_response(false, 500, 'Error saving bank details');
+                $normalizedHeaders = [];
+                foreach ($headers as $header) {
+                    $key = strtolower(trim($header));
+                    $normalizedHeaders[] = $headerMap[$key] ?? strtolower(str_replace(' ', '_', $key));
                 }
+
+                // Data rows start after the header
+                $dataRows = array_slice($rows, $headerRowIndex + 1);
+
+                // Expected columns based on type
+                if ($data['type'] === 'cd') {
+                    $expectedHeaders = ['duration', 'interest', 'minimum_amount', 'panalty', 'remarks'];
+                } elseif ($data['type'] === 'hys') {
+                    $expectedHeaders = ['interest', 'minimum_amount', 'is_demand_deposit', 'remarks'];
+                } else {
+                    return send_json_response(false, 400, 'Invalid type value');
+                }
+
+                // Verify expected headers exist
+                foreach ($expectedHeaders as $col) {
+                    if (!in_array($col, $normalizedHeaders)) {
+                        return send_json_response(false, 400, "Missing column: $col");
+                    }
+                }
+
+                $inserted_groups = [];
+
+                // Loop through all data rows
+                foreach ($dataRows as $i => $r) {
+                    $row = array_combine($normalizedHeaders, $r);
+                    if (!$row) continue;
+
+                    // Skip completely empty rows
+                    if (empty(array_filter($row))) continue;
+
+                    // Validation per type
+                    $checkFor = ($data['type'] === 'cd')
+                        ? ['duration', 'interest']
+                        : ['interest'];
+
+                    foreach ($checkFor as $required_field) {
+                        if (!isset($row[$required_field]) || trim($row[$required_field]) === '') {
+                            return send_json_response(false, 400, "Missing required field '{$required_field}' for row " . ($i + 1));
+                        }
+                    }
+
+                    $group_id = generate_id();
+
+                    // Save each valid field
+                    foreach ($expectedHeaders as $field) {
+                        $field_value = trim($row[$field] ?? '');
+                        if ($field_value === '') continue;
+
+                        $detail_data = [
+                            'id' => generate_id(),
+                            'bank_id' => $data['bank_id'],
+                            'type_id' => $data['type_id'],
+                            'group_id' => $group_id,
+                            'field_name' => $field,
+                            'field_value' => $field_value
+                        ];
+
+                        $result = save_element($bankDetailsTables, $detail_data);
+                        if ($result === false) {
+                            return send_json_response(false, 500, "Error saving row {$i}");
+                        }
+                    }
+
+                    $inserted_groups[] = $group_id;
+                }
+
+                // Success response
+                return send_json_response(true, 200, 'File data saved successfully', [
+                    'bank_id' => $data['bank_id'],
+                    'type_id' => $data['type_id'],
+                    'total_groups' => count($inserted_groups),
+                    'group_ids' => $inserted_groups
+                ]);
+            } catch (Exception $e) {
+                return send_json_response(false, 500, 'Error processing file: ' . $e->getMessage());
+            }
+        } else {
+            if ($data['type'] === 'cd') {
+                $checkFor = ['duration', 'interest'];
+                if (isset($data['withdrawal_terms'])) {
+                    unset($data['withdrawal_terms']);
+                }
+            } else if ($data['type'] === 'hys') {
+                $checkFor = ['interest'];
+            } else {
+                return send_json_response(false, 400, 'Invalid type value');
             }
 
-            $inserted_groups[] = $group_id;
-        }
+            $res = check_missing($checkFor, $data, $this->errors);
+            if ($res !== true) {
+                $res['message'] = 'Missing required fields !';
+                return send_json_response(false, 400, null, [$res]);
+            }
 
-        return send_json_response(true, 200, 'Bank details saved successfully', [
-            'bank_id' => $data['bank_id'],
-            'type_id' => $data['type_id'],
-            'total_groups' => count($inserted_groups),
-            'group_ids' => $inserted_groups
-        ]);
+            // Expected fields
+            $field_names = ['duration', 'interest', 'minimum_amount', 'withdrawal_terms', 'panalty', 'is_demand_deposit', 'remarks'];
+
+            // Determine number of rows
+            $total_rows = isset($data['interest']) ? count($data['interest']) : 0;
+            if ($total_rows == 0) {
+                return send_json_response(false, 400, 'No deposit entries found');
+            }
+
+            $inserted_groups = [];
+
+            // Loop through each row (deposit entry)
+            for ($i = 0; $i < $total_rows; $i++) {
+
+                // Per-row required field validation
+                foreach ($checkFor as $required_field) {
+                    if (
+                        !isset($data[$required_field][$i]) ||
+                        trim($data[$required_field][$i]) === ''
+                    ) {
+                        return send_json_response(false, 400, "Missing required field '{$required_field}' for row " . ($i + 1));
+                    }
+                }
+
+                // Generate a group_id for this deposit row
+                $group_id = generate_id();
+
+                foreach ($field_names as $field) {
+                    if (!isset($data[$field][$i])) continue;
+
+                    $field_value = trim($data[$field][$i]);
+                    if ($field_value === '') continue;
+
+                    $detail_data = [
+                        'id' => generate_id(),
+                        'bank_id' => $data['bank_id'],
+                        'type_id' => $data['type_id'],
+                        'group_id' => $group_id, // reused for each row
+                        'field_name' => $field,
+                        'field_value' => $field_value
+                    ];
+
+                    $result = save_element($bankDetailsTables, $detail_data);
+                    if ($result === false) {
+                        return send_json_response(false, 500, 'Error saving bank details');
+                    }
+                }
+
+                $inserted_groups[] = $group_id;
+            }
+
+            return send_json_response(true, 200, 'Bank details saved successfully', [
+                'bank_id' => $data['bank_id'],
+                'type_id' => $data['type_id'],
+                'total_groups' => count($inserted_groups),
+                'group_ids' => $inserted_groups
+            ]);
+        }
     }
 
     public function delete($data)
