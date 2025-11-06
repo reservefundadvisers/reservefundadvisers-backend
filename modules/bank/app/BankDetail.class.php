@@ -165,40 +165,97 @@ class BankDetail
 
     public function edit($data)
     {
-        global $auth, $bankDetailsTables, $usersTable;
+        global $auth, $bankDetailsTables;
 
-        if (!$auth->islogged()) {
-            return send_json_response(false, 401, 'Unauthorized');
+        if (empty($data['bank_id']) || empty($data['type_id'])) {
+            return send_json_response(false, 400, 'bank_id and type_id are required');
         }
 
-        $user_id = $auth->uid();
-
-        if (!isset($data['id'])) {
-            return send_json_response(false, 400, 'ID is required for edit');
+        if (empty($data['group_id'])) {
+            return send_json_response(false, 400, 'group_id is required');
         }
 
-        // Check if the record exists and belongs to the user
-        $existing = get_element($bankDetailsTables, ['id' => $data['id'], 'user_id' => $user_id]);
-        if (!$existing) {
-            return send_json_response(false, 404, $this->errors['not_found']);
+        // Determine fields per type
+        if ($data['type'] === 'cd') {
+            $field_names = ['duration', 'interest', 'minimum_amount', 'panalty', 'remarks'];
+        } elseif ($data['type'] === 'hys') {
+            $field_names = ['interest', 'minimum_amount', 'is_demand_deposit', 'remarks'];
+        } else {
+            return send_json_response(false, 400, 'Invalid type value');
         }
 
-        // Update the record
-        $update_data = [];
-        if (isset($data['field_name'])) $update_data['field_name'] = $data['field_name'];
-        if (isset($data['field_value'])) $update_data['field_value'] = $data['field_value'];
-
-        if (empty($update_data)) {
-            return send_json_response(false, 400, 'No fields to update');
+        $group_ids = $data['group_id'];
+        if (!is_array($group_ids)) {
+            $group_ids = [$group_ids];
         }
 
-        $result = update_element($bankDetailsTables, $update_data, ['id' => $data['id']]);
+        $updated = 0;
+        $inserted = 0;
 
-        if ($result === false) {
-            return send_json_response(false, 500, $this->errors['save']);
+        // Loop through each group (row)
+        foreach ($group_ids as $i => $group_id) {
+
+            // Load existing records for this group
+            $existing_rows = get_elements($bankDetailsTables, [
+                'bank_id' => $data['bank_id'],
+                'type_id' => $data['type_id'],
+                'group_id' => $group_id
+            ]);
+
+            // Skip if group not found
+            if (empty($existing_rows)) {
+                continue;
+            }
+
+            foreach ($field_names as $field) {
+                if (!isset($data[$field][$i])) continue;
+
+                $value = trim((string)$data[$field][$i]);
+
+                $existing_field = array_filter($existing_rows, function ($row) use ($field) {
+                    return $row['field_name'] === $field;
+                });
+
+                if (!empty($existing_field)) {
+                    // Update existing field
+                    $existing_field = array_values($existing_field)[0];
+                    $update_result = update_element(
+                        $bankDetailsTables,
+                        ['field_value' => $value],
+                        ['id' => $existing_field['id']]
+                    );
+
+                    if ($update_result !== false) {
+                        $updated++;
+                    }
+                } else {
+                    // Insert if new field missing
+                    $insert_data = [
+                        'id' => generate_id(),
+                        'bank_id' => $data['bank_id'],
+                        'type_id' => $data['type_id'],
+                        'group_id' => $group_id,
+                        'field_name' => $field,
+                        'field_value' => $value
+                    ];
+
+                    $insert_result = save_element($bankDetailsTables, $insert_data);
+                    if ($insert_result !== false) {
+                        $inserted++;
+                    }
+                }
+            }
         }
 
-        return send_json_response(true, 200, $this->success['sucess'], ['id' => $data['id']]);
+        if ($updated === 0 && $inserted === 0) {
+            return send_json_response(false, 400, 'No fields were updated or inserted');
+        }
+
+        return send_json_response(true, 200, 'Bank details updated successfully', [
+            'updated' => $updated,
+            'inserted' => $inserted,
+            'total_groups' => count($group_ids)
+        ]);
     }
 
     public function save($data)
@@ -428,29 +485,67 @@ class BankDetail
     {
         global $auth, $bankDetailsTables;
 
-        if (!$auth->islogged()) {
-            return send_json_response(false, 401, 'Unauthorized');
+        if (empty($data['bank_id']) || empty($data['type_id'])) {
+            return send_json_response(false, 400, 'bank_id and type_id are required');
         }
 
-        $user_id = $auth->uid();
+        // If group_id is passed, handle selective delete
+        if (!empty($data['group_id'])) {
+            $groupIds = is_array($data['group_id']) ? $data['group_id'] : [$data['group_id']];
 
-        if (!isset($data['id'])) {
-            return send_json_response(false, 400, 'ID is required for delete');
+            $existing = get_elements($bankDetailsTables, [
+                'bank_id' => $data['bank_id'],
+                'type_id' => $data['type_id']
+            ]);
+
+            if (empty($existing)) {
+                return send_json_response(false, 404, 'No records found for given bank/type');
+            }
+
+            $errors = [];
+            foreach ($groupIds as $gid) {
+                $gid = addslashes($gid);
+                $condQuery = "bank_id = '" . addslashes($data['bank_id']) . "' AND type_id = '" . addslashes($data['type_id']) . "' AND group_id = '$gid'";
+                $res = delete_elements_by_cond($bankDetailsTables, $condQuery);
+                if (!empty($res)) {
+                    $errors = array_merge($errors, $res);
+                }
+            }
+
+            if (!empty($errors)) {
+                return send_json_response(false, 500, 'Error deleting some group(s)', ['errors' => $errors]);
+            }
+
+            return send_json_response(true, 200, 'Selected group(s) deleted successfully', [
+                'deleted_groups' => $groupIds
+            ]);
         }
 
-        // Check if the record exists and belongs to the user
-        $existing = get_element($bankDetailsTables, ['id' => $data['id'], 'user_id' => $user_id]);
-        if (!$existing) {
-            return send_json_response(false, 404, $this->errors['not_found']);
+
+        // --- If group_id is NOT passed: delete all records for bank_id + type_id ---
+        $existing = get_elements($bankDetailsTables, [
+            'bank_id' => $data['bank_id'],
+            'type_id' => $data['type_id']
+        ]);
+
+        if (empty($existing)) {
+            return send_json_response(false, 404, 'No records found for this bank and type');
         }
 
-        $result = delete_elements_by_id($bankDetailsTables, $data['id']);
+        // Manually form WHERE clause for both bank_id and type_id
+        $condQuery = "bank_id = '" . addslashes($data['bank_id']) . "' AND type_id = '" . addslashes($data['type_id']) . "'";
+        $delete_result = delete_elements_by_cond($bankDetailsTables, $condQuery);
 
-        if (!empty($result)) {
-            return send_json_response(false, 500, $this->errors['save']);
+        if (!empty($delete_result)) {
+            return send_json_response(false, 500, 'Error deleting some records', [
+                'errors' => $delete_result
+            ]);
         }
 
-        return send_json_response(true, 200, $this->success['sucess'], ['id' => $data['id']]);
+        return send_json_response(true, 200, 'All records for this bank and type deleted successfully', [
+            'bank_id' => $data['bank_id'],
+            'type_id' => $data['type_id']
+        ]);
     }
 
     public function set($data)
