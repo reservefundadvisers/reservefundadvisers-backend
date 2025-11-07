@@ -199,14 +199,14 @@ class Clients
             $ret = $clientUsers->save($admin_user);
             if(isset($ret['error'])){
                 delete_elements_by_id($clientsTable, ['id'=>$client_id]);
-                return $ret;
+                return send_json_response(false, 400, $ret['error']);
             }
 
         }
         
         
 
-        return send_json_response(true, 200, $this->success['saved'], ['client_id'=>$client_id]);
+        return send_json_response(true, 200, $this->success['saved'], ['client_id'=>$client_id, 'company_id'=>$data['company_id']]);
     }
 
 
