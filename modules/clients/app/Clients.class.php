@@ -186,6 +186,12 @@ class Clients
         if($client_id === false)
             return send_json_response(false, 500, $this->errors['not_allowed']);    
 
+        if($isNew){
+            // Update the logged-in user's client_id in the users table
+            global $usersTable;
+            $update_result = update_element($usersTable, ['client_id' => $client_id], ['id' => $auth->uid()]);
+        }
+
         if($isNew && isset($data['admin_fn']) && isset($data['admin_ln']) && isset($data['admin_email'])){
 
             $admin_user = [ 'fn'=>$data['admin_fn'],
