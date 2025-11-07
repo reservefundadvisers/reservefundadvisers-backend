@@ -125,6 +125,7 @@ $clientPositionRolesTable = 'client_position_roles';
 
 $modelsTable = 'models';
 $modelItemsTable = 'model_items';
+$modelItemCategoriesTable = 'model_item_categories';
 $simActualTable = 'simulation_actual';
 $simSplitsTable = 'simulation_splits';
 $simDeficitTable = 'simulation_deficit';
@@ -160,7 +161,8 @@ $db_table_cols = [
                     $clientPositionsTable => ['row_id', 'id', 'value', 'client_id'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],
                     $modelsTable => ['row_id', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirf_fund_onhand' ,'active', 'updated_at', 'created_at'],
-                    $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'is_sirs'],
+                    $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'item_category_id ', 'is_sirs'],
+                    $modelItemCategoriesTable => ['row_id', 'id', 'name'],
                     $simActualTable => ['row_id', 'id', 'item_id', 'model_id', 'redundancy_at', 'actual_cost'],
                     $simSplitsTable => ['row_id', 'id', 'model_id', 'parent_id', 'user_id', 'split_of', 'redundancy_at', 'year', 'cost'],
                     $simDeficitTable => ['row_id', 'id', 'model_id', 'user_id', 'year', 'to', 'data'],
