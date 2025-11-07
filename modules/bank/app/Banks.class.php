@@ -11,7 +11,6 @@ class Banks
 
     function __construct() {}
 
-
     public function process($cmd, $data)
     {
         $response = "";
@@ -37,7 +36,6 @@ class Banks
         return $response;
     }
 
-
     public function list($data)
     {
         global $banksTable, $auth;
@@ -58,7 +56,6 @@ class Banks
 
         return send_json_response(true, 200, $this->success['sucess'], ['banks' => $banks]);
     }
-
 
     public function edit($data)
     {
@@ -214,6 +211,7 @@ class Banks
         // If no file was uploaded or the file has an error
         return send_json_response(false, 400, 'File upload error');
     }
+
     public function delete($data)
     {
         global $banksTable;
