@@ -36,14 +36,21 @@ class Models
     public function list($data){
         global $auth, $modelItemsTable, $modelsTable;
         
-        if(!is_valid($data, 'model_id'))return ['error'=>$this->errors['model_id']];
-        if(!exists($modelsTable, ['id'=>$data['model_id']]))return ['error'=>$this->errors['missing']];
+        if(!is_valid($data, 'model_id')) {
+            return send_json_response(false, 400, $this->errors['model_id']);
+        }
 
-        if(!belongs_to_client($modelsTable, $data['model_id'], false, true))return ['error'=>$this->errors['not_allowed']];
+        if(!exists($modelsTable, ['id'=>$data['model_id']])){
+            return send_json_response(false, 400, $this->errors['missing']);
+        }
+
+        if(!belongs_to_client($modelsTable, $data['model_id'], false, true)){ 
+            return send_json_response(false, 400, $this->errors['not_allowed']);
+        }
         
         $results = get_elements($modelItemsTable, ['model_id'=>$data['model_id']]);
 
-        return $results;
+        return send_json_response(true, 200, 'Success', ['data' => $results ]);
         
     }
 
@@ -51,10 +58,16 @@ class Models
     public function edit($data){
         global $modelItemsTable, $modelsTable, $clientsTable, $simSplitsTable, $simDeficitTable, $simSplitsLTIMTable, $simDeficitLTIMTable, $simActualTable;
 
-        if(!is_valid($data, 'model_id'))return ['error'=>$this->errors['model_id']];
-        if(!exists($modelsTable, ['id'=>$data['model_id']]))return ['error'=>$this->errors['missing']];
+        if(!is_valid($data, 'model_id')){ 
+            return ['error'=>$this->errors['model_id']];
+        }
+        if(!exists($modelsTable, ['id'=>$data['model_id']])) { 
+            return ['error'=>$this->errors['missing']];
+        }
         
-        if(!belongs_to_client($modelsTable, $data['model_id'], false, true))return ['error'=>$this->errors['not_allowed']];
+        if(!belongs_to_client($modelsTable, $data['model_id'], false, true)){ 
+            return ['error'=>$this->errors['not_allowed']];
+        }
 
         
         
@@ -412,13 +425,13 @@ class Models
 
 
 
-    private $errors = [ "model_id" => "Please choose a <b>Model</b> !",
+    private $errors = [ "model_id" => "Please choose a Model !",
                         "not_allowed" => "Unauthorized Access",
-                        "missing" => "This <b>Model</b> doesn't exist !",
-                        "used" => "This <b>Model</b> cannot be edited because it is used in the <b>Simulation</b> !",
-                        "items" => "Please specify <b>Model Items</b> to edit !",
-                        "deficit_year" => "Invalid Deficit <b>Year</b> !",
-                        "deficit_year" => "Invalid Deficit <b>Last Year</b> !",
+                        "missing" => "This Model doesn't exist !",
+                        "used" => "This Model cannot be edited because it is used in the Simulation !",
+                        "items" => "Please specify Model Items to edit !",
+                        "deficit_year" => "Invalid Deficit Year !",
+                        "deficit_year" => "Invalid Deficit Last Year !",
                         "item_id" => "Please specifiy Item !",
                         "split_exists"=> "An item belonging to the same Master item already exists in this Year !"];
 
