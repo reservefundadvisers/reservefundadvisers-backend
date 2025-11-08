@@ -156,7 +156,7 @@ class Models
                     'Annual SIRS Fees' => 'annual_sirs_fees',
                     'Total Reserve Fees On Hand' => 'total_reserve_fees_onhand',
                     'Annual Reserve Fees' => 'annual_reserve_fees',
-                    'Total SIRS Funds On Hand' => 'total_sirf_fund_onhand'
+                    'Total SIRS Funds On Hand' => 'total_sirs_fund_onhand'
                 ];
 
                 for($i = 1; $i <= 18; $i++){
@@ -231,8 +231,9 @@ class Models
             }
 
         }else{
+            rfa_create_log(print_r($data, true));
             // Original logic for JSON data
-            $checkFor = ['client_id', 'housing', 'annual_sirs_fees', 'total_reserve_fees_onhand','annual_reserve_fees','total_sirf_fund_onhand'];
+            $checkFor = ['client_id', 'housing', 'total_reserve_fees_onhand','total_sirs_fund_onhand'];
             /**
              * allow null for these fields according to requirements(new figma)
              *
@@ -240,16 +241,21 @@ class Models
              */
             $allow_null = ['starting_amount', 'monthly_fees',];
 
-            if(is_valid($data, 'id'))
-                if(!belongs_to_client($modelsTable, $data['id'], false, true))return ['error' => $this->errors['not_allowed'] ];
+            if(is_valid($data, 'id')){
+                if(!belongs_to_client($modelsTable, $data['id'], false, true)){
+                    return send_json_response(false, 400, $this->errors['not_allowed']);
+                }
+            }
 
         if($auth->checkRoleType('client') && empty($data['client_id'])){
             $data['client_id'] = $auth->clientId();
         }
 
 
-        $ret = check_missing($checkFor, $data, $this->errors); if($ret !== true)return $ret;
-
+        $ret = check_missing($checkFor, $data, $this->errors); 
+        if($ret !== true){
+            return send_json_response(false, 400, $ret['error']);
+        }
 
         $data['fiscal_year'] = check_val($data, 'fiscal_year', date('Y', time()));
 
