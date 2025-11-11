@@ -38,7 +38,15 @@ class BankTypes
     {
         global $bankTypesTable;
 
-        $bank_types = get_elements($bankTypesTable, [], '*');
+        $cond = [];
+
+        $keyword = isset($data['type']) ? $data['type'] : '';
+
+        if($keyword != '') {
+            $cond['keyword'] = $keyword;
+        }
+
+        $bank_types = get_elements($bankTypesTable, $cond, '*');
         if(!$bank_types) return send_json_response(false, 400, $this->errors['not_found']);
 
         return send_json_response(true, 200, $this->success['sucess'], ['bank_types' => $bank_types]);

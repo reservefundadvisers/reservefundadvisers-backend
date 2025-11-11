@@ -146,7 +146,7 @@ class Models
             // Validate file type (Excel or CSV)
             $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
             if(!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)){
-                return ['error' => 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.'];
+                return send_json_response(false, 400, 'Invalid file type. Please upload an Excel or CSV file.');
             }
 
             try {
@@ -164,7 +164,7 @@ class Models
                         'redundancy' => intval(preg_replace('/\D/', '', $cells[1])),
                         'remaining_life' => intval(preg_replace('/\D/', '', $cells[2])),
                         'cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
-                        'is_sirs' => intval(preg_replace('/\D/', '', $cells[4])),
+                        'item_type' => intval(preg_replace('/\D/', '', $cells[4])),
                         'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
                         'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[6]))
                     ];
@@ -192,13 +192,13 @@ class Models
                 delete_elements_by_id($modelItemsTable, $items_to_delete);
 
                 if($ret_id === false)
-                    return ['error' => ''];
+                    return send_json_response(false, 404, $this->errors['not_found']);
 
                 set_element($modelsTable, ['updated_at'=>time(), 'id'=>$model_id]);
-                return ['success' => ''];
+                return send_json_response(true, 200, 'Model Items Created Successfully', ['data' =>['model_id' => $model_id ] ]);
 
             } catch (Exception $e) {
-                return ['error' => 'Failed to parse file: ' . $e->getMessage()];
+                return send_json_response(false, 400, 'Error processing file: ' . $e->getMessage());
             }
 
         }else{
@@ -390,7 +390,7 @@ class Models
         $res = array();
 
         if(!is_valid($data, 'id')){
-            return ['error' => ''];
+            return send_json_response(false, 400, 'Please specify Model Items to delete');
         }
             
         $trans_started = start_transaction();
@@ -405,9 +405,11 @@ class Models
         $count = count($data['id']) - count($res);
         
 
-        if(!empty($res))return ['error' => $res];
-        else return ['success' => ''];
-
+        if(!empty($res)){
+            return send_json_response(false, 400, 'Some items could not be deleted', ['data' => $res ]);
+        }else{
+            return send_json_response(true, 200, "$count Model Items deleted successfully", ['data' => $data['id']]);
+        } 
     }
     
     
@@ -427,6 +429,7 @@ class Models
 
     private $errors = [ "model_id" => "Please choose a Model !",
                         "not_allowed" => "Unauthorized Access",
+                        'not_found' => "Model Items not found !",
                         "missing" => "This Model doesn't exist !",
                         "used" => "This Model cannot be edited because it is used in the Simulation !",
                         "items" => "Please specify Model Items to edit !",

@@ -161,7 +161,7 @@ $db_table_cols = [
                     $clientPositionsTable => ['row_id', 'id', 'value', 'client_id'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],
                     $modelsTable => ['row_id', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirs_fund_onhand' ,'active', 'updated_at', 'created_at'],
-                    $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'item_category_id ', 'is_sirs'],
+                    $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'item_category_id ', 'is_sirs','item_type'],
                     $modelItemCategoriesTable => ['row_id', 'id', 'name'],
                     $simActualTable => ['row_id', 'id', 'item_id', 'model_id', 'redundancy_at', 'actual_cost'],
                     $simSplitsTable => ['row_id', 'id', 'model_id', 'parent_id', 'user_id', 'split_of', 'redundancy_at', 'year', 'cost'],
@@ -175,7 +175,7 @@ $db_table_cols = [
 
                     $banksTable => ["row_id", "id", "type_id", "user_id","website", "media", "bank_name", "bank_address", "bank_address_2", "bank_city", "bank_state", "bank_zip", "contact_person","contact_person_country_code", "contact_person_phone", "contact_person_email",
                                     "contact_person_designation", "remarks", "is_public", "created_at", "updated_at",],
-                    $bankTypesTable => ['row_id', 'id', 'name', 'description', 'active', 'created_at', 'updated_at'],
+                    $bankTypesTable => ['row_id', 'id', 'name', 'keyword', 'description', 'active', 'created_at', 'updated_at'],
                     $bankDetailsTables => ['row_id', 'id', 'bank_id', 'user_id' ,'type_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
                     $bankUsersTable => ['row_id', 'id', 'bank_id', 'user_id', 'created_at', 'updated_at'],
                 ];

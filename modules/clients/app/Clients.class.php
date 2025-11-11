@@ -67,9 +67,10 @@ class Clients
         // if company
         if($auth->clientType() == 'company'){
             $conds['company_id'] = $auth->clientId();
-        }else if($auth->clientType() == 'client'){
-            $conds['id'] = $auth->clientId();
         }
+        // else if($auth->clientType() == 'client'){
+        //     $conds['id'] = $auth->clientId();
+        // }
         
 
         $pagination = format_pagination($data);
@@ -212,7 +213,7 @@ class Clients
         
         
 
-        return send_json_response(true, 200, $this->success['saved'], ['client_id'=>$client_id, 'company_id'=>$data['company_id']]);
+        return send_json_response(true, 200, $this->success['saved'], ['id'=>$client_id, 'company_id'=>$data['company_id']]);
     }
 
 
