@@ -160,6 +160,24 @@ class BankDetail
             }
         }
 
+        if (isset($data['type'])) {
+            $filter_type = strtolower($data['type']);
+            foreach ($grouped as $bank_id => &$types) {
+                foreach ($types as $type_name => $groups) {
+                    $type_lower = strtolower($type_name);
+                    $matches = false;
+                    if ($filter_type === 'cd' && ($type_lower === 'certificate of deposit' || $type_lower === 'cd')) {
+                        $matches = true;
+                    } elseif ($filter_type === 'hys' && ($type_lower === 'high yield saving' || $type_lower === 'hys')) {
+                        $matches = true;
+                    }
+                    if (!$matches) {
+                        unset($types[$type_name]);
+                    }
+                }
+            }
+        }
+
         return send_json_response(true, 200, $this->success['sucess'], ['data' => $grouped]);
     }
 
