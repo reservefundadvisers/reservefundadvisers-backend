@@ -15,6 +15,13 @@ class Clients
 	}
 
 	
+	/**
+	 * Process the command and return the response.
+	 *
+	 * @param string $cmd The command to process.
+	 * @param array $data The data associated with the command.
+	 * @return mixed The response from the command.
+	 */
 	public function process($cmd, $data)
 	{
         $response = "";
@@ -25,6 +32,7 @@ class Clients
 
 
         switch($command){
+            case 'create': $response = $this->save_company_by_name($data); break;
             case 'load': $response = view($this->module_name, $this->type.'.php'); break;
             case 'get': $response = $this->list($data); break;
             case 'edit': $response = $this->edit($data); break;
@@ -275,6 +283,22 @@ class Clients
 
         return set_property($clientsTable, $data);
 
+    }
+
+    public function save_company_by_name($data){
+        global $clientsTable;
+
+        if(!is_valid($data, 'company_name')){
+            return send_json_response(false, 400, 'Company Name is required !');
+        }
+
+        $company_id = save_element($clientsTable, ['company'=>$data['company_name'], 'type'=>'company']);
+
+        if($company_id === false){
+            return send_json_response(false, 400, $this->errors['internal_error']);
+        }
+
+        return send_json_response(true, 200, $this->success['success'], ['company_id'=>$company_id]);
     }
 
 
