@@ -19,6 +19,12 @@ class BankDetail
             case 'get':
                 $response = $this->list($data);
                 break;
+            case 'get_cd':
+                $response = $this->list_cd($data);
+                break;
+            case 'get_hys':
+                $response = $this->list_hys($data);
+                break;
             case 'edit':
                 $response = $this->edit($data);
                 break;
@@ -160,21 +166,170 @@ class BankDetail
             }
         }
 
-        if (isset($data['type'])) {
-            $filter_type = strtolower($data['type']);
-            foreach ($grouped as $bank_id => &$types) {
-                foreach ($types as $type_name => $groups) {
-                    $type_lower = strtolower($type_name);
-                    $matches = false;
-                    if ($filter_type === 'cd' && ($type_lower === 'certificate of deposit' || $type_lower === 'cd')) {
-                        $matches = true;
-                    } elseif ($filter_type === 'hys' && ($type_lower === 'high yield saving' || $type_lower === 'hys')) {
-                        $matches = true;
-                    }
-                    if (!$matches) {
-                        unset($types[$type_name]);
+        // if (isset($data['type'])) {
+        //     $filter_type = strtolower($data['type']);
+        //     foreach ($grouped as $bank_id => &$types) {
+        //         foreach ($types as $type_name => $groups) {
+        //             $type_lower = strtolower($type_name);
+        //             $matches = false;
+        //             if ($filter_type === 'cd' && ($type_lower === 'certificate of deposit' || $type_lower === 'cd')) {
+        //                 $matches = true;
+        //             } elseif ($filter_type === 'hys' && ($type_lower === 'high yield saving' || $type_lower === 'hys')) {
+        //                 $matches = true;
+        //             }
+        //             if (!$matches) {
+        //                 unset($types[$type_name]);
+        //             }
+        //         }
+        //     }
+        // }
+
+        return send_json_response(true, 200, $this->success['sucess'], ['data' => $grouped]);
+    }
+
+    public function list_cd($data)
+    {
+        global $auth, $bankDetailsTables, $banksTable, $bankUsersTable, $bankTypesTable;
+
+        $conds = [];
+
+        $user_id = $auth->uid();
+
+        if (!empty($user_id)) {
+            $bank_ids = get_elements($bankUsersTable, ['user_id' => $user_id], 'bank_id');
+        }
+
+        if (isset($data['bank_id']) && !empty($data['bank_id'])) {
+            $bank_ids = [['bank_id' => $data['bank_id']]];
+        } else {
+            if (!empty($bank_ids)) {
+                $conds['bank_id'] = array_column($bank_ids, 'bank_id');
+            }
+        }
+
+        // Use JOIN to fetch bank_details with type_name, filter for CD types
+        $join = "LEFT JOIN $bankTypesTable bt ON bd.type_id = bt.id";
+        $select = "bd.bank_id, bd.group_id, bd.field_name, bd.field_value, bt.name AS type_name";
+        $bank_ids_flat = array_column($bank_ids, 'bank_id');
+        $bank_ids_str = implode("','", $bank_ids_flat);
+        $extra = "WHERE bd.bank_id IN ('$bank_ids_str') AND LOWER(bt.name) IN ('certificate of deposit', 'cd') ORDER BY bd.bank_id, bd.group_id";
+        $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
+
+        if (!$bank_details) {
+            return send_json_response(false, 400, $this->errors['not_found']);
+        }
+
+        // Group bank_details by bank_id, then group_id (since type is fixed)
+        $grouped = [];
+        $temp = [];
+        foreach ($bank_details as $detail) {
+            $bank_id = $detail['bank_id'];
+            $group_id = $detail['group_id'];
+
+            if (!isset($temp[$bank_id])) {
+                $temp[$bank_id] = [];
+            }
+            if (!isset($temp[$bank_id][$group_id])) {
+                $temp[$bank_id][$group_id] = [];
+            }
+            $temp[$bank_id][$group_id][$detail['field_name']] = $detail['field_value'];
+        }
+
+        // Convert to table rows for CD
+        foreach ($temp as $bank_id => $groups) {
+            $grouped[$bank_id] = [];
+            foreach ($groups as $group_id => $fields) {
+                $defaultFields = [
+                    'group_id' => $group_id,
+                    'duration' => null,
+                    'interest' => null,
+                    'minimum_amount' => null,
+                    'panalty' => null,
+                    'remarks' => null
+                ];
+
+                // Fill in values from $fields (even if 0)
+                foreach ($defaultFields as $key => $val) {
+                    if (isset($fields[$key])) {
+                        $defaultFields[$key] = $fields[$key];
                     }
                 }
+
+                $grouped[$bank_id][] = $defaultFields;
+            }
+        }
+
+        return send_json_response(true, 200, $this->success['sucess'], ['data' => $grouped]);
+    }
+
+    public function list_hys($data)
+    {
+        global $auth, $bankDetailsTables, $banksTable, $bankUsersTable, $bankTypesTable;
+
+        $conds = [];
+
+        $user_id = $auth->uid();
+
+        if (!empty($user_id)) {
+            $bank_ids = get_elements($bankUsersTable, ['user_id' => $user_id], 'bank_id');
+        }
+
+        if (isset($data['bank_id']) && !empty($data['bank_id'])) {
+            $bank_ids = [['bank_id' => $data['bank_id']]];
+        } else {
+            if (!empty($bank_ids)) {
+                $conds['bank_id'] = array_column($bank_ids, 'bank_id');
+            }
+        }
+
+        // Use JOIN to fetch bank_details with type_name, filter for HYS types
+        $join = "LEFT JOIN $bankTypesTable bt ON bd.type_id = bt.id";
+        $select = "bd.bank_id, bd.group_id, bd.field_name, bd.field_value, bt.name AS type_name";
+        $bank_ids_flat = array_column($bank_ids, 'bank_id');
+        $bank_ids_str = implode("','", $bank_ids_flat);
+        $extra = "WHERE bd.bank_id IN ('$bank_ids_str') AND LOWER(bt.name) IN ('high yield saving', 'hys') ORDER BY bd.bank_id, bd.group_id";
+        $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
+
+        if (!$bank_details) {
+            return send_json_response(false, 400, $this->errors['not_found']);
+        }
+
+        // Group bank_details by bank_id, then group_id (since type is fixed)
+        $grouped = [];
+        $temp = [];
+        foreach ($bank_details as $detail) {
+            $bank_id = $detail['bank_id'];
+            $group_id = $detail['group_id'];
+
+            if (!isset($temp[$bank_id])) {
+                $temp[$bank_id] = [];
+            }
+            if (!isset($temp[$bank_id][$group_id])) {
+                $temp[$bank_id][$group_id] = [];
+            }
+            $temp[$bank_id][$group_id][$detail['field_name']] = $detail['field_value'];
+        }
+
+        // Convert to table rows for HYS
+        foreach ($temp as $bank_id => $groups) {
+            $grouped[$bank_id] = [];
+            foreach ($groups as $group_id => $fields) {
+                $defaultFields = [
+                    'group_id' => $group_id,
+                    'interest' => null,
+                    'minimum_amount' => null,
+                    'is_demand_deposit' => null,
+                    'remarks' => null
+                ];
+
+                // Fill in values from $fields (even if 0)
+                foreach ($defaultFields as $key => $val) {
+                    if (isset($fields[$key])) {
+                        $defaultFields[$key] = $fields[$key];
+                    }
+                }
+
+                $grouped[$bank_id][] = $defaultFields;
             }
         }
 
