@@ -37,6 +37,9 @@ class BankDetail
             case 'set':
                 $response = $this->set($data);
                 break;
+            default:
+                $response = send_json_response(false, 400, 'Invalid Command');
+                break;
         }
 
         return $response;
@@ -71,7 +74,7 @@ class BankDetail
         $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
 
         if (!$bank_details) {
-            return send_json_response(false, 400, $this->errors['not_found']);
+            return send_json_response(true, 200, $this->success['no_record'], ['data' => []]);
         }
 
         // Group bank_details by bank_id, then type_name, then pivot to table format
@@ -216,7 +219,7 @@ class BankDetail
         $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
 
         if (!$bank_details) {
-            return send_json_response(false, 400, $this->errors['not_found']);
+            return send_json_response(true, 200, $this->success['no_record'], ['data' => []]);
         }
 
         // Group bank_details by bank_id, then group_id (since type is fixed)
@@ -235,9 +238,9 @@ class BankDetail
             $temp[$bank_id][$group_id][$detail['field_name']] = $detail['field_value'];
         }
 
-        // Convert to table rows for CD
+        // Convert to table rows for CD, flattened without bank_id
+        $grouped = [];
         foreach ($temp as $bank_id => $groups) {
-            $grouped[$bank_id] = [];
             foreach ($groups as $group_id => $fields) {
                 $defaultFields = [
                     'group_id' => $group_id,
@@ -255,7 +258,7 @@ class BankDetail
                     }
                 }
 
-                $grouped[$bank_id][] = $defaultFields;
+                $grouped[] = $defaultFields;
             }
         }
 
@@ -291,7 +294,7 @@ class BankDetail
         $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
 
         if (!$bank_details) {
-            return send_json_response(false, 400, $this->errors['not_found']);
+            return send_json_response(true, 200, $this->success['no_record'], ['data' => []]);
         }
 
         // Group bank_details by bank_id, then group_id (since type is fixed)
@@ -310,9 +313,9 @@ class BankDetail
             $temp[$bank_id][$group_id][$detail['field_name']] = $detail['field_value'];
         }
 
-        // Convert to table rows for HYS
+        // Convert to table rows for HYS, flattened without bank_id
+        $grouped = [];
         foreach ($temp as $bank_id => $groups) {
-            $grouped[$bank_id] = [];
             foreach ($groups as $group_id => $fields) {
                 $defaultFields = [
                     'group_id' => $group_id,
@@ -329,7 +332,7 @@ class BankDetail
                     }
                 }
 
-                $grouped[$bank_id][] = $defaultFields;
+                $grouped[] = $defaultFields;
             }
         }
 
@@ -733,6 +736,7 @@ class BankDetail
     ];
 
     private $success = [
-        'sucess' => 'Success !'
+        'sucess' => 'Success !',
+        'no_record' => 'No records found !'
     ];
 }
