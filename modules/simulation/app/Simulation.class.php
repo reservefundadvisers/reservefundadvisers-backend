@@ -182,13 +182,15 @@ class Simulation
             $simRulesTable, $simActualTable, $simVersionTable;
 
         if (!is_valid($data, 'model_id'))
-            return ['error' => $this->errors['model_id']];
+            // return ['error' => $this->errors['model_id']];
+            return send_json_response(false, 400, $this->errors['model_id']);
         if (!exists($modelsTable, ['id' => $data['model_id']]))
-            return ['error' => $this->errors['missing']];
+            // return ['error' => $this->errors['missing']];
+            return send_json_response(false, 404, $this->errors['missing']);
 
         if (!belongs_to_client($modelsTable, $data['model_id'], false, true))
-            return ['error' => $this->errors['not_allowed']];
-
+            // return ['error' => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         // get model
         $model = get_element_join(
@@ -1433,7 +1435,8 @@ class Simulation
             unset($results['inv_strategies']['bbp']);
 
 
-        return $results;
+        // return $results;
+        return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
     }
 
     public function list_association($data)
