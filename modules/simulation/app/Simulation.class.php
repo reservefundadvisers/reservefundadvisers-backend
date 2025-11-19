@@ -11,7 +11,7 @@ class Simulation
 
     private $inv_strategies = [];
 
-    private $default_invest_strategy = ['type' => 'bbp', 'dur' => 3, 'rate' => 0.55, 'year' => 0, 'terms' => 1, 'hold' => 0, 'end_of_year' => 0, 'parent' => -1, 'index' => -1];// $model['inv_strategy']; //0.0055;
+    private $default_invest_strategy = ['type' => 'bbp', 'dur' => 3, 'rate' => 0.55, 'year' => 0, 'terms' => 1, 'hold' => 0, 'end_of_year' => 0, 'parent' => -1, 'index' => -1]; // $model['inv_strategy']; //0.0055;
 
 
     /*
@@ -61,7 +61,6 @@ class Simulation
         $this->init_config();
 
         $this->inv_strategies = get_investment_strategies();
-
     }
 
 
@@ -138,11 +137,9 @@ class Simulation
             case 'set_settings':
                 $response = $this->set_config($data);
                 break;
-
         }
 
         return $response;
-
     }
 
     private function init_config()
@@ -159,9 +156,6 @@ class Simulation
 
             $this->config[$c['param']] = parse_json($c['value'], true);
         }
-
-
-
     }
 
     private function set_config($data)
@@ -176,7 +170,6 @@ class Simulation
 
 
         return set_property($configTable, $data, 'param');
-
     }
 
 
@@ -184,9 +177,9 @@ class Simulation
     public function simulation($data)
     {
         global $auth, $modelItemsTable, $modelsTable, $clientsTable,
-        $simSplitsTable, $simDeficitTable,
-        $simSplitsLTIMTable, $simDeficitLTIMTable,
-        $simRulesTable, $simActualTable, $simVersionTable;
+            $simSplitsTable, $simDeficitTable,
+            $simSplitsLTIMTable, $simDeficitLTIMTable,
+            $simRulesTable, $simActualTable, $simVersionTable;
 
         if (!is_valid($data, 'model_id'))
             return ['error' => $this->errors['model_id']];
@@ -396,7 +389,6 @@ class Simulation
                             'splits' => 0
                         ]
                     );
-
                 } else if (!empty($splits)) {
 
                     $splits_total_cost_without_org = 0;
@@ -457,17 +449,9 @@ class Simulation
 
                         // update year total spendings
                         $spendings[$org_item_year] += -1 * $org_item_split_cost;
-
                     }
-
                 }
-
-
             }
-
-
-
-
         }
 
         // log_info($spendings);
@@ -573,16 +557,12 @@ class Simulation
                         $auto_monthly_fees_inc[$i] = $monthly_fees == 0 ? 0 : ($auto_monthly_fees[$i] - $monthly_fees) / $monthly_fees;
                     } else {
                         $auto_monthly_fees_inc[$i] = $auto_monthly_fees[$i - 1] == 0 ? 0 : ($auto_monthly_fees[$i] - $auto_monthly_fees[$i - 1]) / $auto_monthly_fees[$i - 1];
-
                     }
 
 
                     // add auto fee to all previous years
                     $apply_auto_fees[$i] = true;
                 }
-
-
-
             } else if (is_valid($deficit_array[$year], 'monthly_fees')) {
 
 
@@ -607,7 +587,6 @@ class Simulation
                     $auto_monthly_fees_inc[$i] = $monthly_fees == 0 ? 0 : ($auto_monthly_fees[$i] - $monthly_fees) / $monthly_fees;
                 } else {
                     $auto_monthly_fees_inc[$i] = $auto_monthly_fees[$i - 1] == 0 ? 0 : ($auto_monthly_fees[$i] - $auto_monthly_fees[$i - 1]) / $auto_monthly_fees[$i - 1];
-
                 }
                 // }
 
@@ -627,8 +606,6 @@ class Simulation
 
                 // log_info("set mf (".$year.")", json_encode($auto_monthly_fees));
                 /***** New Code RUSHI End *****/
-
-
             } else if (isset($deficit_array[$year]['inv_existing_wthd'])) {
 
                 /*
@@ -655,8 +632,6 @@ class Simulation
                     }
                 }
                 */
-
-
             } else if (isset($deficit_array[$year]['inv_strategy'])) {
 
                 if (is_array($deficit_array[$year]['inv_strategy'])) {
@@ -698,10 +673,7 @@ class Simulation
                             array_unshift($invest_strategies[$year], ['terms' => $dur, 'parent' => $year, 'index' => $n] + $strategy);
                         }
                     }
-
                 }
-
-
             }
 
             // if(is_valid($deficit_array[$deficit['year']], 'monthly_fees_auto')){
@@ -761,7 +733,6 @@ class Simulation
 
                     // merge parent infos with child infos
                     array_push($existing_inv_strategy[$inv_y], $yearly_details + ['total_pi' => $ret_strategy_p, 'total_ne' => $ret_strategy_ne]);
-
                 }
             }
         }
@@ -900,7 +871,6 @@ class Simulation
                     $ltim_perc = 1;
                 else if ($ltim_perc < 0)
                     $ltim_perc = 0;
-
             }
 
 
@@ -913,7 +883,7 @@ class Simulation
 
             // LTIM Withdraw to cover deficit
             $ltim_withdrawn = $auto_monthly_fees_ltim_wth[$i];      // -1 when not previously assigned
-            if ( /* $ltim_withdrawn < 0 && */ isset($erase_deficit['ltim_wth'])) {
+            if ( /* $ltim_withdrawn < 0 && */isset($erase_deficit['ltim_wth'])) {
                 $ltim_withdrawn = check_val($erase_deficit, 'ltim_wth', 0);
             }
 
@@ -969,7 +939,7 @@ class Simulation
             // log_info("Deficit Year ".$i.": ".$year_calculations['fa']." LTIM Ava: ".check_val($year_calculations, 'ltim_acc', 0));
 
             // get the available LTIM funds in this year
-            $ltim_available = check_val($year_calculations, 'ltim_acc', 0) /* * 0.8 */ ; // only allow 80% f available funds
+            $ltim_available = check_val($year_calculations, 'ltim_acc', 0) /* * 0.8 */; // only allow 80% f available funds
             $deficit_to_cover = $year_calculations['fa'] * (1 + $inflation_rate);  // abs() year deficit
 
             // log_info("$i -> LTIM AVAILABLE $ltim_available");
@@ -1029,8 +999,6 @@ class Simulation
                     $i--;
                     continue;
                 }
-
-
             } else {
                 if (isset($deficit_array[$i]['ltim_auto_wth']))
                     unset($deficit_array[$i]['ltim_auto_wth']);
@@ -1172,12 +1140,10 @@ class Simulation
                         // start over
                         $i = -1;
                         continue;
-
                     } else if ($current_auto_fee >= 0 || $auto_fee_remaining_loop_count == $auto_fee_remaining_loop_max) {
 
                         $current_auto_fee = -1;
                         $auto_fee_remaining_loop_count = 0;
-
                     } else {
 
 
@@ -1229,18 +1195,11 @@ class Simulation
                         // start over
                         $i = -1;
                         continue;
-
                     }
-
-
-
-
                 } else if ($current_auto_fee == $i) {
 
                     $current_auto_fee = -1;
-
                 }
-
             }
 
 
@@ -1348,7 +1307,6 @@ class Simulation
                             // log_info("$prev_mf, $new_mf");
                             // var_dump($max_mf);var_dump($new_mf);
                             $auto_monthly_fees[$y] = ($new_mf > $max_mf) ? $max_mf : $new_mf;
-
                         }
 
 
@@ -1425,9 +1383,6 @@ class Simulation
                     // }
                 }
             }
-
-
-
         }
 
 
@@ -1472,15 +1427,13 @@ class Simulation
         $results['ltims'] = [];
         foreach ($this->ltim_strategy as $state => $infos) {
             $results['ltims'][$state] = $infos['name'];
-        }
-        ;
+        };
         $results['inv_strategies'] = $this->inv_strategies;
         if ($results['inv_strategies']['bbp'])
             unset($results['inv_strategies']['bbp']);
 
 
         return $results;
-
     }
 
     public function list_association($data)
@@ -1518,7 +1471,6 @@ class Simulation
             return ['last_page' => $total, 'data' => $results, 'total' => $count['count']];
         else
             return $results;
-
     }
 
 
@@ -1558,7 +1510,6 @@ class Simulation
             return send_json_response(true, 200, $this->success['getted'], ['last_page' => $total, 'data' => $results, 'total' => $count['count']]);
         else
             return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
-
     }
 
     public function set($data)
@@ -1575,7 +1526,6 @@ class Simulation
 
 
         return set_property($modelsTable, $data);
-
     }
 
     private function initOriginalCalculation(
@@ -1688,15 +1638,15 @@ class Simulation
         }
         // add LTIM withdrawn amout to starting amount
         $starting_amount += $ltim_wth;
-        
+
         // Apply safety net to spending
         $cushion_fund = floatval(check_val($simulation_rules, 'cushion_fund', 0));
         $cushion_fund = $cushion_fund * 100;
-        
+
         // Apply cash_reserve_threshold to spending
         $cash_reserve_threshold = floatval(check_val($simulation_rules, 'cash_reserve_threshold', 0));
-        
-        
+
+
         if ($cash_reserve_threshold > 0 || $cushion_fund > 0) {
 
             // Check if cushion_fund exceeds 15%
@@ -1783,7 +1733,7 @@ class Simulation
         // $inv_principal = ($total_amount < 0 ? 0 : $total_amount) + ($total_expenses + $prev_loan_payment + $loss_purchase); if($inv_principal < 0)$inv_principal = 0;
 
         // $inv_principal = ($starting_amount < 0 ? 0 : $starting_amount) + $yearly_collections /* - $ltim_amount */; if($inv_principal < 0)$inv_principal = 0;
-        $inv_principal = ($starting_amount < 0 ? 0 : $starting_amount) + ($spending + $loss_purchase) /* - $ltim_amount */ ;
+        $inv_principal = ($starting_amount < 0 ? 0 : $starting_amount) + ($spending + $loss_purchase) /* - $ltim_amount */;
 
         if ($inv_principal < 0)
             $inv_principal = 0;
@@ -1843,9 +1793,6 @@ class Simulation
                     if (++$inv_y >= count($propagated_inv_strategy))
                         break;
                 }
-
-
-
             }
         }
 
@@ -1937,7 +1884,6 @@ class Simulation
         $year_calculations = array_merge($year_calculations, $tmp_year_calculations);
 
         return $tmp_year_calculations;
-
     }
 
     public function loanMonthlyPayment($amount, $interest, $numOfMonths)
@@ -1957,7 +1903,6 @@ class Simulation
         $monthlyPayment = round($monthlyPayment, 4);
 
         return $monthlyPayment;
-
     }
 
 
@@ -2002,7 +1947,6 @@ class Simulation
         if ($addPaymentsToArr) {
             for ($i = $from; $i < $to; $i++) {
                 $arr[$i] += $yearly_payment;
-
             }
         }
 
@@ -2151,7 +2095,6 @@ class Simulation
                         // set year of early withdraw and penalty
                         $extra['early'] = $y_wth;
                         $extra['penalty'] = $pen;
-
                     }
 
                     // log_info("$note -> $inv_dur");
@@ -2216,11 +2159,6 @@ class Simulation
                     // add amount to amount_to_deduce when the investment strategy hold the amount when terms > 1
                     // if($inv_dur > 1)$ad += $amount;
                     $ad += $amount;
-
-
-
-
-
                 } else {
                     array_push($yearly, [
                         'type' => $type,
@@ -2242,7 +2180,6 @@ class Simulation
                         'name' => $name
                     ] + $extra);
                 }
-
             }
 
 
@@ -2311,11 +2248,8 @@ class Simulation
                         // add amount to amount_to_deduce when the investment strategy hold the amount when intrest are paid by end of the year
                         // if($inv_dur > 1)$ad += $amount;
                         $ad += $amount;
-
                     } else {
-
                     }
-
                 } else {
                     array_push($yearly, [
                         'type' => $type,
@@ -2370,7 +2304,6 @@ class Simulation
                 continue;
 
             array_push($ret_strategies, $cb($s, $perc_used, $ad, $pn));
-
         }
 
         // when money is left, add default_invest_strategy
@@ -2384,15 +2317,10 @@ class Simulation
 
         $amount_to_deduce = $ad;
         $early_penalty = $pn;
-
-
     }
 
 
-    private function calculateInvType()
-    {
-
-    }
+    private function calculateInvType() {}
 
     private function calculateLTIM($spendings, $startAt = 0, $whichLTIM = "FL")
     {
@@ -2451,7 +2379,6 @@ class Simulation
                 $bucketSum += -1 * $spendings[$from + $i];
 
                 $content .= (-1 * $spendings[$from + $i]) . ";";
-
             }
 
             // $content .= "SUM BUCKET;$bucketSum;=ARRONDI($bucketSum*100/B". (1 + $startAt * 2) .");%;;";
@@ -2462,7 +2389,6 @@ class Simulation
 
             $deficit_sum += $bucketSum;
             array_push($buckets, ['sum' => $bucketSum, 'rate' => $bucket['rate'], 'dur' => $bucket['dur']]);
-
         }
 
 
@@ -2597,77 +2523,77 @@ class Simulation
 
     }
     //     private function estimateMonthlyFeeInc($years, $mf, $deficit, $max_inc, $inflation_rate) {
-//     $deficit = abs($deficit); 
+    //     $deficit = abs($deficit); 
 
     //     if ($mf == 0) {
-//         var_dump('Monthly Fee (mf) is 0, returning 0.');
-//         return 0;
-//     }
+    //         var_dump('Monthly Fee (mf) is 0, returning 0.');
+    //         return 0;
+    //     }
 
     //     var_dump("Initial Parameters: Years: $years, MF: $mf, Deficit: $deficit, Max Increase: $max_inc, Inflation Rate: $inflation_rate");
 
     //     if ($max_inc <= 0) {
-//         $max_inc = 200;
-//         var_dump("Max Increase was <= 0, set to: $max_inc");
-//     }
+    //         $max_inc = 200;
+    //         var_dump("Max Increase was <= 0, set to: $max_inc");
+    //     }
 
     //     $max = $max_inc; 
-//     $max_val = 0;
-//     $min = 0; 
-//     $min_val = 0;
+    //     $max_val = 0;
+    //     $min = 0; 
+    //     $min_val = 0;
 
     //     var_dump("Starting Iteration with Max: $max, Min: $min");
 
     //     for ($i = $max_inc; $i > 0; $i -= 0.01) {
-//         $inc_multi = ((pow(1 + $i, $years + 1) - 1) / $i) - 1; 
-//         $cumul = ($mf * $inc_multi) - ($mf * $years);
-//         $diff = $cumul - $deficit;
+    //         $inc_multi = ((pow(1 + $i, $years + 1) - 1) / $i) - 1; 
+    //         $cumul = ($mf * $inc_multi) - ($mf * $years);
+    //         $diff = $cumul - $deficit;
 
     //         var_dump("Iteration for > 1: i = $i, Inc Multi: $inc_multi, Cumulative: $cumul, Diff: $diff");
 
     //         if ($diff < 0) { 
-//             $min = $i; 
-//             $min_val = $diff; 
-//             var_dump("Breaking Loop > 1: Min: $min, Min Val: $min_val");
-//             break; 
-//         } else { 
-//             $max = $i; 
-//             $max_val = $diff; 
-//         }
-//     }
+    //             $min = $i; 
+    //             $min_val = $diff; 
+    //             var_dump("Breaking Loop > 1: Min: $min, Min Val: $min_val");
+    //             break; 
+    //         } else { 
+    //             $max = $i; 
+    //             $max_val = $diff; 
+    //         }
+    //     }
 
     //     var_dump("After > 1 Iteration: Max: $max ($max_val), Min: $min ($min_val)");
 
     //     $inc = 0;
 
     //     if ($min == 0) {
-//         for ($i = $max_inc; $i > 0; $i -= 0.00005) {
-//             $inc_multi = ((pow(1 + $i, $years + 1) - 1) / $i) - 1; 
-//             $cumul = ($mf * $inc_multi) - ($mf * $years);
-//             $diff = $cumul - $deficit;
+    //         for ($i = $max_inc; $i > 0; $i -= 0.00005) {
+    //             $inc_multi = ((pow(1 + $i, $years + 1) - 1) / $i) - 1; 
+    //             $cumul = ($mf * $inc_multi) - ($mf * $years);
+    //             $diff = $cumul - $deficit;
 
     //             var_dump("Iteration for < 1: i = $i, Inc Multi: $inc_multi, Cumulative: $cumul, Diff: $diff");
 
     //             if ($diff < 0) { 
-//                 $min = $i; 
-//                 $min_val = $diff; 
-//                 var_dump("Breaking Loop < 1: Min: $min, Min Val: $min_val");
-//                 break; 
-//             } else { 
-//                 $max = $i; 
-//                 $max_val = $diff; 
-//             }
-//         }
-//         $inc = 0.0002 + $max - ($max_val * ($max - $min) / ($max_val - $min_val));
-//         var_dump("Calculated Inc for < 1: $inc");
-//     } else {
-//         $inc = 0.001 + $max - ($max_val * ($max - $min) / ($max_val - $min_val));
-//         var_dump("Calculated Inc for > 1: $inc");
-//     }
+    //                 $min = $i; 
+    //                 $min_val = $diff; 
+    //                 var_dump("Breaking Loop < 1: Min: $min, Min Val: $min_val");
+    //                 break; 
+    //             } else { 
+    //                 $max = $i; 
+    //                 $max_val = $diff; 
+    //             }
+    //         }
+    //         $inc = 0.0002 + $max - ($max_val * ($max - $min) / ($max_val - $min_val));
+    //         var_dump("Calculated Inc for < 1: $inc");
+    //     } else {
+    //         $inc = 0.001 + $max - ($max_val * ($max - $min) / ($max_val - $min_val));
+    //         var_dump("Calculated Inc for > 1: $inc");
+    //     }
 
     //     var_dump("Final Increment: $inc");
-//     return $inc;
-// }
+    //     return $inc;
+    // }
 
     private function get_closest_inc_year($year, $start_year = 0, &$auto_monthly_fees, &$auto_monthly_fees_inc, $max_inc, $base_mf, $deficit, $inflation_rate)
     {
@@ -2847,14 +2773,12 @@ class Simulation
 
             // delete erase deficit data
             delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id AND year = :year', ['model_id' => $model_id, 'user_id' => $auth->uid(), 'year' => $year]);
-
         } else if (is_valid($data, "from_year")) {
 
             $year = $data["from_year"];
 
             // delete erase deficit data
             delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id AND year >= :year', ['model_id' => $model_id, 'user_id' => $auth->uid(), 'year' => $year]);
-
         } else {
 
             // delete_elements_by_cond($simRulesTable, 'model_id = :model_id AND user_id = :user_id', ['model_id'=>$data['model_id'], 'user_id'=>$auth->uid()] );
@@ -2863,7 +2787,6 @@ class Simulation
 
                 delete_elements_by_cond($splitsTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
                 delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
-
             } else {
 
                 delete_elements_by_cond($simSplitsTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
@@ -2871,15 +2794,10 @@ class Simulation
                 // delete_elements_by_cond($simSplitsLTIMTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id'=>$auth->uid()]);
                 // delete_elements_by_cond($simDeficitLTIMTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id'=>$auth->uid()]);
                 delete_elements_by_cond($simRulesTable, 'model_id = :model_id AND user_id = :user_id', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
-
             }
-
-
-
         }
 
         return ['success' => ''];
-
     }
 
     // handles erase deficit data
@@ -2952,7 +2870,6 @@ class Simulation
 
                         // remove all future ltim_wth
                         array_push($remove_prop, 'ltim_wth');
-
                     }
 
                     // check monthly_fees
@@ -3052,8 +2969,6 @@ class Simulation
                     $split_min_year = $split['year'];
                 save_element($splitsTable, $split);
             }
-
-
         }
 
         // unsplit
@@ -3075,7 +2990,6 @@ class Simulation
 
 
         return ['success' => ''];
-
     }
 
     // unsplit item 
@@ -3096,7 +3010,6 @@ class Simulation
 
             $deficitTable = $simDeficitLTIMTable;
             $splitsTable = $simSplitsLTIMTable;
-
         } else if (!belongs_to_user($splitsTable, $data['id']))
             return ['error' => $this->errors['not_allowed']];
 
@@ -3126,7 +3039,6 @@ class Simulation
             delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id AND year >= 0', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
 
         return ['success' => $year];
-
     }
 
 
@@ -3174,7 +3086,6 @@ class Simulation
         }
 
         return ['success' => ''];
-
     }
 
 
@@ -3217,7 +3128,6 @@ class Simulation
 
 
         return ['success' => ''];
-
     }
 
     private function get_rules($model_id)
@@ -3296,8 +3206,7 @@ class Simulation
         $compare['ltims'] = [];
         foreach ($this->ltim_strategy as $state => $infos) {
             $compare['ltims'][$state] = $infos['name'];
-        }
-        ;
+        };
 
         return $compare;
     }
@@ -3323,7 +3232,6 @@ class Simulation
             $conds['raw'] = "user_id = :user_id";
         } else {
             $conds['raw'] = "(user_id = :user_id  OR ( (user_id != :user_id OR user_id IS NULL) AND (can_view = 1 OR can_load = 1)))";
-
         }
 
         $versions = get_elements_join(
@@ -3331,7 +3239,7 @@ class Simulation
             $conds,
             "LEFT JOIN $usersTable ON $usersTable.id = $simVersionTable.user_id",
             format_select($simVersionTable, '*', ['user_id', 'data']) .
-            ", IF(user_id IS NOT NULL AND user_id = :user_id, 1, 0) owned, $usersTable.fn, $usersTable.ln",
+                ", IF(user_id IS NOT NULL AND user_id = :user_id, 1, 0) owned, $usersTable.fn, $usersTable.ln",
             'ORDER BY row_id DESC'
         );
 
@@ -3367,7 +3275,6 @@ class Simulation
                 return ["error" => $this->errors['not_allowed']];
 
             $data = ['id' => $version_id];
-
         } else {
 
             // add uid
@@ -3376,7 +3283,6 @@ class Simulation
             $name = trim(check_val($data, 'name'));
             if (empty($name))
                 return ["error" => $this->errors['version_name']];
-
         }
 
 
@@ -3399,7 +3305,6 @@ class Simulation
             return ['error' => ''];
 
         return ['success' => ''];
-
     }
 
     // edit version prop
@@ -3434,7 +3339,6 @@ class Simulation
             return ['error' => ''];
 
         return ['success' => ''];
-
     }
 
     // delete version
@@ -3460,7 +3364,6 @@ class Simulation
             return ['error' => $res];
         else
             return ['success' => ''];
-
     }
 
     // load versions
@@ -3555,14 +3458,10 @@ class Simulation
 
 
         return ['success' => ''];
-
     }
 
     // compare versions
-    public function compare_version($data)
-    {
-
-    }
+    public function compare_version($data) {}
 
 
     private $errors = [
@@ -3581,6 +3480,4 @@ class Simulation
         "updated" => "Updated successfully !",
         'getted' => "Data retrieved successfully !"
     ];
-
-
 }
