@@ -145,7 +145,7 @@ class ClientUsers
         {
             // return ['error' =>  $this->errors['username_exists'] ];
             // return ['error' =>  $this->errors['email_exists'] ];
-            return send_json_response(false, 400, $this->errors['email_exists'], ['email' => ''] );
+            return send_json_response(false, 400, $this->errors['email_exists']);
         }
 
         // hash password
