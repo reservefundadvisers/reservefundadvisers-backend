@@ -1554,9 +1554,10 @@ class Simulation
         }
 
         if ($is_pagination)
-            return ['last_page' => $total, 'data' => $results, 'total' => $count['count']];
+            // return ['last_page' => $total, 'data' => $results, 'total' => $count['count']];
+            return send_json_response(true, 200, $this->success['getted'], ['last_page' => $total, 'data' => $results, 'total' => $count['count']]);
         else
-            return $results;
+            return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
 
     }
 
@@ -3572,6 +3573,13 @@ class Simulation
         "version_name" => "<b>Version Name</b> invalid !",
         "version_id" => "<b>Version</b> invalid !",
         "param" => "Setting Parameter missing !"
+    ];
+
+    private $success = [
+        "saved" => "Saved successfully !",
+        "deleted" => "Deleted successfully !",
+        "updated" => "Updated successfully !",
+        'getted' => "Data retrieved successfully !"
     ];
 
 
