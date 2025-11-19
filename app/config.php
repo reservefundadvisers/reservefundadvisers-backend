@@ -6,7 +6,7 @@ require('server.php');
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
+    'https://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
