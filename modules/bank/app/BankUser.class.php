@@ -52,7 +52,7 @@ class BankUser
             $conds,
             "LEFT JOIN $usersTable u ON u.id = $bankUsersTable.user_id
              LEFT JOIN $banksTable b ON b.id = $bankUsersTable.bank_id",
-            "$bankUsersTable.*, u.fn, u.ln, u.username, b.bank_name",
+            "$bankUsersTable.*, u.fn, u.ln, u.username, b.*",
             check_val($pagination, 'query')
         );
 
@@ -93,7 +93,7 @@ class BankUser
             ['id' => $id],
             "LEFT JOIN $usersTable u ON u.id = $bankUsersTable.user_id
              LEFT JOIN $banksTable b ON b.id = $bankUsersTable.bank_id",
-            "$bankUsersTable.*, u.fn, u.ln, u.username, b.bank_name"
+            "$bankUsersTable.*, u.fn, u.ln, u.username, b.*"
         );
 
         if (empty($bank_user)) {
@@ -184,29 +184,56 @@ class BankUser
     {
         global $bankUsersTable;
 
-        if (!isset($data['id'])) {
-            return send_json_response(false, 400, 'ID is required');
+        if (!isset($data['user_id']) || !isset($data['bank_id'])) {
+            return send_json_response(false, 400, 'User ID and Bank ID array are required');
         }
 
-        $id = trim($data['id']);
+        $user_id = trim($data['user_id']);
+        $bank_ids = $data['bank_id'];
 
-        if (empty($id)) {
-            return send_json_response(false, 400, 'ID cannot be empty');
+        if (empty($user_id)) {
+            return send_json_response(false, 400, 'User ID cannot be empty');
         }
 
-        // Check if association exists
-        $exists = exists($bankUsersTable, ['id' => $id]);
+        // Ensure bank_id is an array
+        if (!is_array($bank_ids)) {
+            return send_json_response(false, 400, 'Bank ID must be an array');
+        }
+
+        // Validate bank_ids are not empty
+        $bank_ids = array_filter(array_map('trim', $bank_ids));
+        if (empty($bank_ids)) {
+            return send_json_response(false, 400, 'At least one Bank ID is required');
+        }
+
+        // Build condition for IN
+        $placeholders = [];
+        $params = ['user_id' => $user_id];
+        foreach ($bank_ids as $index => $bank_id) {
+            $placeholders[] = ':bank' . $index;
+            $params['bank' . $index] = $bank_id;
+        }
+        $condition = 'user_id = :user_id AND bank_id IN (' . implode(',', $placeholders) . ')';
+
+        // Check if associations exist
+        $exists = false;
+        foreach ($bank_ids as $bank_id) {
+            if (exists($bankUsersTable, ['user_id' => $user_id, 'bank_id' => $bank_id])) {
+                $exists = true;
+                break;
+            }
+        }
         if (!$exists) {
-            return send_json_response(false, 404, 'Bank-User association not found');
+            return send_json_response(false, 404, 'No Bank-User associations found for the provided IDs');
         }
 
-        $result = delete_elements_by_id($bankUsersTable, $id);
+        $result = delete_elements_by_cond($bankUsersTable, $condition, $params);
 
-        if (!empty($result)) {
-            return send_json_response(false, 500, 'Error deleting bank-user association');
+        if ($result === false) {
+            return send_json_response(false, 500, 'Error deleting bank-user associations');
         }
 
-        return send_json_response(true, 200, 'Bank-User association deleted successfully');
+        return send_json_response(true, 200, 'Bank-User associations deleted successfully');
     }
 
     public function set($data)

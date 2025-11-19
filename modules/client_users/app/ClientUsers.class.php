@@ -230,16 +230,16 @@ class ClientUsers
     }
 
 
-    private $errors = [ "fn" => "<b>First Name</b> invalid !",
-                        "ln" => "<b>Last Name</b> invalid !",
-                        "username" => "<b>Username</b> invalid !",
-                        "username_exists" => "<b>Username</b> already exists !",
-                        "email_exists" => "<b>Email</b> already assigned !",
-                        "password" => "<b>Password</b> invalid !",
-                        "role" => "<b>Role</b> invalid !",
+    private $errors = [ "fn" => "First Name invalid !",
+                        "ln" => "Last Name invalid !",
+                        "username" => "Username invalid !",
+                        "username_exists" => "Username already exists !",
+                        "email_exists" => "Email already assigned !",
+                        "password" => "Password invalid !",
+                        "role" => "Role invalid !",
                         "self" => "Operation not allowed on this user",
-                        "client_id" => "<b>Client</b> invalid !",
-                        "password_short" => "<b>Password</b> must be at least 6 characters !"   ];
+                        "client_id" => "Client invalid !",
+                        "password_short" => "Password must be at least 6 characters !"   ];
 
     private $tr = [     "admin" => "administrator",
                         "manager" => "manager"   ];

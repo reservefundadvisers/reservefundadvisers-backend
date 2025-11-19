@@ -126,18 +126,19 @@ class Models
             // Validate file type (Excel or CSV)
             $allowedTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv', 'application/csv'];
             if(!in_array($fileType, $allowedTypes) && !preg_match('/\.(xlsx?|csv)$/i', $fileName)){
-                return ['error' => 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.'];
+                return send_json_response(false, 400, 'Invalid file type. Only Excel (.xlsx, .xls) and CSV files are allowed.');
             }
 
-            // Parse the file
-            try {
-                $spreadsheet = IOFactory::load($fileTmpPath);
-                $sheet = $spreadsheet->getActiveSheet();
-                $rows = $sheet->toArray();
+                // Parse the file
+                try {
+                    $spreadsheet = IOFactory::load($fileTmpPath);
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $rows = $sheet->toArray();
 
-                if(count($rows) < 20){
-                    return ['error' => 'File is too short. Expected at least 20 rows.'];
-                }
+                    // Validate file format
+                    if (count($rows) < 20) {
+                        return send_json_response(false, 400, 'Invalid file format. Please ensure the file matches the required template.');
+                    }
 
                 // Extract model data from actual sheet layout
                 $model_data = ['client_id' => $data['client_id']];
@@ -145,21 +146,15 @@ class Models
                     'Model Name' => 'name',
                     'Housing Units' => 'housing',
                     'Starting Amount' => 'starting_amount',
-                    'Monthly fees' => 'monthly_fees',
-                    'Mnthly fees Yearly Increase (%)' => 'monthly_fees_rate',
+                    'Monthly fees per unitInflaction rate (%)' => 'monthly_fees_rate',
                     'Inflation rate (%)' => 'inflation_rate',
-                    'Bank Income Intrest Rate (%)' => 'bank_int_rate',
-                    'Loan Intrest Rate (%)' => 'bank_rate',
-                    'Loan Terms' => 'loan_years',
-                    'Simulation Period' => 'period',
-                    'Model Fiscal Year' => 'fiscal_year',
-                    'Annual SIRS Fees' => 'annual_sirs_fees',
+                    'What is your Reserve funding year ?' => 'period',
+                    'Fiscal Year To Start' => 'fiscal_year',
                     'Total Reserve Fees On Hand' => 'total_reserve_fees_onhand',
-                    'Annual Reserve Fees' => 'annual_reserve_fees',
                     'Total SIRS Funds On Hand' => 'total_sirs_fund_onhand'
                 ];
 
-                for($i = 1; $i <= 18; $i++){
+                for($i = 1; $i <= 11; $i++){
                     if($i >= count($rows)) break;
                     $cells = $rows[$i];
                     if(count($cells) < 2) continue;
@@ -175,22 +170,47 @@ class Models
                     }
                 }
 
+                // --- Calculate starting_amount from totals ---
+                if (isset($model_data['total_reserve_fees_onhand']) && isset($model_data['total_sirs_fund_onhand'])) {
+                    $model_data['starting_amount'] =
+                        floatval($model_data['total_reserve_fees_onhand']) +
+                        floatval($model_data['total_sirs_fund_onhand']);
+                }
+
                 // Extract model items from actual sheet layout
                 $model_items = [];
-                for($i = 20; $i < count($rows); $i++){
+                for($i = 14; $i < count($rows); $i++){
                     $cells = $rows[$i];
-                    if(count($cells) < 7) continue;
-                    if(empty(trim($cells[0])) && empty(trim($cells[1])) && empty(trim($cells[2])) && empty(trim($cells[3]))) continue;
+                    if(count($cells) < 6) continue;
+                    // Skip only if ALL IMPORTANT FIELDS are blank
+                    if (empty(trim($cells[0])) && empty(trim($cells[1])) && empty(trim($cells[2])) && empty(trim($cells[3]))) {
+                        continue;
+                    }
+
+                     // Normalize dropdown text
+                    $raw_type = trim($cells[4]);
+                    $normalized_type = strtolower(str_replace(' ', '_', $raw_type));
+
+                    // Optional strict mapping to prevent invalid enum entries
+                    $valid_types = ['sirs_item', 'non_sirs_item', 'uncertain_sirs_item'];
+                    if (!in_array($normalized_type, $valid_types)) {
+                        $normalized_type = 'non_sirs_item';
+                    }
+
+                    // is_sirs boolean → only true when sirs_item
+                    $is_sirs = ($normalized_type === 'sirs_item') ? 1 : 0;
+
                     $item = [
                         'name' => trim($cells[0]),
                         'expected_life' => intval(preg_replace('/\D/', '', $cells[1])),
                         'remaining_life' => intval(preg_replace('/\D/', '', $cells[2])),
-                        'cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
-                        'is_sirs' => intval(preg_replace('/\D/', '', $cells[4])),
-                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
-                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[6]))
+                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
+                        'is_sirs' => $is_sirs,
+                        'item_type' => $normalized_type,
+                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
+                        
                     ];
-                    if(!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 || $item['cost'] > 0){
+                    if(!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 ){
                         $model_items[] = $item;
                     }
                 }
@@ -210,7 +230,7 @@ class Models
                 // Save model
                 $model_id = save_element($modelsTable, $model_data);
                 if($model_id === false){
-                    return ['error' => 'Failed to save model.'];
+                    return send_json_response(false, 500, 'Failed to save model.');
                 }
 
                 // Save model items
@@ -218,20 +238,20 @@ class Models
                     foreach($model_items as &$item){
                         $item['model_id'] = $model_id;
                     }
+                    unset($item); 
                     // 
                     foreach($model_items as $item){
-                        save_element($modelItemsTable, $item);
+                       $items_save =  save_element($modelItemsTable, $item);
                     }
                 }
 
-                return ['success' => $model_id];
+                return send_json_response(true, 200, $this->success['sucess'], ['data' =>['model_id' => $model_id ] ]);
 
             } catch (Exception $e) {
-                return ['error' => 'Failed to parse file: ' . $e->getMessage()];
+                return send_json_response(false, 500, 'Error processing file: ' . $e->getMessage());
             }
 
         }else{
-            rfa_create_log(print_r($data, true));
             // Original logic for JSON data
             $checkFor = ['client_id', 'housing', 'total_reserve_fees_onhand','total_sirs_fund_onhand'];
             /**
@@ -258,6 +278,7 @@ class Models
         }
 
         $data['fiscal_year'] = check_val($data, 'fiscal_year', date('Y', time()));
+        $data['starting_amount'] = floatval(check_val($data, 'total_reserve_fees_onhand', 0)) + floatval(check_val($data, 'total_sirs_fund_onhand', 0));
 
         $ret_id = save_element($modelsTable, $data);
 
@@ -328,7 +349,6 @@ class Models
         $res = delete_elements_by_id($modelsTable, $data['id']);
     
         if($trans_started)end_transaction();
-
         
         $count = count($data['id']) - count($res);
         
@@ -337,7 +357,7 @@ class Models
             // return ['error' => $res];
             return send_json_response(false, 400, $res);
         } else {
-            return send_json_response(true, 200, $this->errors['deleted']);
+            return send_json_response(true, 200, $this->success['deleted']);
             // return ['success' => ''];
         } 
     }
@@ -404,14 +424,14 @@ class Models
     }
 
 
-    private $errors = [ "client_id" => "Please choose an <b>Association</b> !",
+    private $errors = [ "client_id" => "Please choose anAssociation !",
                         "not_allowed" => "Unauthorized Access", 
-                        "model_id" => "Please choose a <b>Model</b> !",
-                        "missing" => "This <b>Model</b> doesn't exist !",
-                        "used" => "This <b>Model</b> cannot be edited because it is used in the <b>Simulation</b> !",
-                        "housing" => "<b>Housing Units</b> invalid !",
-                        "starting_amount" => "<b>starting_amount</b> invalid !",
-                        "monthly_fees" => "<b>Monthly Fees</b> invalid !"];
+                        "model_id" => "Please choose aModel !",
+                        "missing" => "ThisModel doesn't exist !",
+                        "used" => "ThisModel cannot be edited because it is used in theSimulation !",
+                        "housing" => "Housing Units invalid !",
+                        "starting_amount" => "starting_amount invalid !",
+                        "monthly_fees" => "Monthly Fees invalid !"];
 
     private $success = [ "sucess" => "Operation completed successfully!",
                          "deleted" => "Selected model(s) deleted successfully!" ];

@@ -74,9 +74,17 @@ class ClientUsers
                                 format_select($usersTable, "*", ['row_id', 'password']).", $clientPositionsTable.value AS position, $clientPositionRolesTable.value AS position_role", " GROUP BY $usersTable.id ORDER BY $usersTable.row_id DESC".check_val($pagination, 'query'));
         /* ******* */
 
+        #exclude loggedin user from list
+        foreach($results as $key => $user){
+            if($user['id'] == $auth->uid()){
+                unset($results[$key]);
+                break;;
+            }
+        }
 
         if($is_pagination)
-            return ['last_page'=>$total, 'data'=>$results, 'total'=>$count['count']];
+            return send_json_response(true, 200, $this->success['success'], ['last_page'=>$total, 'data'=>$results, 'total'=>$count['count']]);
+            // return ['last_page'=>$total, 'data'=>$results, 'total'=>$count['count']];
         else
             return send_json_response(true, 200, $this->success['success'], ['data' => $results]);
 
@@ -137,7 +145,7 @@ class ClientUsers
         {
             // return ['error' =>  $this->errors['username_exists'] ];
             // return ['error' =>  $this->errors['email_exists'] ];
-            return send_json_response(false, 400, $this->errors['email_exists']);
+            return send_json_response(false, 400, $this->errors['email_exists'], ['email' => ''] );
         }
 
         // hash password

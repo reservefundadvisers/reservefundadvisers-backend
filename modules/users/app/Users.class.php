@@ -214,13 +214,28 @@ class Users
      * @return array User profile session information or error message.
      */
     public function getProfile($data){
-        global $auth, $usersTable;
+        global $auth, $usersTable, $usersTable, $modelsTable;
 
         $user_info = $auth->sessioninfo();
         if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
 
         $user_data = get_element($usersTable, ['id' => $user_info['uid']], 'position_id');
         $user_info['position_id'] = $user_data['position_id'];
+
+        $user_client_id = get_element($usersTable, ['id' => $user_info['uid']], 'client_id');
+
+        $user_info['is_association_created'] = false;
+        if(!empty($user_client_id['client_id'])){
+            $user_info['is_association_created'] = true;
+        }
+
+        // $user_info['is_association_created'] = $user_client_id ? true : false;
+        // rfa_create_log(print_r($user_info['is_association_created'], true));
+        $user_info['is_models_created'] = false;
+        if($user_client_id){
+            $user_client_models = get_elements($modelsTable, ['client_id' => $user_client_id]);
+            $user_info['is_models_created'] = $user_client_models ? true : false;
+        }
 
         return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
     }
