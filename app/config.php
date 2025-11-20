@@ -2,8 +2,6 @@
 
 require('server.php');
 
-rfa_create_log("CORS Origin: " . $origin);
-
 // Dynamic CORS origin handling
 $allowed_origins = [
     'http://localhost:5173',
