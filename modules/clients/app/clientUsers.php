@@ -8,6 +8,33 @@
     include_once('ClientPositionRoles.php');
     $request = check_request();
 
+    // Dynamic CORS origin handling
+    $allowed_origins = [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://absd.frontend.reservefundadvisors.com',
+        'http://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
+    ];
+
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: " . $origin);
+        header("Access-Control-Allow-Credentials: true");
+    } else {
+        // Fallback for development - be cautious with this in production
+        header("Access-Control-Allow-Origin: *");
+        // Note: Cannot use credentials with wildcard
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, auth_session, cookie");
+
+    // Handle preflight OPTIONS request
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit(); // Allow preflight to succeed, but do not block real requests
+    }
+
     // Allow public access for get_position and get_positions commands
     if(!(isset($request['cmd']) && ($request['cmd'] === 'get_position' || $request['cmd'] === 'get_positions'))) {
         // check if logged in and validated 
