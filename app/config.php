@@ -2,11 +2,15 @@
 
 require('server.php');
 
+rfa_create_log("CORS Origin: " . $origin);
+
 // Dynamic CORS origin handling
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://absd.frontend.reservefundadvisors.com'  // Add production domains as needed
+    'https://absd.frontend.reservefundadvisors.com',
+    'http://absd.frontend.reservefundadvisors.com',
+    rtrim('https://absd.frontend.reservefundadvisors.com', '/'),  // Add production domains as needed
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -14,6 +18,7 @@ $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: " . $origin);
     header("Access-Control-Allow-Credentials: true");
+    header("Vary: Origin");
 } else {
     // Fallback for development - be cautious with this in production
     header("Access-Control-Allow-Origin: *");
