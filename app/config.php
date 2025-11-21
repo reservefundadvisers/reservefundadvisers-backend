@@ -23,7 +23,7 @@ if (in_array($origin, $allowed_origins)) {
     // Note: Cannot use credentials with wildcard
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, auth_session, cookie");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Auth-Session, auth-session, cookie");
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
