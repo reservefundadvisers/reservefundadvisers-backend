@@ -168,7 +168,7 @@ class Models
                 $rows = $sheet->toArray();
 
                 $model_items = [];
-                for ($i = 1; $i < count($rows); $i++) {
+                for ($i = 5; $i < count($rows); $i++) {
                     $cells = $rows[$i];
                     if (count($cells) < 7) continue;
                     if (empty(trim($cells[0])) && empty(trim($cells[1])) && empty(trim($cells[2])) && empty(trim($cells[3]))) continue;
@@ -178,24 +178,24 @@ class Models
                     $normalized_type = strtolower(str_replace(' ', '_', $raw_type));
 
                     // Optional strict mapping to prevent invalid enum entries
-                    $valid_types = ['sirs_item', 'non_sirs_item', 'uncertein_sirs_item'];
+                    $valid_types = ['sirs_item', 'non_sirs_item', 'uncertain_sirs_item'];
                     if (!in_array($normalized_type, $valid_types)) {
-                        $normalized_type = 'uncertein_sirs_item'; // default fallback
+                        $normalized_type = 'uncertain_sirs_item'; // default fallback
                     }
 
-                    rfa_create_log(preg_replace('/\D/', '', $cells[3]));
-                    rfa_create_log($raw_type);
+                    // is_sirs boolean → only true when sirs_item
+                    $is_sirs = ($normalized_type === 'sirs_item') ? 1 : 0;
 
                     $item = [
                         'name' => trim($cells[0]),
-                        'redundancy' => intval(preg_replace('/\D/', '', $cells[1])),
+                        'redundancy' => intval(preg_replace('/\D/', '', $cells[1])), // expected_life = redundancy
                         'remaining_life' => intval(preg_replace('/\D/', '', $cells[2])),
-                        'cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
+                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
+                        'is_sirs' => $is_sirs,  
                         'item_type' => $normalized_type,
-                        'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
-                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[6]))
+                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
                     ];
-                    if (!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 || $item['cost'] > 0) {
+                    if (!empty($item['name']) || $item['redundancy'] > 0 || $item['remaining_life'] > 0) {
                         $model_items[] = $item;
                     }
                 }
@@ -225,7 +225,6 @@ class Models
 
                 return send_json_response(true, 200, 'Model Items Created Successfully', ['data' => ['model_id' => $model_id]]);
             } catch (Exception $e) {
-                rfa_create_log("Models::save - Error processing file upload by user " . $auth->uid() . " for model_id " . $data['model_id'] . ". Error: " . $e->getMessage());
                 return send_json_response(false, 400, 'Error processing file: ' . $e->getMessage());
             }
         } else {
