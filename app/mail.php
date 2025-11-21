@@ -11,7 +11,7 @@ try {
     $dotenv->load();
 } catch (Exception $e) {
     // Handle the exception if .env file is missing or cannot be loaded
-    rfa_create_log("[OTP] Could not load .env file: " . $e->getMessage());
+    // rfa_create_log("[OTP] Could not load .env file: " . $e->getMessage());
     return false;
 }
 
@@ -63,7 +63,7 @@ function sendOtpEmail($email, $name, $otp, $recipientName = 'User', $otpValidity
         $mail->send();
         return true; // Return true if email is sent successfully
     } catch (Exception $e) {
-        rfa_create_log("[OTP] Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        // rfa_create_log("[OTP] Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
         return false; // Return false on failure
     }
 }
