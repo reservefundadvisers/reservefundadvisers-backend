@@ -1471,9 +1471,10 @@ class Simulation
 
 
         if ($is_pagination)
-            return ['last_page' => $total, 'data' => $results, 'total' => $count['count']];
+            // return ['last_page' => $total, 'data' => $results, 'total' => $count['count']];
+            return send_json_response(true, 200, $this->success['getted'], ['last_page' => $total, 'data' => $results, 'total' => $count['count']]);
         else
-            return $results;
+            return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
     }
 
 
