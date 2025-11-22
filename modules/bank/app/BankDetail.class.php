@@ -493,7 +493,7 @@ class BankDetail
                     'duration (in months)' => 'duration',
                     'apy interest (%)' => 'interest',
                     'minimum amount ($)' => 'minimum_amount',
-                    'early withdrawl (%)' => 'panalty',
+                    'early withdrawal (%)' => 'panalty',
                     'demand deposit (boolean)' => 'is_demand_deposit',
                     'remarks' => 'remarks'
                 ];
