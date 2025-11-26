@@ -137,6 +137,10 @@ class Simulation
             case 'set_settings':
                 $response = $this->set_config($data);
                 break;
+
+            case 'get_months_items':
+                // $response = $this->get_months_items($data);
+                break;
         }
 
         return $response;
@@ -1225,6 +1229,8 @@ class Simulation
             // $year_calculations['ltim_r'] = $ltim_rates[$i] * 100;
             $calculated[$i] = $year_calculations;
 
+            // Add is_deficit boolean to indicate if year has deficit (fa < 0)
+            $calculated[$i]['is_deficit'] = ($year_calculations['fa'] < 0);
 
             //log_info("$starting_amount -> $final_amount");
 
@@ -1434,6 +1440,60 @@ class Simulation
         if ($results['inv_strategies']['bbp'])
             unset($results['inv_strategies']['bbp']);
 
+        // Prepare formatted_calculation with descriptive keys
+        $key_mapping = [
+            'sa' => 'starting_amount',
+            'yc' => 'yearly_collections',
+            'mf' => 'monthly_fees',
+            'ta' => 'total_amount',
+            'ih' => 'held_amount',
+            'ipn' => 'early_penalty',
+            'is' => 'investment_strategies',
+            'ip' => 'investment_principal',
+            'inv' => 'total_invested',
+            'ne' => 'net_earnings',
+            'pip' => 'principal_withdrawn',
+            'pne' => 'principal_net_earnings',
+            'cp' => 'compound',
+            'lp' => 'loss_purchase_power',
+            'sp' => 'spending',
+            'loan_t' => 'loan_total',
+            'loan_pay' => 'loan_payment',
+            'tx' => 'total_expenses',
+            'fa' => 'final_amount',
+            'deficit' => 'deficit',
+            'assess' => 'assessment',
+            'ltim_yoc' => 'ltim_years_of_cash',
+            'ltim_spl' => 'ltim_surplus',
+            'ltim_p' => 'ltim_principal',
+            'ltim_ne' => 'ltim_net_earnings',
+            'ltim_str' => 'ltim_strategy',
+            'loan_i' => 'loan_interest',
+        ];
+
+        $results['formatted_calculation'] = [];
+
+        foreach ($calculated as $year_idx => $year_data) {
+            $formatted_year = [];
+            foreach ($year_data as $key => $value) {
+                // remove suffix if present
+                $key_base = $key;
+                $suffix = '';
+                if (strlen($key) > 2) {
+                    $key_base = substr($key, 0, 2);
+                    $suffix = substr($key, 2);
+                }
+
+                if (array_key_exists($key_base, $key_mapping)) {
+                    $formatted_key = $key_mapping[$key_base] . $suffix;
+                    $formatted_year[$formatted_key] = $value;
+                } else {
+                    // preserve keys which are not in mapping as is
+                    $formatted_year[$key] = $value;
+                }
+            }
+            $results['formatted_calculation'][$year_idx] = $formatted_year;
+        }
 
         // return $results;
         return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
