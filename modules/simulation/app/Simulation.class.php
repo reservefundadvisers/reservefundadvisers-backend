@@ -271,6 +271,7 @@ class Simulation
 
 
         $inflation_rate = $rule_use_inflation ? $rule_inf_rate /* floatval($model['inflation_rate']) / 100.0 */ : 0;
+        $lopp_rate = round($inflation_rate * 100, 2);
 
         // set default bank intrest rate 
         $this->default_invest_strategy['rate'] = check_val($model, 'bank_int_rate', 0.55);
@@ -500,6 +501,7 @@ class Simulation
         $final_amount = 0;      // used for final calulated amount to be used as new starting_amount    
         $loan_payments = array_fill(0, $period, 0);     // different loan to take for next year
         $remaining_loan_payments = 0;
+        $loan_balance = 0; // Track remaining loan principal
         /* ************** */
 
 
@@ -813,6 +815,7 @@ class Simulation
 
             // get any calculated as year_calculations      
             $year_calculations = $calculated[$i];
+            $year_calculations['lopp_rate'] = $lopp_rate;
 
             // current year spendings, array index starts at 0
             $spending = $spendings[$i];
@@ -838,6 +841,7 @@ class Simulation
             if (isset($erase_deficit['loan_amount'])) {
                 $loan_amount = check_val($erase_deficit, 'loan_amount', 0);
                 $loan_calc = $this->calculateLoan($loan_payments, $loan_amount, check_val($erase_deficit, 'bank_rate', $bank_rate), check_val($erase_deficit, 'loan_years', $loan_years), $i, $period, !array_has($processed_loans, $i));
+                $loan_balance += $loan_amount;
 
                 $year_calculations['loan_i'] = $loan_calc['total_i'];
                 $year_calculations['loan_pi'] = $loan_calc['total'];
@@ -849,6 +853,11 @@ class Simulation
             $loan_payment = $loan_payments[$i] * -1;
             $year_calculations['loan_y'] = $loan_payment;
 
+            if ($loan_payment < 0) {
+                $loan_balance += $loan_payment; // subtract payment
+                if ($loan_balance < 0) $loan_balance = 0;
+            }
+            $year_calculations['loan_balance'] = round($loan_balance, 2);
 
             // assessment
             $assessment = check_val($erase_deficit, 'assessment', 0);
@@ -1226,6 +1235,12 @@ class Simulation
             $year_calculations['sa'] = $starting_amount;
             $year_calculations['ltim_yoc'] = $spending_year_amount;
 
+            // % Allocated to LTIM
+            $year_calculations['ltim_p_perc'] = 0;
+            if (!empty($year_calculations['inv']) && $year_calculations['inv'] > 0) {
+                $year_calculations['ltim_p_perc'] = round(($year_calculations['ltim_p'] / $year_calculations['inv']) * 100, 2);
+            }
+
             // $year_calculations['ltim_r'] = $ltim_rates[$i] * 100;
             $calculated[$i] = $year_calculations;
 
@@ -1476,7 +1491,11 @@ class Simulation
             'ltim_ne'   => 'ltim_net_earnings',
             'ltim_str'  => 'ltim_strategy',
             'ltim_yoc'  => 'ltim_years_of_cash',
-            'ltim_spl'  => 'ltim_surplus'
+            'ltim_spl'  => 'ltim_surplus',
+
+            'ltim_p_perc' => 'ltim_percent_allocated',
+            'lopp_rate'   => 'loss_of_purchase_power_rate',
+            'loan_balance'=> 'remaining_loan_balance',
         ];
 
         $results['formatted_calculation'] = [];
