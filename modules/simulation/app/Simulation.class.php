@@ -1441,34 +1441,23 @@ class Simulation
             unset($results['inv_strategies']['bbp']);
 
         // Prepare formatted_calculation with descriptive keys
-        $key_mapping = [
-            'sa' => 'starting_amount',
-            'yc' => 'yearly_collections',
-            'mf' => 'monthly_fees',
-            'ta' => 'total_amount',
-            'ih' => 'held_amount',
-            'ipn' => 'early_penalty',
-            'is' => 'investment_strategies',
-            'ip' => 'investment_principal',
-            'inv' => 'total_invested',
-            'ne' => 'net_earnings',
-            'pip' => 'principal_withdrawn',
-            'pne' => 'principal_net_earnings',
-            'cp' => 'compound',
-            'lp' => 'loss_purchase_power',
-            'sp' => 'spending',
-            'loan_t' => 'loan_total',
-            'loan_pay' => 'loan_payment',
-            'tx' => 'total_expenses',
-            'fa' => 'final_amount',
-            'deficit' => 'deficit',
-            'assess' => 'assessment',
-            'ltim_yoc' => 'ltim_years_of_cash',
-            'ltim_spl' => 'ltim_surplus',
-            'ltim_p' => 'ltim_principal',
-            'ltim_ne' => 'ltim_net_earnings',
-            'ltim_str' => 'ltim_strategy',
-            'loan_i' => 'loan_interest',
+       $key_mapping = [
+            'sa'        => 'starting_amount',
+            'yc'        => 'yearly_collections',
+            'inv'       => 'total_invested',
+            'ne'        => 'net_earnings',
+            'loan_t'    => 'loan_total',
+            'assess'    => 'assessment',
+            'sp'        => 'spending',
+            'lp'        => 'loss_purchase_power',
+            'loan_pay'  => 'loan_payment',
+            'loan_i'    => 'loan_interest',
+            'fa'        => 'final_amount',
+            'deficit'   => 'deficit',
+            'ltim_acc'  => 'ltim_principal_accumulated',
+            'ltim_p'    => 'ltim_principal',
+            'ltim_ne'   => 'ltim_net_earnings',
+            'ltim_str'  => 'ltim_strategy'
         ];
 
         $results['formatted_calculation'] = [];
