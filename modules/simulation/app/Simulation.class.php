@@ -1634,6 +1634,7 @@ class Simulation
             'sa'        => 'starting_amount',
             'yc'        => 'yearly_collections',
             'mf'        => 'monthly_fee',
+            'mf_m'      => 'monthly_fee_manual',
             'ta'        => 'total_amount',
             'ih'        => 'held_amount',
             'ipn'       => 'early_penalty',
