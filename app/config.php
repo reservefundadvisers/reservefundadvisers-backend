@@ -136,7 +136,7 @@ $simSplitsLTIMTable = 'simulation_splits_ltim';
 $simDeficitLTIMTable = 'simulation_deficit_ltim';
 $simRulesTable = 'simulation_rules';
 $simVersionTable = 'simulation_versions';
-$simModnthlyItems = 'simulation_item_monthly';
+$simMonthlyItems = 'simulation_item_monthly';
 
 $banksTable = 'banks';
 $bankTypesTable = 'bank_type';
@@ -174,7 +174,7 @@ $db_table_cols = [
                     $simDeficitLTIMTable => ['row_id', 'id', 'model_id', 'user_id', 'year', 'to', 'data'],
                     $simRulesTable => ['row_id', 'id', 'model_id', 'user_id', 'rules'],
                     $simVersionTable => ['row_id', 'id', 'model_id', 'user_id', 'name', 'note', 'can_view', 'can_load', 'data', 'created_at'],
-                    $simModnthlyItems => ['row_id', 'id', 'model_id', 'item_id', 'occurrence','month', 'year', 'created_by', 'amount'],
+                    $simMonthlyItems => ['row_id', 'id', 'model_id', 'item_id', 'occurrence','month', 'year', 'created_by', 'amount'],
                     $configTable => ['row_id', 'id', 'param', 'value'], 
                     $checkoutsTable => ['row_id', 'id', 'order', 'type', 'details', 'status', 'created_at'],
 
