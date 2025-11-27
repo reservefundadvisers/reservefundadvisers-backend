@@ -139,11 +139,185 @@ class Simulation
                 break;
 
             case 'get_months_items':
-                // $response = $this->get_months_items($data);
+                $response = $this->get_monthly_items($data);
+                break;
+            case 'get_yearly_items':
+                $response = $this->get_yearly_items($data);
+                break;
+            case 'add_monthly_item':
+                $response = $this->add_monthly_item($data);
+                break;
+            case 'update_monthly_item':
+                $response = $this->update_monthly_item($data);
+                break;
+            case 'delete_monthly_item':
+                $response = $this->delete_monthly_item($data);
                 break;
         }
 
         return $response;
+    }
+
+    public function get_monthly_items($data)
+    {
+        global $simMonthlyItems;
+
+        if (!is_valid($data, 'model_id')) {
+            return send_json_response(false, 400, "model_id is required");
+        }
+
+        $conds = ['model_id' => intval($data['model_id'])];
+
+        if (isset($data['year']))  $conds['year'] = intval($data['year']);
+        if (isset($data['month'])) $conds['month'] = intval($data['month']);
+
+        $items = get_elements($simMonthlyItems, $conds);
+
+        return send_json_response(true, 200, "Monthly items fetched", ['data' => $items]);
+    }
+
+    public function get_yearly_items($data)
+    {
+        global $simMonthlyItems;
+
+       if (!is_valid($data, 'year') || !is_valid($data, 'model_id')) {
+           return send_json_response(false, 400, "year and model_id is required");
+        }
+
+        $year = intval($data['year']);
+        $model_id = $data['model_id'];
+
+        // Run simulation to get spending items
+        $simulation = $this->simulation($data, true);
+        $spendings = $simulation['spendings'];
+
+        if (empty($spendings)) {
+            return send_json_response(false, 404, "No spending items found for the specified year");
+        }
+
+        $items_in_year = $spendings[$year];
+
+        // Load monthly allocations from DB
+        $monthly = get_elements($simMonthlyItems, ['model_id' => $model_id, 'year' => $year]);
+
+        $grouped_allocated = [];
+        foreach ($monthly as $entry) {
+            $key = "{$entry['item_id']}|{$entry['occurrence']}";
+            if (!isset($grouped_allocated[$key])) {
+                $grouped_allocated[$key] = [
+                    'item_id' => $entry['item_id'],
+                    'occurrence' => $entry['occurrence'],
+                    'year' => $entry['year'],
+                    'parent_id' => $entry['parent_id'] ?? null,
+                    'monthly' => []
+                ];
+            }
+            $grouped_allocated[$key]['monthly'][] = [
+                'month' => intval($entry['month']),
+                'amount' => floatval($entry['amount'])
+            ];
+        }
+
+        // Collect keys for allocated items
+        $allocated_keys = array_keys($grouped_allocated);
+
+        $unallocated_items = [];
+        foreach ($items_in_year as $item) {
+            $occurrence = isset($item['occurrence']) ? $item['occurrence'] : 0;
+            $item_id = !empty($item['parent_id']) ? $item['parent_id'] : $item['id'];
+            $key = "{$item_id}|{$occurrence}";
+            if (!in_array($key, $allocated_keys)) {
+                $unallocated_items[] = $item;
+            }
+        }
+
+        return send_json_response(true, 200, "Yearly items fetched", [
+            'allocated' => array_values($grouped_allocated),
+            'unallocated' => $unallocated_items
+        ]);
+    }
+
+    public function add_monthly_item($data)
+    {
+        global $auth, $simMonthlyItems;
+
+        if (!is_valid($data, 'model_id') || !is_valid($data, 'item_id') || !is_valid($data, 'month') || !is_valid($data, 'year') || !is_valid($data, 'amount') || !is_valid($data, 'occurrence')) {
+            return send_json_response(false, 400, 'Model ID, Item ID, Month, Year, Occurrence and Amount are required');
+        }
+
+        $data['created_by'] = $auth->uid();
+
+        // Check if an item for the same model_id, item_id, occurrence, month and year already exists, to avoid duplicates
+        $existing = get_elements($simMonthlyItems, [
+            'model_id' => $data['model_id'],
+            'item_id' => $data['item_id'],
+            'month' => $data['month'],
+            'year' => $data['year'],
+        ]);
+
+        if (!empty($existing)) {
+            return send_json_response(false, 409, 'A monthly item allocation for the specified model, item, month, and year already exists');
+        }
+
+        // Generate a new ID if none is provided
+        if (!isset($data['id'])) {
+            $data['id'] = generate_id();
+        }
+
+        $saved = save_element($simMonthlyItems, $data);
+
+        if ($saved === false) {
+            return send_json_response(false, 500, 'Failed to allocate monthly item');
+        }
+
+        return send_json_response(true, 200, 'Monthly item allocated successfully', $data);
+    }
+
+    public function update_monthly_item($data)
+    {
+        global $simMonthlyItems;
+
+        if (!is_valid($data, 'id')) {
+            return send_json_response(false, 400, "monthly allocation id required");
+        }
+
+        $existing = get_element($simMonthlyItems, ['id' => $data['id']]);
+        if (!$existing) {
+            return send_json_response(false, 404, "Allocation not found");
+        }
+
+        $update = ['id' => $data['id']];
+
+        if (isset($data['amount'])) $update['amount'] = floatval($data['amount']);
+        if (isset($data['month']))  $update['month'] = intval($data['month']);
+        if (isset($data['year']))   $update['year'] = intval($data['year']);
+        if (isset($data['occurrence'])) $update['occurrence'] = intval($data['occurrence']);
+
+        if (!save_element($simMonthlyItems, $update)) {
+            return send_json_response(false, 500, "Update failed");
+        }
+
+        return send_json_response(true, 200, "Monthly allocation updated", $update);
+    }
+
+    public function delete_monthly_item($data)
+    {
+        global $simMonthlyItems;
+
+        if (!is_valid($data,'id')) {
+            return send_json_response(false, 400, "ID is required");
+        }
+
+        $existing = get_element($simMonthlyItems,['id'=>$data['id']]);
+        if (!$existing) {
+            return send_json_response(false, 404, "Record not found");
+        }
+
+        if (!empty(delete_elements_by_id($simMonthlyItems, $data['id']))) {
+            return send_json_response(false, 500, "Delete failed");
+        }
+
+        return send_json_response(true, 200, "Monthly allocation deleted");
     }
 
     private function init_config()
@@ -178,12 +352,12 @@ class Simulation
 
 
 
-    public function simulation($data)
+    public function simulation($data, $internal_call = false)
     {
         global $auth, $modelItemsTable, $modelsTable, $clientsTable,
             $simSplitsTable, $simDeficitTable,
             $simSplitsLTIMTable, $simDeficitLTIMTable,
-            $simRulesTable, $simActualTable, $simVersionTable;
+            $simRulesTable, $simActualTable, $simVersionTable, $simMonthlyItems;
 
         if (!is_valid($data, 'model_id'))
             // return ['error' => $this->errors['model_id']];
@@ -1514,6 +1688,9 @@ class Simulation
         }
 
         // return $results;
+        if($internal_call){
+            return $results;
+        }
         return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
     }
 
