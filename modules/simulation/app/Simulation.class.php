@@ -3547,12 +3547,12 @@ class Simulation
 
 
     private $errors = [
-        "client_id" => "Please choose an <b>Association</b> !",
-        "model_id" => "Please choose a <b>Model</b> !",
+        "client_id" => "Please choose an Association !",
+        "model_id" => "Please choose a Model !",
         "not_allowed" => "Unauthorized Access",
-        "missing" => "This <b>Model</b> doesn't exist !",
-        "version_name" => "<b>Version Name</b> invalid !",
-        "version_id" => "<b>Version</b> invalid !",
+        "missing" => "This Model doesn't exist !",
+        "version_name" => "Version Name invalid !",
+        "version_id" => "Version invalid !",
         "param" => "Setting Parameter missing !"
     ];
 
