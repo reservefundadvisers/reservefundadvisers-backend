@@ -172,6 +172,11 @@ $lang['en']['auth']['signup_position_error'] = "Please enter a valid Position ID
 $lang['en']['auth']['signup_position_invalid'] = "The Position ID is invalid !";
 $lang['en']['auth']['signup_user_update_success'] = "The User details updated successfully !";
 
+$lang['en']['auth']['signup_address_error'] = "Please enter a valid Address !";
+$lang['en']['auth']['signup_city_error'] = "Please enter a valid City !";
+$lang['en']['auth']['signup_state_error'] = "Please enter a valid State !";
+$lang['en']['auth']['signup_zip_error'] = "Please enter a valid Zip Code !";
+
 // fr (French) :
 
 $lang['fr']['auth']['login_lockedout'] = "Vous avez été temporairement bloqué !";
