@@ -153,7 +153,7 @@ class Clients
             }
         }
 
-        $checkFor = ['phone', 'zip', 'city', 'state'];
+        $checkFor = [];
 
         if($this->type == 'client')array_push($checkFor, 'association');
 
