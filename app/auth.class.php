@@ -1169,6 +1169,24 @@ class Auth
 	
 	
 	/*
+	* Username !
+	* @return string
+	*/
+	
+	function user_fnln() {
+
+			if (!is_array($this->session)) {
+					return '';
+			}
+
+			$fn = $this->session['fn'] ?? '';
+			$ln = $this->session['ln'] ?? '';
+
+			return trim($fn . ' ' . $ln);
+	}
+
+	
+	/*
 	* Client ID !
 	* @return string
 	*/
@@ -1388,6 +1406,16 @@ class Auth
 			return false;
 		}
 		
+	}
+
+	function generate_token($length = 64) {
+		$characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?/';
+		$charactersLength = strlen($characters);
+		$randomString = '';
+		for ($i = 0; $i < $length; $i++) {
+			$randomString .= $characters[rand(0, $charactersLength - 1)];
+		}
+		return $randomString;
 	}
 }
 

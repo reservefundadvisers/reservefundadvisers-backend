@@ -223,6 +223,34 @@ if(isset($_POST['cmd'])){
 
     }
 
+    else if($cmd == 'resend_invite_email'){
+
+        include('mail.php');     
+
+        $user_id = check_val($_POST, 'user_id');
+
+        $user_details = get_elements('users', ['id' => $user_id]);
+
+        $user =$user_details[0]; 
+
+        $name  = ($user['fn'] ?? '') . ' ' . ($user['ln'] ?? '');
+        $email =$user['email'] ?? '';
+        $url =  $_ENV['FRONTEND_URL'] ?? ''; 
+        $inviteLink = $url . "invite-member?token=some_random_token";
+        $sendername = $auth->user_fnln() ?? '';
+
+        $template = emailTemplateInviteMember($name, $sendername, $inviteLink, "Reserve Fund System");
+        $subject = $template['subject'] ?? ''   ;
+        $body = $template['body'] ?? '';
+
+        $res = sendOtpEmail($email, $subject, $body);
+
+        if($res)
+            send_json_response(true, 200, $lang[$loc]['auth']['invitation_resent_success']);
+        else 
+           send_json_response(false, 400, $auth->errormsg[0]);
+    }
+
     else if($cmd == 'validate_otp'){
 
         $res = $auth->validate_otp($_POST);

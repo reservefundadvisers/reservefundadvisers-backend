@@ -135,6 +135,7 @@ class ClientUsers
             return send_json_response(false, 400, null, [ $ret ]);
         }
         
+        $is_invite = $data['invited'] ?? false;
 
         $data['role'] = array_has($client_roles, $data['role']) ? $data['role'] : 'client_user'; 
 
@@ -165,6 +166,29 @@ class ClientUsers
                 
         if(!is_valid($data, 'id') && $withEmail){
             $auth->generate_reset($data['username']);
+        }
+
+        if($is_invite){
+
+            // get user role
+            $role = $auth->role();
+
+            // send invite email only for these roles
+            if($role == 'client_admin' || $role == 'company_admin' || $role == 'admin' || $role == 'manager'){
+
+                $url = $_ENV['FRONTEND_URL'] ?? '';
+                $token = $auth->generate_token(64);
+                $invite_url = $url . "invite-member?token=" . $token;
+                $receipientName = $data['fn'] . ' ' . $data['ln'];
+                $sendername = $auth->user_fnln() ?? '';
+                
+                $template = emailTemplateInviteMember($receipientName, $sendername , $invite_url,  'Our Platform');
+                $sent = sendOtpEmail($data['email'], $template['subject'], $template['body']);
+
+                if(!$sent){
+                    rfa_create_log('ClientUsers::save - invite email failed to send', $data);
+                }
+            }
         }
 
         return send_json_response(true, 200, $this->success['success'], ['id'=>$ret_id]);

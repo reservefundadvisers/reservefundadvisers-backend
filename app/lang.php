@@ -164,6 +164,7 @@ $lang['en']['auth']['signup_otp_invalid'] = "The OTP Code is invalid !";
 $lang['en']['auth']['signup_otp_expired'] = "The OTP has expired, please request a new one !";
 $lang['en']['auth']['signup_otp_attempts'] = "You have exceeded the maximum number of attempts, please request a new OTP !";
 $lang['en']['auth']['signup_otp_sent'] = "An OTP Code has been sent to your email address, please enter it to complete the sign up process !";
+$lang['en']['auth']['invitation_resent_success'] = "The Invitation email has been resent successfully !";
 $lang['en']['auth']['signup_otp_resent'] = "An OTP Code has been resent to your email address !";
 $lang['en']['auth']['signup_mobile_error'] = "Please enter a valid Mobile Number !";
 $lang['en']['auth']['signup_country_code_error'] = "Please enter a valid Country Code !";

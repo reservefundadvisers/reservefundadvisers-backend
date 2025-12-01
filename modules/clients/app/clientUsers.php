@@ -2,6 +2,7 @@
 
     include_once('../../../app/init.php');
     include_once('../../../app/global_func.php');
+    include_once('../../../app/mail.php');
 
     include_once('ClientUsers.class.php');
     include_once('ClientPositions.class.php');

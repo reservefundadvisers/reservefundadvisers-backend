@@ -26,7 +26,7 @@ try {
  *
  * @return bool True if the email is sent successfully, false otherwise.
  */
-function sendOtpEmail($email, $name, $otp, $recipientName = 'User', $otpValidity = 10) {
+function sendOtpEmail($email, $subject = '', $body = '') {
 
     $mail = new PHPMailer(true);
 
@@ -43,21 +43,12 @@ function sendOtpEmail($email, $name, $otp, $recipientName = 'User', $otpValidity
         
         // Sender and recipient settings
         $mail->setFrom($_ENV['MAIL_FROM_ADDRESS'] ?? '', $_ENV['MAIL_FROM_NAME'] ?? '');
-        $mail->addAddress($email, $name);
+        $mail->addAddress($email);
 
         // Email content
         $mail->isHTML(true);
-        $mail->Subject = 'Your OTP Code';
-        $mail->Body = '<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 5px; max-width: 600px; margin: auto;">
-                        <h2 style="color: #4CAF50; text-align: center;">Your One-Time Password (OTP)</h2>
-                        <p>Dear ' . htmlspecialchars($recipientName) . ',</p>
-                        <p>Your One-Time Password (OTP) for accessing the Reserve Fund System is:</p>
-                        <p style="font-size: 24px; font-weight: bold; color: #333; text-align: center; margin: 20px 0;">' . htmlspecialchars($otp) . '</p>
-                        <p>This OTP is valid for ' . htmlspecialchars($otpValidity) . ' minutes. Please do not share this OTP with anyone.</p>
-                        <p>To complete your login or verification, please enter the OTP in the system.</p>
-                        <p>We are excited to have you on board and look forward to your participation in the system.</p>
-                        <p>Thank you,<br>Reserve Funds Advisers Team</p>
-                    </div>';
+        $mail->Subject = $subject;
+        $mail->Body = $body;
 
         // Send email
         $mail->send();

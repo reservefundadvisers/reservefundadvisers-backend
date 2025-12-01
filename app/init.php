@@ -9,6 +9,7 @@ include_once('config.php');
 include_once('payment_methods.php');
 include_once('auth.class.php');
 include_once('config.class.php');
+include_once('mail_templates.php');
 
 \header('Content-type: text/html; charset=utf-8');
 
