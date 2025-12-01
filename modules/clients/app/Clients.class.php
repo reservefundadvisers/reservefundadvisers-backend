@@ -304,16 +304,16 @@ class Clients
 
     private $errors = [
                         "not_allowed" => "Unauthorized operation",
-                        "association" => "<b>Association Name</b> invalid !",
-                        "wrong_type" => "<b>Type</b> invalid !",
-                        "admin_fn" => "<b>Administrator First Name</b> invalid !",
-                        "admin_ln" => "<b>Administrator Last Name</b> invalid !",
-                        "admin_email" => "<b>Administrator Email</b> invalid !",
-                        "phone" => "<b>Phone</b> invalid !",
-                        "email" => "<b>Email</b> invalid !",
-                        "zip" => "<b>Zip Code</b> invalid !",
-                        "city" => "<b>City</b> invalid !",
-                        "state" => "<b>State</b> invalid !",
+                        "association" => "Association Name invalid !",
+                        "wrong_type" => "Type invalid !",
+                        "admin_fn" => "Administrator First Name invalid !",
+                        "admin_ln" => "Administrator Last Name invalid !",
+                        "admin_email" => "Administrator Email invalid !",
+                        "phone" => "Phone invalid !",
+                        "email" => "Email invalid !",
+                        "zip" => "Zip Code invalid !",
+                        "city" => "City invalid !",
+                        "state" => "State invalid !",
                         ];
                         
     private $success = [
