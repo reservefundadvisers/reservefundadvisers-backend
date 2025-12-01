@@ -743,6 +743,11 @@ class Auth
 		$last_name = check_val($data, 'last_name');
 		$country_code = check_val($data, 'country_code');
 		$mobile_number = check_val($data, 'mobile_number');
+		$address = check_val($data, 'address', '');
+		$address2 = $data['address2'] ?? '';
+		$city = check_val($data, 'city', '');
+		$state = check_val($data, 'state', '');
+		$zip = check_val($data, 'zip', '');
 
 		if(empty($position_id)){
 			$error = $lang[$loc]['auth']['signup_position_error'];
@@ -764,6 +769,18 @@ class Auth
 			return false;
 		}else if(empty($country_code)){
 			$error = $lang[$loc]['auth']['signup_country_code_error'];
+			return false;
+		}else if(empty($address)){
+			$error = $lang[$loc]['auth']['signup_address_error'];
+			return false;
+		}else if(empty($city)){
+			$error = $lang[$loc]['auth']['signup_city_error'];
+			return false;
+		}else if(empty($state)){
+			$error = $lang[$loc]['auth']['signup_state_error'];
+			return false;
+		}else if(empty($zip)){
+			$error = $lang[$loc]['auth']['signup_zip_error'];
 			return false;
 		}
 
@@ -802,18 +819,23 @@ class Auth
 			'role'=>'client_admin', 
 			'position_id'=>$position_id,
 			'country_code'=>$country_code,
-			'mobile_number'=>$mobile_number];
+			'mobile_number'=>$mobile_number,
+			'address'=>$address,
+			'address2'=>$address2,
+			'city'=>$city,
+			'state'=>$state,
+			'zip'=>$zip];
 
 			$hashed_password = $this->hashpass($password);
 		
 		if(!empty($uid)){
 
 			$query = $this->mysqli->prepare("UPDATE users 
-				SET fn=?, ln=?, email=?, username=?, password=?, position_id=?, country_code=?, phone=? 
+				SET fn=?, ln=?, email=?, username=?, password=?, position_id=?, country_code=?, phone=?, address=?, address2=?, city=?, state=?, zip=?
 				WHERE id=?");
 
 			$query->bind_param(
-    			"sssssssss", 
+    			"ssssssssssssss", 
 				$user['first_name'],
 				$user['last_name'],
 				$user['email'],
@@ -822,6 +844,11 @@ class Auth
 				$user['position_id'],
 				$user['country_code'],
 				$user['mobile_number'],
+				$user['address'],
+				$user['address2'],
+				$user['city'],
+				$user['state'],
+				$user['zip'],
 				$uid
 			);
 			$query->execute();
@@ -829,9 +856,9 @@ class Auth
 			return $uid;
 		}else{
 
-			$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, address, address2, city, state, zip, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			
-			$query->bind_param("sssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user_active);
+			$query->bind_param("ssssssssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user['address'], $user['address2'], $user['city'], $user['state'], $user['zip'], $user_active);
 			$query->execute();
 			$affected_id = $this->mysqli->insert_id;
 			$query->close();
