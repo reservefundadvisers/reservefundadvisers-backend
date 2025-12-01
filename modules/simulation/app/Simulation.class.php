@@ -153,6 +153,9 @@ class Simulation
             case 'delete_monthly_item':
                 $response = $this->delete_monthly_item($data);
                 break;
+            case 'split_item_monthly':
+                $response = $this->split_item_monthly($data);
+                break;
         }
 
         return $response;
@@ -213,6 +216,7 @@ class Simulation
                 ];
             }
             $grouped_allocated[$key]['monthly'][] = [
+                'allocated_item_id' => $entry['id'], 
                 'month' => intval($entry['month']),
                 'amount' => floatval($entry['amount'])
             ];
@@ -229,6 +233,18 @@ class Simulation
             if (!in_array($key, $allocated_keys)) {
                 $unallocated_items[] = $item;
             }
+            // Find total amount allocated for this key
+            // $total_allocated = 0;
+            // if (isset($grouped_allocated[$key])) {
+            //     foreach ($grouped_allocated[$key]['monthly'] as $alloc) {
+            //         $total_allocated += $alloc['amount'];
+            //     }
+            // }
+
+            // // Exclude only if fully allocated
+            // if (!in_array($key, $allocated_keys) || $total_allocated < floatval($item['cost'])) {
+            //     $unallocated_items[] = $item;
+            // }
         }
 
         return send_json_response(true, 200, "Yearly items fetched", [
@@ -277,16 +293,16 @@ class Simulation
     {
         global $simMonthlyItems;
 
-        if (!is_valid($data, 'id')) {
-            return send_json_response(false, 400, "monthly allocation id required");
+        if (!is_valid($data, 'allocated_item_id')) {
+            return send_json_response(false, 400, "monthly allocation allocated item_id required");
         }
 
-        $existing = get_element($simMonthlyItems, ['id' => $data['id']]);
+        $existing = get_element($simMonthlyItems, ['id' => $data['allocated_item_id']]);
         if (!$existing) {
             return send_json_response(false, 404, "Allocation not found");
         }
 
-        $update = ['id' => $data['id']];
+        $update = ['id' => $data['allocated_item_id']];
 
         if (isset($data['amount'])) $update['amount'] = floatval($data['amount']);
         if (isset($data['month']))  $update['month'] = intval($data['month']);
@@ -304,20 +320,24 @@ class Simulation
     {
         global $simMonthlyItems;
 
-        if (!is_valid($data,'id')) {
-            return send_json_response(false, 400, "ID is required");
+        if (!is_valid($data,'allocated_item_id')) {
+            return send_json_response(false, 400, "allocated_item_id is required");
         }
 
-        $existing = get_element($simMonthlyItems,['id'=>$data['id']]);
+        $existing = get_element($simMonthlyItems,['id'=>$data['allocated_item_id']]);
         if (!$existing) {
             return send_json_response(false, 404, "Record not found");
         }
 
-        if (!empty(delete_elements_by_id($simMonthlyItems, $data['id']))) {
+        if (!empty(delete_elements_by_id($simMonthlyItems, $data['allocated_item_id']))) {
             return send_json_response(false, 500, "Delete failed");
         }
 
         return send_json_response(true, 200, "Monthly allocation deleted");
+    }
+
+    public function split_item_monthly($data){
+
     }
 
     private function init_config()
@@ -3722,6 +3742,9 @@ class Simulation
 
     // compare versions
     public function compare_version($data) {}
+
+    //Missing func
+    public function list_fiscal() {}
 
 
     private $errors = [
