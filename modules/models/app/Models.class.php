@@ -39,7 +39,7 @@ class Models
 
 
     public function list($data){
-        global $auth, $modelsTable, $clientsTable, $simDeficitTable;
+        global $auth, $modelsTable, $clientsTable, $simDeficitTable, $modelItemsTable;
 
         $filters = array();
         if(is_valid($data, 'filters'))
@@ -75,10 +75,12 @@ class Models
 
         $results = get_elements_join($modelsTable, $conds,
                                         "LEFT JOIN $clientsTable ON $clientsTable.id = $modelsTable.client_id
-                                         LEFT JOIN $simDeficitTable ON $simDeficitTable.model_id = $modelsTable.id",
-                                        "$modelsTable.*, IF(COUNT($modelsTable.id) - 1 > 0, 1, 0) AS has_simulation, CASE WHEN $clientsTable.association IS NOT NULL THEN $clientsTable.association ELSE 'unspecified' END AS association ", " GROUP BY $modelsTable.id ORDER BY $modelsTable.row_id DESC".check_val($pagination, 'query'));
+                                         LEFT JOIN $simDeficitTable ON $simDeficitTable.model_id = $modelsTable.id
+                                         LEFT JOIN $modelItemsTable ON $modelItemsTable.model_id = $modelsTable.id",
+                                        "$modelsTable.*, IF(COUNT($modelsTable.id) - 1 > 0, 1, 0) AS has_simulation, CASE WHEN $clientsTable.association IS NOT NULL THEN $clientsTable.association ELSE 'unspecified' END AS association, COUNT($modelItemsTable.id) AS total_items, SUM(CASE WHEN $modelItemsTable.is_sirs = 1 THEN 1 ELSE 0 END) AS total_sirs, SUM(CASE WHEN $modelItemsTable.is_sirs = 0 THEN 1 ELSE 0 END) AS total_non_sirs ", " GROUP BY $modelsTable.id ORDER BY $modelsTable.row_id DESC".check_val($pagination, 'query'));
 
         
+                                        rfa_create_log("Model List Retrieved");
         if($is_pagination)
             return ['last_page'=>$pages, 'data'=>$results, 'total'=>$total];
         else
