@@ -1048,7 +1048,13 @@ class Auth
 		switch ($type) {
 			case 'email':
 				if (function_exists('sendOtpEmail')) {
-					$sent = sendOtpEmail($email, "$first_name $last_name", $otp);
+					$recipientName = "$first_name $last_name";
+					$template = emailTemplateOTP($recipientName, $otp, "Reserve Fund System");
+
+					$subject = $template['subject'] ?? ''   ;
+					$body = $template['body'] ?? '';
+					
+					$sent = sendOtpEmail($email, $subject, $body);
 					$message = 'OTP has been sent successfully via email.';
 				}
 				break;
