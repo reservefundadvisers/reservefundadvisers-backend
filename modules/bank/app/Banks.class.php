@@ -31,6 +31,9 @@ class Banks
             case 'set':
                 $response = $this->set($data);
                 break;
+            case 'test_excel':
+                $response = $this->handle_excel_upload($data);
+                break;
         }
 
         return $response;
@@ -229,6 +232,148 @@ class Banks
     public function set($data)
     {
         return true;
+    }
+
+    private function slug($string) {
+        return strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '_', $string), '_'));
+    }   
+
+    function handle_excel_upload($file)
+    {
+
+        // Correct file validation
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            return [
+                'success' => false,
+                'message' => 'File upload error'
+            ];
+        }
+
+        $file = $_FILES['file'];
+
+        $spreadsheet = IOFactory::load($file['tmp_name']);
+        $sheet = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+        $banks = [];
+        $currentBank = null;
+        $mode = null;
+
+        $cdHeader = [];
+        $hysHeader = [];
+
+        foreach ($sheet as $rowIndex => $row) {
+
+            $colA = trim($row['A']);
+
+            /* =========================
+                BANK DETECT
+            ========================== */
+            if (preg_match('/^BANK\s+\d+$/i', $colA)) {
+
+                if ($currentBank !== null) {
+                    $banks[] = $currentBank;
+                }
+
+                $currentBank = [
+                    'bank' => [],
+                    'cd'   => [],
+                    'hys'  => []
+                ];
+
+                $mode = 'bank';
+                continue;
+            }
+
+            /* =========================
+                CD DETECT
+            ========================== */
+            if (stripos($colA, 'CD') !== false) {
+                $mode = 'cd_header';
+                continue;
+            }
+
+            /* =========================
+                HYS DETECT
+            ========================== */
+            if (stripos($colA, 'HYS') !== false) {
+                $mode = 'hys_header';
+                continue;
+            }
+
+            /* =========================
+                BANK FIELD
+            ========================== */
+            if ($mode === 'bank' && !empty($row['A'])) {
+                $currentBank['bank'][$this->slug($row['A'])] = trim($row['B'] ?? '');
+            }
+
+            /* =========================
+                CD HEADER
+            ========================== */
+            if ($mode === 'cd_header') {
+                $cdHeader = array_values(array_filter(array_map('trim', $row)));
+                $mode = 'cd';
+                continue;
+            }
+
+            /* =========================
+                HYS HEADER
+            ========================== */
+            if ($mode === 'hys_header') {
+                $hysHeader = array_values(array_filter(array_map('trim', $row)));
+                $mode = 'hys';
+                continue;
+            }
+
+            /* =========================
+                CD DATA ROW
+            ========================== */
+            if ($mode === 'cd') {
+
+                $values = array_values($row);
+                $values = array_slice($values, 0, count($cdHeader));
+                $values = array_map('trim', $values);
+
+                while (end($values) === '' || end($values) === null) {
+                    array_pop($values);
+                }
+
+                if (count($values) === count($cdHeader)) {
+                    $currentBank['cd'][] = array_combine($cdHeader, $values);
+                }
+                continue;
+            }
+
+            /* =========================
+                HYS DATA ROW
+            ========================== */
+            if ($mode === 'hys') {
+
+                $values = array_values($row);
+                $values = array_slice($values, 0, count($hysHeader));
+                $values = array_map('trim', $values);
+
+                while (end($values) === '' || end($values) === null) {
+                    array_pop($values);
+                }
+
+                if (count($values) === count($hysHeader)) {
+                    $currentBank['hys'][] = array_combine($hysHeader, $values);
+                }
+
+                continue;
+            }
+        }
+
+        // capture last bank
+        if ($currentBank !== null) {
+            $banks[] = $currentBank;
+        }
+
+        return [
+            'success' => true,
+            'data' => $banks
+        ];
     }
 
     private $errors = [
