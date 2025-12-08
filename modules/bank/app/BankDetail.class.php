@@ -423,9 +423,9 @@ class BankDetail
             }
         }
 
-        if ($updated === 0 && $inserted === 0) {
-            return send_json_response(false, 400, 'No fields were updated or inserted');
-        }
+        // if ($updated === 0 && $inserted === 0) {
+        //     return send_json_response(false, 400, 'No fields were updated or inserted');
+        // }
 
         return send_json_response(true, 200, 'Bank details updated successfully', [
             'updated' => $updated,
