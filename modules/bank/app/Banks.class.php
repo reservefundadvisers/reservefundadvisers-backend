@@ -62,7 +62,70 @@ class Banks
 
     public function edit($data)
     {
-        return true;
+        global $auth, $bankTypesTable, $usersTable, $banksTable, $upload_dir_banks;
+
+        if (!isset($data['bank_id']) || empty($data['bank_id'])) {
+            return send_json_response(false, 400, 'Bank ID is required');
+        }
+
+        $bank_id = $data['bank_id'];
+
+        // Check if bank exists
+        if (!exists($banksTable, ['id' => $bank_id])) {
+            return send_json_response(false, 400, 'Bank not found');
+        }
+
+        // $user_id = $data['user_id'] ? $data['user_id'] : '';
+
+        // // check if user exists
+        // if (!exists($usersTable, ['bank_id' => $user_id])) {
+        //     $error = 'User not found !';
+        //     return send_json_response(false, 400, $error);
+        // }   
+
+        // Handle media upload
+        if(!empty($_FILES['media'])){
+            $image_upload = handle_file_upload($_FILES['media'], $upload_dir_banks);
+            // Upload the file
+            if ($image_upload['success'] === true) {
+                $image_path = $image_upload['path'];
+                $data['media'] = $image_path;
+            }
+        }
+
+        // Validate required fields
+        $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation'];
+
+        $res = check_missing($checkFor, $data, $this->errors);
+        if ($res !== true) {
+            $res['message'] = 'Missing required fields !';
+            return send_json_response(false, 400, null, [$res]);
+        }
+
+        if (isset($data['type_id'])) {
+            // check if bank type already exists
+            if (!exists($bankTypesTable, ['id' => $data['type_id']])) {
+                $error = 'Bank type not found !';
+                return send_json_response(false, 400, $error);
+            }
+        }
+
+        $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
+        if (!is_numeric($contact_person_country_code)) {
+            return send_json_response(false, 400, 'Country code is not valid.');
+        }
+
+        // Ensure the ID is set for update
+        $data['id'] = $bank_id;
+
+        // Update the bank
+        $result = save_element($banksTable, $data);
+
+        if ($result === false) {
+            return send_json_response(false, 500, $this->errors['save']);
+        }
+
+        return send_json_response(true, 200, $this->success['sucess'], ['id' => $bank_id]);
     }
 
     public function save($data)
