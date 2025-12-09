@@ -54,7 +54,7 @@ function sendOtpEmail($email, $subject = '', $body = '') {
         $mail->send();
         return true; // Return true if email is sent successfully
     } catch (Exception $e) {
-        // rfa_create_log("[OTP] Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        rfa_create_log("[OTP] Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
         return false; // Return false on failure
     }
 }
