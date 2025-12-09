@@ -750,37 +750,37 @@ class Auth
 		$zip = check_val($data, 'zip', '');
 
 		if(empty($position_id)){
-			$error = $lang[$loc]['auth']['signup_position_error'];
+			$error = ['key' => 'POSITION','message' => $lang[$loc]['auth']['signup_position_error']];
 			return false;
 		}else if(empty($email)){
-			$error = $lang[$loc]['auth']['signup_email_error'];
+			$error = ['key' => 'EMAIL','message' => $lang[$loc]['auth']['signup_email_error']];
 			return false;
 		}else if(empty($password) || strlen($password) < 6){
-			$error = $lang[$loc]['auth']['signup_password_error'];
+			$error = ['key' => 'PASSWORD','message' => $lang[$loc]['auth']['signup_password_error']];
 			return false;
 		}else if(empty($first_name)){
-			$error = $lang[$loc]['auth']['signup_fn_error'];
+			$error = ['key' => 'FIRST_NAME','message' => $lang[$loc]['auth']['signup_fn_error']];
 			return false;
 		}else if(empty($last_name)){
-			$error = $lang[$loc]['auth']['signup_ln_error'];
+			$error = ['key' => 'LAST_NAME','message' => $lang[$loc]['auth']['signup_ln_error']];
 			return false;
 		}else if(empty($mobile_number)){
-			$error = $lang[$loc]['auth']['signup_mobile_error'];
+			$error = ['key' => 'MOBILE_NUMBER','message' => $lang[$loc]['auth']['signup_mobile_error']];
 			return false;
 		}else if(empty($country_code)){
-			$error = $lang[$loc]['auth']['signup_country_code_error'];
+			$error = ['key' => 'COUNTRY_CODE','message' => $lang[$loc]['auth']['signup_country_code_error']];
 			return false;
 		}else if(empty($address)){
-			$error = $lang[$loc]['auth']['signup_address_error'];
+			$error = ['key' => 'ADDRESS','message' => $lang[$loc]['auth']['signup_address_error']];
 			return false;
 		}else if(empty($city)){
-			$error = $lang[$loc]['auth']['signup_city_error'];
+			$error = ['key' => 'CITY','message' => $lang[$loc]['auth']['signup_city_error']];
 			return false;
 		}else if(empty($state)){
-			$error = $lang[$loc]['auth']['signup_state_error'];
+			$error = ['key' => 'STATE','message' => $lang[$loc]['auth']['signup_state_error']];
 			return false;
 		}else if(empty($zip)){
-			$error = $lang[$loc]['auth']['signup_zip_error'];
+			$error = ['key' => 'ZIP','message' => $lang[$loc]['auth']['signup_zip_error']];
 			return false;
 		}
 
@@ -793,18 +793,18 @@ class Auth
 
 		// check if email already exists
 		if(exists($usersTable, $email_conds)){
-			$error = $lang[$loc]['auth']['signup_email_exists'];
+			$error =['key' => 'EMAIL', 'message' => $lang[$loc]['auth']['signup_email_exists']];
 			return false;
 		}
 
 		// check if mobile number already exists
 		if(exists($usersTable, $mobile_conds)){
-			$error = $lang[$loc]['auth']['signup_mobile_exists'];
+			$error =['key' => 'MOBILE_NUMBER', 'message' => $lang[$loc]['auth']['signup_mobile_exists']];
 			return false;
 		}
 
 		if(!exists($clientPositionsTable, ['id'=>$position_id])){
-			$error = $lang[$loc]['auth']['signup_position_invalid'];
+			$error = ['key' => 'POSITION', 'message' => $lang[$loc]['auth']['signup_position_invalid']];
 			return false;
 		}
 
