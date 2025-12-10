@@ -274,7 +274,7 @@ class ClientUsers
                         "position_id" => "Position invalid !",
                         "username" => "Username invalid !",
                         "username_exists" => "Username already exists !",
-                        "email_exists" => ['key' => 'EMAIL','messag' => "Email already assigned !"],
+                        "email_exists" => ['key' => 'EMAIL','message' => "Email already assigned !"],
                         "email" => "Email invalid !",
                         "password" => "Password invalid !",
                         "password_reset" => "Password Reset couldn't be generated !",

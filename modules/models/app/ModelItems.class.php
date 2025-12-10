@@ -239,6 +239,7 @@ class Models
             }
 
             $ret_id = true;
+            $is_updated = false;
 
             foreach ($items as $item) {
 
@@ -246,6 +247,7 @@ class Models
                 if (is_valid($item, 'id')) {
                     $item_exists = array_has($items_to_delete, $item['id'], true);
                     if ($item_exists >= 0) array_splice($items_to_delete, $item_exists, 1);
+                    $is_updated = true;
                 }
 
                 $item['model_id'] = $model_id;
@@ -276,7 +278,10 @@ class Models
 
             $response = set_element($modelsTable, ['updated_at' => time(), 'id' => $model_id]);
 
-            return send_json_response(true, 200, 'Model Items Created Successfully', ['data' => ['model_id' => $model_id]]);
+            // Determine the success message based on whether this was an update or create
+            $success_message = $is_updated ? 'Model Items Updated Successfully' : 'Model Items Created Successfully';
+
+            return send_json_response(true, 200, $success_message, ['data' => ['model_id' => $model_id]]);
         }
     }
 
