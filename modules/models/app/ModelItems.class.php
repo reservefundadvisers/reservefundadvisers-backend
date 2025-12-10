@@ -261,7 +261,13 @@ class Models
                 if (isset($item['actual_cost'])) {
                     if (!is_numeric($item['actual_cost'])) $item['actual_cost'] = 0;
                 }
-
+                if(isset($item['item_type'])) {
+                    if($item['item_type'] === 'sirs_item'){
+                        $item['is_sirs'] = 1;
+                    } else {
+                        $item['is_sirs'] = 0;
+                    } 
+                }
 
                 $ret_id = save_element($modelItemsTable, $item);
             }
