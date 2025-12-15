@@ -121,7 +121,7 @@ class ClientUsers
 
         if(!is_valid($data, 'client_id') || !exists($clientsTable, ['id'=>$data['client_id']])){
 
-            $error = 'Missing Field ';
+            $error = 'Missing Or Invalid Field ';
             $error .= is_valid($data, 'client_id') ? 'Client ID' : 'Client ID';
             
             return send_json_response(false, 400, $error);
