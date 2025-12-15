@@ -197,8 +197,16 @@ class Simulation
         if (empty($spendings)) {
             return send_json_response(false, 404, "No spending items found for the specified year");
         }
-
         $items_in_year = $spendings[$year];
+
+        $item_name_lookup = [];
+
+        foreach ($items_in_year as $item) {
+            $occurrence = isset($item['occurrence']) ? $item['occurrence'] : ($item['redundancy_at'] ?? 0);
+            $item_id = !empty($item['parent_id']) ? $item['parent_id'] : $item['id'];
+            $key = "{$item_id}|{$occurrence}";
+            $item_name_lookup[$key] = $item['name'];
+        }
 
         // Load monthly allocations from DB
         $monthly = get_elements($simMonthlyItems, ['model_id' => $model_id, 'year' => $year]);
@@ -212,6 +220,7 @@ class Simulation
                     'occurrence' => $entry['occurrence'],
                     'year' => $entry['year'],
                     'parent_id' => $entry['parent_id'] ?? null,
+                    'name' => $item_name_lookup[$key] ?? null,
                     'monthly' => []
                 ];
             }
@@ -227,7 +236,10 @@ class Simulation
 
         $unallocated_items = [];
         foreach ($items_in_year as $item) {
-            $occurrence = isset($item['occurrence']) ? $item['occurrence'] : 0;
+           $occurrence = isset($item['occurrence']) 
+                ? $item['occurrence'] 
+                : ($item['redundancy_at'] ?? 0);
+
             $item_id = !empty($item['parent_id']) ? $item['parent_id'] : $item['id'];
             $key = "{$item_id}|{$occurrence}";
             if (!in_array($key, $allocated_keys)) {
@@ -420,7 +432,12 @@ class Simulation
         $rule_used_ltim_strategy = check_val($simulation_rules, 'ltim_used', 'FL');
 
         $rule_mf_auto = check_val($simulation_rules, 'mf_auto', 0) == 1;
+
+        // $disable_auto_fee_reduction = check_val($simulation_rules, 'disable_auto_fee_reduction', 0) == 1;
         $rule_mf_perc = check_val($simulation_rules, 'mf_perc', 0);
+
+        $disable_auto_fee_reduction = check_val($simulation_rules, 'disable_auto_fee_reduction', 0);
+
         $rule_inf_rate = check_val($simulation_rules, 'inf_rate', 0);
         if (!is_numeric($rule_inf_rate)) {
             $rule_inf_rate = 0;
@@ -673,6 +690,11 @@ class Simulation
         $manual_monthly_fees = array_fill(0, $period, $monthly_fees);
         $used_manual_monthly_fees = array_fill(0, $period, false);
 
+        $custom_range_years = array_fill(0, $period, false);
+        $custom_gradual_range_years = array_fill(0, $period, false);
+        // print_r($custom_range_years);
+        // exit;
+
 
         $apply_auto_fees = array_fill(0, $period, false);
 
@@ -765,9 +787,185 @@ class Simulation
                     // add auto fee to all previous years
                     $apply_auto_fees[$i] = true;
                 }
+                 } else if (
+
+                isset($deficit_array[$year]['monthly_fees_auto_range']) &&
+                is_array($deficit_array[$year]['monthly_fees_auto_range'])
+
+            ) {
+                $range = $deficit_array[$year]['monthly_fees_auto_range'];
+                $start = intval($range['start']);
+                $end = intval($range['end']);
+                $max_perc = isset($range['max_perc']) ? floatval($range['max_perc']) : $rule_mf_perc;
+                $new_monthly_fees = $monthly_fees;
+
+
+
+                // Reset all years to false so only the range is affected
+                $apply_auto_fees = array_fill(0, $period, false);
+
+
+                // --- Update simulation_rules['mf_perc_per_year'] as array for selected years ---
+                if (!isset($simulation_rules['mf_perc_per_year']) || !is_array($simulation_rules['mf_perc_per_year'])) {
+                    $simulation_rules['mf_perc_per_year'] = [];
+                }
+
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+                    $simulation_rules['mf_perc_per_year'][$i] = $max_perc;
+                    // Only apply auto logic for selected range
+                    $used_manual_monthly_fees[$i] = false;
+                    $auto_monthly_fees_inc[$i] = $max_perc;
+                    $custom_gradual_range_inc[$i] = $max_perc;
+                    $custom_gradual_range_years[$i] = true;
+
+                    if ($i == $start) {
+                        // Always apply the increase for the first year in range
+                        $auto_monthly_fees[$i] = $new_monthly_fees * (1 + $max_perc);
+                        $auto_monthly_fees_inc[$i] = $max_perc;
+                    } else {
+                        $auto_monthly_fees[$i] = $auto_monthly_fees[$i - 1] * (1 + $max_perc);
+                        $auto_monthly_fees_inc[$i] = $max_perc;
+                    }
+
+                }
+
+                // Now optimize all years, skipping custom range years
+
+                if ($rule_mf_auto == 1) {
+                    for ($year_idx = 0; $year_idx < $period; $year_idx++) {
+                        if (!isset($custom_range_fees))
+                            $custom_range_fees = [];
+                        if (!isset($custom_gradual_range_inc))
+                            $custom_gradual_range_inc = [];
+                        
+                        $this->updateMonthlyFeeInc(
+                            $year_idx,
+                            $deficit_per_unit,
+                            $auto_monthly_fees,
+                            $auto_monthly_fees_inc,
+                            $this->get_mf_perc($simulation_rules, $year_idx), // Use year-wise mf_perc
+                            $monthly_fees,
+                            $rule_cushion_fund,
+                            $inflation_rate,
+                            $rule_mf_auto,
+                            $used_manual_monthly_fees,
+                            $cash_reserve_threshold,
+                            $simulation_rules,
+                            $custom_range_years,
+                            $custom_range_fees,
+                            $custom_gradual_range_inc,
+                            $custom_gradual_range_years,
+                            $disable_auto_fee_reduction
+                        );
+                    }
+                }
+
+                $custom_gradual_range_inc = [];
+                foreach ($custom_gradual_range_years as $year => $is_customs) {
+                    if ($is_customs) {
+                        $custom_gradual_range_inc[$year] = $auto_monthly_fees_inc[$year];
+                    }
+                }
+
+                // After custom gradual range is set
+
+                if ($rule_mf_auto == 1) {
+                    for ($i = 0; $i < $period; $i++) {
+                        if (!isset($simulation_rules['mf_perc_per_year'][$i]) && isset($simulation_rules['mf_perc'])) {
+                            $simulation_rules['mf_perc_per_year'][$i] = $rule_mf_perc;
+                        }
+                    }
+                }
+
+            } else if (isset($deficit_array[$year]['monthly_fees_range']) && is_array($deficit_array[$year]['monthly_fees_range'])) {
+
+                $range = $deficit_array[$year]['monthly_fees_range'];
+                $fee = floatval($range['fee']);
+                $start = intval($range['start']);
+                $end = intval($range['end']);
+
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+                    $used_manual_monthly_fees[$i] = true;
+                    $auto_monthly_fees[$i] = $fee;
+                    $custom_range_years[$i] = true;
+                    $custom_range_fees[$i] = $fee;
+
+                    if ($i == $start) {
+                        $auto_monthly_fees_inc[$i] = $monthly_fees == 0 ? 0 : ($auto_monthly_fees[$i] - $monthly_fees) / $monthly_fees;
+                    } else {
+                        $auto_monthly_fees_inc[$i] = $auto_monthly_fees[$i - 1] == 0 ? 0 : ($auto_monthly_fees[$i] - $auto_monthly_fees[$i - 1]) / $auto_monthly_fees[$i - 1];
+                    }
+                }
+
+                // Now optimize all years, skipping custom range years
+
+                if ($rule_mf_auto == 1) {
+
+                    for ($opt_year = 0; $opt_year < $period; $opt_year++) {
+
+                        if (!isset($custom_range_fees))
+                            $custom_range_fees = [];
+
+                        if (!isset($custom_gradual_range_inc))
+                            $custom_gradual_range_inc = [];
+
+                        $this->updateMonthlyFeeInc(
+                            $opt_year,
+                            $deficit_per_unit,
+                            $auto_monthly_fees,
+                            $auto_monthly_fees_inc,
+                            $rule_mf_perc,
+                            $monthly_fees,
+                            $rule_cushion_fund,
+                            $inflation_rate,
+                            $rule_mf_auto,
+                            $used_manual_monthly_fees,
+                            $cash_reserve_threshold,
+                            $simulation_rules,
+                            $custom_range_years,
+                            $custom_range_fees,
+                            $custom_gradual_range_inc,
+                            $custom_gradual_range_years,
+                            $disable_auto_fee_reduction
+                        );
+
+                    }
+
+                }
+
+                $custom_range_fees = [];
+
+                foreach ($custom_range_years as $year => $is_custom) {
+                    if ($is_custom) {
+                        $custom_range_fees[$year] = $auto_monthly_fees[$year];
+                    }
+                }
+
+            } else if (isset($deficit_array[$year]['disable_auto_fee_reduction'])) {
+                $disable_auto_fee_reduction = $deficit_array[$year]['disable_auto_fee_reduction'];
+
+
+                $this->updateMonthlyFeeInc(
+                    $i,
+                    $deficit_per_unit,
+                    $auto_monthly_fees,
+                    $auto_monthly_fees_inc,
+                    $rule_mf_perc,
+                    $monthly_fees,
+                    $rule_cushion_fund,
+                    $inflation_rate,
+                    $rule_mf_auto,
+                    $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
+                    $cash_reserve_threshold,
+                    $simulation_rules,
+                    $custom_range_years,
+                    $custom_range_fees,
+                    $custom_gradual_range_inc,
+                    $custom_gradual_range_years,
+                    $disable_auto_fee_reduction
+                );
+                
             } else if (is_valid($deficit_array[$year], 'monthly_fees')) {
-
-
 
                 $new_monthly_fees = floatval($deficit_array[$year]['monthly_fees']);
 
@@ -996,6 +1194,7 @@ class Simulation
         $adjustment_operations = ['cushion'];
         $current_adjustment = '';
 
+        $is_deficit_check = false;
 
         // then managed calculations
         for ($i = 0; $i < $period; $i++) {
@@ -1009,6 +1208,7 @@ class Simulation
 
             // get any calculated as year_calculations      
             $year_calculations = $calculated[$i];
+            
             $year_calculations['lopp_rate'] = $lopp_rate;
 
             // current year spendings, array index starts at 0
@@ -1114,6 +1314,10 @@ class Simulation
 
             // managed calculations
             // if auto monthly fee increase ON, don't add LOAN & ASSESSMENT until auto has been calculated
+            // if ($year_calculations['fa']  >= 0 && $rule_mf_auto) {
+            //     $this->adjustFeesForNoDeficitScenario($calculated, $auto_monthly_fees, $monthly_fees, $housing, $period, $simulation_rules);
+            // }
+
             $this->calculateYearData(
                 $starting_amount,
                 $auto_monthly_fees[$i],
@@ -1258,10 +1462,38 @@ class Simulation
             $auto_monthly_fees_ltim_amount[$i] = $year_calculations['ltim_p'];
             $auto_monthly_fees_ltim_wth[$i] = $ltim_withdrawn;
 
+             // $is_deficit_check = false;
+
 
             // when not lowering fees or applying cushion
             if ($is_calculating) {
+                 if ($year_calculations['fa'] < 0) {
+                    $is_deficit_check = true;
+                }
 
+
+                if (!$is_deficit_check) {
+                    if ($year_calculations['fa'] > 0) {
+                        // "increase 15% Logic";
+                        $auto_monthly_fees_inc[$i] = $rule_mf_perc;
+
+                        // Protect against accessing negative array index and division by zero
+
+                        if ($i == 0) {
+                            // First year - compare against original monthly fees
+                            $auto_monthly_fees[$i] = $monthly_fees * (1 + $rule_mf_perc);
+                            $auto_monthly_fees_inc[$i] = $monthly_fees == 0 ? 0 : ($auto_monthly_fees[$i] - $monthly_fees) / $monthly_fees;
+                        } else {
+                            // Subsequent years - compare against previous year
+                            $auto_monthly_fees[$i] = $auto_monthly_fees[$i - 1] * (1 + $rule_mf_perc);
+                            $auto_monthly_fees_inc[$i] = $auto_monthly_fees[$i - 1] == 0 ? 0 : ($auto_monthly_fees[$i] - $auto_monthly_fees[$i - 1]) / $auto_monthly_fees[$i - 1];
+                        }
+                    }
+                }
+
+                // if ($deficit == 0 && $rule_mf_auto) {
+                //     $this->adjustFeesForNoDeficitScenario($calculated, $auto_monthly_fees, $monthly_fees, $housing, $period, $simulation_rules);
+                // }
 
                 // IF DEFICIT AUTO MF INCREASE
                 if (
@@ -1304,6 +1536,12 @@ class Simulation
 
                         // log_info("still have to cover: $deficit_per_unit => total % : " . $auto_monthly_fees_inc[$i]);
                         // var_dump("1");
+                        if (!isset($custom_range_fees))
+                            $custom_range_fees = [];
+
+                        if (!isset($custom_gradual_range_inc))
+                            $custom_gradual_range_inc = [];
+
                         $this->updateMonthlyFeeInc(
                             $i,
                             $deficit_per_unit,
@@ -1315,7 +1553,14 @@ class Simulation
                             $inflation_rate,
                             $rule_mf_auto,
                             $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
-                            $cash_reserve_threshold
+                            // $cash_reserve_threshold,
+                            $cash_reserve_threshold,
+                            $simulation_rules,
+                            $custom_range_years,
+                            $custom_range_fees,
+                            $custom_gradual_range_inc,
+                            $custom_gradual_range_years,
+                            $disable_auto_fee_reduction
                         );
 
 
@@ -1357,6 +1602,13 @@ class Simulation
 
 
                         // var_dump("2");
+
+                        if (!isset($custom_range_fees))
+                            $custom_range_fees = [];
+
+                        if (!isset($custom_gradual_range_inc))
+                            $custom_gradual_range_inc = [];
+
                         $this->updateMonthlyFeeInc(
                             $i,
                             $deficit_per_unit,
@@ -1367,7 +1619,14 @@ class Simulation
                             $rule_cushion_fund,
                             $inflation_rate,
                             $rule_mf_auto,
-                            $used_manual_monthly_fees /* $auto_monthly_fees_stop_year */
+                            // $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
+                            $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
+                            $simulation_rules,
+                            $custom_range_years,
+                            $custom_range_fees,
+                            $custom_gradual_range_inc,
+                            $custom_gradual_range_years,
+                            $disable_auto_fee_reduction
                         );
 
 
@@ -1477,10 +1736,23 @@ class Simulation
 
                     // Adnan Saleem........
                     // if($rule_cushion_fund > 0 && $rule_cushion_fund < $rule_mf_perc && $rule_mf_perc > 0){
+                   
+                    //Rushi patel
+                    // if (
+                    //     $cash_reserve_threshold == 0 &&
+                    //     (($rule_cushion_fund > 0 && $rule_cushion_fund < $rule_mf_perc && $rule_mf_perc > 0) ||
+                    //         ($cushion_fund_thre > 0 && $cushion_fund_thre < $rule_mf_perc && $rule_mf_perc > 0))
+                    // ) {
+
+                    // if (
+                    //     $cash_reserve_threshold == 0 &&
+                    //     (($rule_cushion_fund > 0 && $rule_cushion_fund < $rule_mf_perc && $rule_mf_perc > 0) ||
+                    //         ($cushion_fund_thre > 0 && $cushion_fund_thre < $rule_mf_perc && $rule_mf_perc > 0))
+                    // ) {
                     if (
                         $cash_reserve_threshold == 0 &&
-                        (($rule_cushion_fund > 0 && $rule_cushion_fund < $rule_mf_perc && $rule_mf_perc > 0) ||
-                            ($cushion_fund_thre > 0 && $cushion_fund_thre < $rule_mf_perc && $rule_mf_perc > 0))
+                        (($rule_cushion_fund > 0 && $rule_mf_perc > 0) ||
+                            ($cushion_fund_thre > 0 && $rule_mf_perc > 0))
                     ) {
                         // echo "working";
                         // Adnan Saleem........
@@ -1885,6 +2157,198 @@ class Simulation
 
             // $starting_amount_o = $year_calculations['fa_o'] < 0 ? 0 : $year_calculations['fa_o'];
             $starting_amount_o = $year_calculations['fa_o'];
+
+            // Check if there are no deficits in any year and adjust fees accordingly
+            // Only when "Optimize All Monthly Fees" toggle is ON
+            // if ($rule_mf_auto) {
+            // $this->adjustFeesForNoDeficitScenario($calculated, $auto_monthly_fees, $monthly_fees, $housing, $period, $simulation_rules);
+            // }
+        }
+    }
+
+    /**
+     * Adjust monthly fees when there are no deficits in any year
+     * This method finds the exact minimum fee that prevents deficits
+     * Only works when "Optimize All Monthly Fees" toggle is ON
+     */
+    private function adjustFeesForNoDeficitScenario(&$calculated, &$auto_monthly_fees, $original_monthly_fees, $housing, $period, $simulation_rules){
+        // Check if there are any deficit years
+        $has_deficits = false;
+
+        for ($i = 0; $i < $period; $i++) {
+            $final_amount = isset($calculated[$i]['fa']) ? $calculated[$i]['fa'] :
+                (isset($calculated[$i]['fa_o']) ? $calculated[$i]['fa_o'] : 0);
+
+            if ($final_amount < 0) {
+                $has_deficits = true;
+                break;
+            }
+        }
+
+        // If there are no deficits, find individual optimal fees for each year
+        if (!$has_deficits) {
+
+            // Calculate total expenses for all years
+            $total_expenses = 0;
+            $final_amount = 0; // Track starting amount
+
+            for ($i = 0; $i < $period; $i++) {
+
+                $spending = isset($calculated[$i]['sp']) ? abs($calculated[$i]['sp']) : 0;
+                $loss_purchase = isset($calculated[$i]['lp']) ? abs($calculated[$i]['lp']) : 0;
+
+                // CRITICAL: Include ALL income sources that reduce required fees
+                $investment_income = isset($calculated[$i]['inv_ne']) ? abs($calculated[$i]['inv_ne']) : 0;
+                $ltim_income = isset($calculated[$i]['ltim_ne']) ? abs($calculated[$i]['ltim_ne']) : 0;
+                $assessments = isset($calculated[$i]['assessment']) ? abs($calculated[$i]['assessment']) : 0;
+                $loans = isset($calculated[$i]['loan_amount']) ? abs($calculated[$i]['loan_amount']) : 0;
+                $other_income = isset($calculated[$i]['other_income']) ? abs($calculated[$i]['other_income']) : 0;
+
+                // NEW: Include starting amount for first year
+                if ($i == 0) {
+                    $final_amount = isset($calculated[$i]['sa']) ? $calculated[$i]['sa'] :
+                        (isset($calculated[$i]['sa_o']) ? $calculated[$i]['sa_o'] : 0);
+                }
+
+                // Calculate NET expenses (expenses minus income)
+                $net_expenses = $spending + $loss_purchase - $investment_income - $ltim_income - $assessments - $loans - $other_income;
+
+                // Only add positive net expenses
+                if ($net_expenses > 0) {
+                    $total_expenses += $net_expenses;
+                }
+            }
+
+            // Calculate initial minimum required monthly fee
+            $total_months = $period * 12;
+            $min_monthly_fee = $total_months > 0 ? ceil($total_expenses / ($total_months * $housing)) : $original_monthly_fees;
+
+            // NEW: Calculate individual fees for each year based on their specific expenses
+            $individual_fees = [];
+            $test_starting = $final_amount;
+
+            for ($i = 0; $i < $period; $i++) {
+
+                // Get year-specific expenses and income
+                $spending = isset($calculated[$i]['sp']) ? abs($calculated[$i]['sp']) : 0;
+                $loss_purchase = isset($calculated[$i]['lp']) ? abs($calculated[$i]['lp']) : 0;
+                $investment_income = isset($calculated[$i]['inv_ne']) ? abs($calculated[$i]['inv_ne']) : 0;
+                $ltim_income = isset($calculated[$i]['ltim_ne']) ? abs($calculated[$i]['ltim_ne']) : 0;
+                $assessments = isset($calculated[$i]['assessment']) ? abs($calculated[$i]['assessment']) : 0;
+                $loans = isset($calculated[$i]['loan_amount']) ? abs($calculated[$i]['loan_amount']) : 0;
+                $other_income = isset($calculated[$i]['other_income']) ? abs($calculated[$i]['other_income']) : 0;
+
+                // Calculate year-specific net expenses
+                $year_net_expenses = $spending + $loss_purchase - $investment_income - $ltim_income - $assessments - $loans - $other_income;
+
+                // Calculate year-specific monthly fee
+                if ($year_net_expenses > 0) {
+                    // This year needs fees to cover expenses
+                    $year_monthly_fee = ceil($year_net_expenses / (12 * $housing));
+
+                    // Ensure it's not less than minimum
+                    if ($year_monthly_fee < $min_monthly_fee) {
+                        $year_monthly_fee = $min_monthly_fee;
+                    }
+                } else {
+                    // This year has surplus, use minimum fee or previous year's fee
+                    $year_monthly_fee = $i > 0 ? $individual_fees[$i - 1] : $min_monthly_fee;
+                }
+
+                // Apply progressive fee adjustment based on year position
+                if ($i > 0) {
+
+                    $prev_fee = $individual_fees[$i - 1];
+                    // Allow some variation but maintain reasonable progression
+                    $max_increase = $prev_fee * 0.15; // Max 15% increase
+                    $max_decrease = $prev_fee * 0.10; // Max 10% decrease
+
+                    if ($year_monthly_fee > $prev_fee + $max_increase) {
+                        $year_monthly_fee = $prev_fee + $max_increase;
+                    } elseif ($year_monthly_fee < $prev_fee - $max_decrease) {
+                        $year_monthly_fee = $prev_fee - $max_decrease;
+                    }
+                }
+                $individual_fees[$i] = $year_monthly_fee;
+            }
+
+            // NEW: Binary search to find exact minimum fees that prevent deficits for each year
+            $optimal_fees = [];
+
+            for ($i = 0; $i < $period; $i++) {
+
+                $test_fee = $individual_fees[$i];
+                $optimal_fee = $test_fee;
+
+                // Test fees from calculated minimum down to $1
+                while ($test_fee > 0) {
+                    $test_fee--; // Decrease by $1
+
+                    // Test if this fee creates any deficits
+                    $creates_deficit = false;
+                    $test_starting = $final_amount;
+
+                    for ($j = 0; $j < $period; $j++) {
+                        // Use the test fee for current year, optimal fees for other years
+                        $current_year_fee = ($j == $i) ? $test_fee : ($optimal_fees[$j] ?? $individual_fees[$j]);
+
+                        // Calculate what the final amount would be with this test fee
+                        $monthly_collection = $current_year_fee * 12 * $housing;
+                        $spending = isset($calculated[$j]['sp']) ? abs($calculated[$j]['sp']) : 0;
+                        $loss_purchase = isset($calculated[$j]['lp']) ? abs($calculated[$j]['lp']) : 0;
+
+                        // Include income sources
+                        $investment_income = isset($calculated[$j]['inv_ne']) ? abs($calculated[$j]['inv_ne']) : 0;
+                        $ltim_income = isset($calculated[$j]['ltim_ne']) ? abs($calculated[$j]['ltim_ne']) : 0;
+                        $assessments = isset($calculated[$j]['assessment']) ? abs($calculated[$j]['assessment']) : 0;
+                        $loans = isset($calculated[$j]['loan_amount']) ? abs($calculated[$j]['loan_amount']) : 0;
+                        $other_income = isset($calculated[$j]['other_income']) ? abs($calculated[$j]['other_income']) : 0;
+
+                        // Calculate test final amount
+                        $test_final = $test_starting + $monthly_collection + $assessments + $loans + $investment_income + $ltim_income + $other_income - $spending - $loss_purchase;
+
+                        if ($test_final < 0) {
+                            $creates_deficit = true;
+                            break;
+                        }
+
+                        $test_starting = $test_final; // Next year's starting amount
+                    }
+
+                    // If this fee creates a deficit, use the previous fee as optimal
+                    if ($creates_deficit) {
+                        $optimal_fee = $test_fee + 1; // Go back to the fee that didn't create deficit
+                        break;
+                    }
+                    $optimal_fee = $test_fee;
+                }
+                $optimal_fees[$i] = $optimal_fee;
+            }
+
+            // Only adjust if any of the optimal fees are less than the original fees
+            $should_adjust = false;
+            for ($i = 0; $i < $period; $i++) {
+                if ($optimal_fees[$i] < $original_monthly_fees) {
+                    $should_adjust = true;
+                    break;
+                }
+            }
+
+            if ($should_adjust) {
+                // Update each year with its individual optimal fee
+                for ($i = 0; $i < $period; $i++) {
+                    $auto_monthly_fees[$i] = $optimal_fees[$i];
+                }
+
+                // CRITICAL: Also update the calculated array to ensure frontend displays correctly
+                for ($i = 0; $i < $period; $i++) {
+                    if (isset($calculated[$i])) {
+                        $calculated[$i]['monthly_fee'] = $optimal_fees[$i];
+                        $calculated[$i]['mf'] = $optimal_fees[$i];
+                    }
+                }
+            }
+
         }
     }
 
@@ -1925,14 +2389,14 @@ class Simulation
 
         // Apply cash_reserve_threshold to spending
         $cash_reserve_threshold = floatval(check_val($simulation_rules, 'cash_reserve_threshold', 0));
-
+        // echo "spending: " . $spending . "<br>";
 
         if ($cash_reserve_threshold > 0 || $cushion_fund > 0) {
 
             // Check if cushion_fund exceeds 15%
-            if ($cushion_fund > 15 && $cash_reserve_threshold == 0) {
-                $cushion_fund = 0; // Ignore cushion_fund if it exceeds 15%
-            }
+            // if ($cushion_fund > 15 && $cash_reserve_threshold == 0) {
+            //     $cushion_fund = 0; // Ignore cushion_fund if it exceeds 15%
+            // }
 
             $cash_reserve_threshold = $cash_reserve_threshold * 100;
             $cash_reserve_threshold = $cushion_fund + $cash_reserve_threshold;
@@ -1943,6 +2407,7 @@ class Simulation
             }
             $spending = $spending * ((100 - $cash_reserve_threshold) / 100);
         }
+        // echo "spending after cash reserve threshold: " . $spending . "<br>";
 
         // withdraw investments from existing strategy 
         $withdrawn_principal = 0;
@@ -2917,11 +3382,300 @@ class Simulation
         $inflation_rate = 0,
         $rule_mf_auto = false,
         &$used_manual_monthly_fees,
-        $cash_reserve_threshold = 0
+        $cash_reserve_threshold = 0,
+        $simulation_rules = [],
+        $custom_range_years = [],
+        $custom_range_fees = [],
+        $custom_gradual_range_inc = [],
+        $custom_gradual_range_years = [],
+        $disable_auto_fee_reduction = false
     ) {
+        // print_r($disable_auto_fee_reduction);
+        // exit;
+
         $is_optimize_all = $rule_mf_auto;
         $start_year = $is_optimize_all ? 0 : $year;
-        if ($deficit > 0) {
+        if ($disable_auto_fee_reduction == "1" && $rule_mf_auto) {
+
+
+
+            $is_optimize_all = $rule_mf_auto;
+
+            $start_year = $is_optimize_all ? 0 : $year;
+
+
+
+            //  var_dump('START HERE');var_dump($auto_monthly_fees);
+
+
+
+            // get closest year with % to increase by and total years to increase
+
+            $inc_infos = $this->get_closest_inc_year($year, $start_year, $auto_monthly_fees, $auto_monthly_fees_inc, $max_inc, '', $deficit, $inflation_rate);
+
+
+
+            $start_year = $inc_infos['start_year'];     // year to start increasing
+
+            $total_years = $inc_infos['total_years'];   // number of years to increase
+
+            $inc = $inc_infos['inc'];                   // % to increase each year
+
+
+
+            // log_info($inc_infos);
+
+
+
+
+
+            $adjust_inflation = ($inflation_rate > 0 ? 1 + $inflation_rate : 1);
+
+
+
+            /*
+
+            // if no increase return, that means that the inital mf is $0
+
+            // create new monthly fee for all previous years
+
+            if($inc == 0){
+
+                $n_mf = ceil(abs($deficit)) / $total_years;
+
+                for($y=$start_year; $y<$total_years; $y++){
+
+                    $auto_monthly_fees[$y] = $n_mf * $adjust_inflation;        
+
+                    $auto_monthly_fees_inc[$y] = 0;
+
+                }         
+
+                //return;
+
+            }
+
+            */
+
+
+
+
+
+            // base monthly fee to start the increase from auto_monthly_fees previously increased
+
+            $base_mf = $auto_monthly_fees[$start_year];
+
+
+
+
+
+            // log_info("deficit: $deficit, year: ".($year).", start_year: ".($start_year).", total_years: $total_years, incBy: $inc");
+
+
+
+            // period to process
+
+            $period = count($auto_monthly_fees); /* $stop_at_year >= 0 ? $stop_at_year : count($auto_monthly_fees); */
+
+
+
+            // new monthly fee used as base of increase
+
+            $new_mf = $base_mf;
+
+
+
+
+
+            // var_dump($auto_monthly_fees);
+
+            // blindly apply to whole period
+
+            $total_covered = 0;
+
+            for ($y = $start_year; $y < $period; $y++) {
+
+
+
+                // reached the year to auto-calc
+
+                // fill with the manual monthly fees
+
+                if ($y > $year) {
+
+
+
+                    // if manually entered mf, break
+
+                    if ($used_manual_monthly_fees[$y] == true)
+
+                        break;
+
+
+
+                    // else update
+
+                    $auto_monthly_fees[$y] = $new_mf;
+
+                    // var_dump($y);
+
+                    // var_dump($default_monthly_fee);
+
+                    continue;
+
+                }
+
+
+
+                // get 'n' of equation
+
+                $n = $y - $start_year + 1;
+
+
+
+                // calculate by how much current fees should be increased
+
+                $inc_ratio = pow(1 + $inc, $n);
+
+                $inc_by_amount = $base_mf * $inc_ratio - ($base_mf);
+
+                // var_dump($inc_ratio);
+
+                // adjusted to inflation
+
+                $inc_by_amount *= $adjust_inflation;
+
+
+
+
+
+                // calculate new mf
+
+                $current_mf = $auto_monthly_fees[$y];
+
+                $new_mf = $current_mf + $inc_by_amount;
+
+                // var_dump($new_mf);
+
+                // compare increase to prev value
+
+                $prev_mf = $y == 0 ? $default_monthly_fee : $auto_monthly_fees[$y - 1];
+
+                $diff_mf = ($new_mf - $prev_mf);
+
+                $inced_by = $prev_mf > 0 ? $diff_mf / $prev_mf : 0;
+
+
+
+
+
+                // if increase for more than max, set to max, else keep 
+
+                if ($max_inc > 0 && $inced_by > $max_inc) {
+
+                    // log_info("Exeeds $inced_by > $max_inc -> $new_mf");
+
+                    $new_mf = $prev_mf * (1 + $max_inc);
+
+                    // log_info("Adjust $new_mf");
+
+                    $diff_mf = ($new_mf - $prev_mf);
+
+                    $inced_by = $max_inc;
+
+                    // var_dump($max_inc);
+
+                }
+
+                // var_dump($y);
+
+                $total_covered += $new_mf - $current_mf;
+
+
+
+                // log_info("Year $y ($inced_by): $new_mf ($diff_mf), covered: $total_covered");
+
+
+
+                // add it to the lf array
+
+                // if($inced_by == 0){
+
+                //     $auto_monthly_fees[$y] = 0;
+
+                //     var_dump("Here ITS NOW");
+
+                // } else {
+
+                $auto_monthly_fees[$y] = $new_mf;
+
+                //}
+
+
+
+
+
+                $auto_monthly_fees_inc[$y] = $inced_by;
+
+
+
+
+
+                // log_info("Year $y: increase by $inc_by_amount -> $new_mf (".($inced_by*100).")");
+
+
+
+            }
+
+            // for($x=21; $x<=29; $x++){
+
+            //     $auto_monthly_fees[$x] = 10;
+
+            // }
+
+            // var_dump($auto_monthly_fees);
+
+
+
+            // if remaining deficit to cover, add max remaining to last year 
+
+            $remain_to_cover = abs($deficit) - $total_covered;
+
+            if ($remain_to_cover < 0)
+
+                $remain_to_cover = 0;
+
+
+
+            if ($remain_to_cover > 0 && $auto_monthly_fees_inc[$year] < $max_inc) {
+
+                $prev_mf = $y == 0 ? $default_monthly_fee : $auto_monthly_fees[$y - 1];
+
+                $curr_mf = $auto_monthly_fees[$year];
+
+                $max_mf = $prev_mf * (1 + $max_inc);
+
+                // log_info("Covered: $total_covered - $deficit = $remain_to_cover");
+
+
+
+                $auto_monthly_fees[$year] = $curr_mf + ceil($remain_to_cover);
+
+                if ($auto_monthly_fees[$year] > $max_mf)
+
+                    $auto_monthly_fees[$year] = $max_mf;
+
+
+
+                // log_info("Added $remain_to_cover to $curr_mf = $auto_monthly_fees[$year]");
+
+
+
+            }
+
+
+
+        } else if ($deficit > 0) {
             // Get closest year with % to increase by and total years to increase
             $inc_infos = $this->get_closest_inc_year(
                 $year,
@@ -2949,6 +3703,15 @@ class Simulation
             $deficit_cleared_year = -1;
 
             for ($y = $start_year; $y < $period; $y++) {
+                if (!empty($custom_range_years[$y]) && $custom_range_years[$y] === true) {
+                    continue;
+                }
+
+                if (!empty($custom_gradual_range_years[$y]) && $custom_gradual_range_years[$y] === true) {
+                    $auto_monthly_fees_inc[$y] = $custom_gradual_range_inc[$y];
+                    continue;
+                }
+
                 // Skip years with manual monthly fees
                 if ($y > $year && !empty($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
                     break;
@@ -2987,8 +3750,23 @@ class Simulation
                 $auto_monthly_fees_inc[$y] = $inced_by;
             }
         } else {
-            // Handle years after deficit is cleared
+            // $disable_auto_reduction = isset($simulation_rules['disable_auto_fee_reduction']) &&
+            //     $simulation_rules['disable_auto_fee_reduction'] == 1;
+            // Handle years after deficit is clearedion);
+            // if (isset($simulation_rules['disable_auto_fee_reduction']) && $simulation_rules['disable_auto_fee_reduction'] == 1) {
+            
             for ($y = $year + 1; $y < count($auto_monthly_fees); $y++) {
+
+                if (!empty($custom_range_years[$y]) && $custom_range_years[$y] === true) {
+                    $auto_monthly_fees[$y] = $custom_range_fees[$y];
+                    continue;
+                }
+
+                if (!empty($custom_gradual_range_years[$y]) && $custom_gradual_range_years[$y] === true) {
+                    $auto_monthly_fees_inc[$y] = $custom_gradual_range_inc[$y];
+                    continue;
+                }
+
                 if (!empty($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
                     continue;
                 }
@@ -3000,23 +3778,53 @@ class Simulation
                     $new_mf = $default_monthly_fee; // Ensure it doesn't go below the default fee
                 }
 
+                // if ($new_mf < 0) {
+                //     $new_mf = 0; // Ensure it doesn't go below the default fee
+                // }
+
                 $auto_monthly_fees[$y] = $new_mf;
                 $auto_monthly_fees_inc[$y] = -$max_inc; // Negative increment for decrease
             }
+            // } else {
+            //     // When auto reduction is ENABLED, use the OLD LOGIC approach
+            //     // Based on your old logic, when deficit <= 0, there's no special handling
+            //     // Just continue with the current fees without any auto-reduction
+
+            //     for ($y = $year + 1; $y < count($auto_monthly_fees); $y++) {
+            //         if (!empty($custom_range_years[$y]) && $custom_range_years[$y] === true) {
+            //             $auto_monthly_fees[$y] = $custom_range_fees[$y];
+            //             continue;
+            //         }
+            //         if (!empty($custom_gradual_range_years[$y]) && $custom_gradual_range_years[$y] === true) {
+            //             $auto_monthly_fees_inc[$y] = $custom_gradual_range_inc[$y];
+            //             continue;
+            //         }
+            //         if (!empty($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+            //             continue;
+            //         }
+            //         // Keep the fee at the same level (no reduction) - like in old logic
+            //         $auto_monthly_fees[$y] = $auto_monthly_fees[$y - 1];
+            //         $auto_monthly_fees_inc[$y] = 0; // No change
+            //     }
+            // }
         }
 
-        // Handle remaining deficit
-        $remain_to_cover = abs($deficit) - $total_covered;
-        if ($remain_to_cover > 0 && $auto_monthly_fees_inc[$year] < $max_inc) {
-            $prev_mf = $year == 0 ? $default_monthly_fee : $auto_monthly_fees[$year - 1];
-            $curr_mf = $auto_monthly_fees[$year];
-            $max_mf = $prev_mf * (1 + $max_inc);
+        if (empty($custom_range_years[$year]) && empty($custom_gradual_range_years[$year])) {
+            // Handle remaining deficit
+            $remain_to_cover = abs($deficit) - $total_covered ? $total_covered : 0;
+            if ($remain_to_cover > 0 && $auto_monthly_fees_inc[$year] < $max_inc) {
+                $prev_mf = $year == 0 ? $default_monthly_fee : $auto_monthly_fees[$year - 1];
+                $curr_mf = $auto_monthly_fees[$year];
+                $max_mf = $prev_mf * (1 + $max_inc);
 
-            $auto_monthly_fees[$year] = $curr_mf + ceil($remain_to_cover);
-            if ($auto_monthly_fees[$year] > $max_mf) {
-                $auto_monthly_fees[$year] = $max_mf;
+                $auto_monthly_fees[$year] = $curr_mf + ceil($remain_to_cover);
+                if ($auto_monthly_fees[$year] > $max_mf) {
+                    $auto_monthly_fees[$year] = $max_mf;
+                    }
             }
         }
+        // print_r($auto_monthly_fees_inc);
+        // exit;
     }
 
     public function reset($data)
@@ -3086,10 +3894,15 @@ class Simulation
         global $simSplitsTable, $simDeficitTable, $simSplitsLTIMTable, $simDeficitLTIMTable, $modelsTable, $clientsTable, $auth;
 
         // get model info and year to erase deficit for
-        if (!is_valid($data, 'model_id'))
-            return ['error' => $this->errors['model_id']];
-        if (!is_valid($data, 'year') || intval($data['year']) < 0)
-            return ['error' => $this->errors['deficit_year']];
+        if (!is_valid($data, 'model_id')){
+            // return ['error' => $this->errors['model_id']];
+            return send_json_response(false, 400 , $this->errors['model_id']);
+        }
+        if (!is_valid($data, 'year') || intval($data['year']) < 0){
+            // return ['error' => $this->errors['deficit_year']];
+            return send_json_response(false, 400 , $this->errors['deficit_year']);
+        }
+
         //if(!is_valid($data, 'to') || intval($data['to']) < 0)return ['error'=>$this->errors['deficit_to'] ];
 
 
@@ -3098,11 +3911,15 @@ class Simulation
 
         $model = get_element($modelsTable, ['id' => $model_id]);
 
-        if (empty($model))
-            return ['error' => $this->errors['missing']];
+        if (empty($model)){
+            // return ['error' => $this->errors['missing']];
+            return send_json_response(false, 404 , $this->errors['missing']);
+        }
 
-        if (!belongs_to_client($modelsTable, $model_id, false, true))
-            return ['error' => $this->errors['not_allowed']];
+        if (!belongs_to_client($modelsTable, $model_id, false, true)){
+            // return ['error' => $this->errors['not_allowed']];
+            return send_json_response(false, 403 , $this->errors['not_allowed']);
+        }
 
         // check if LTIM is enabled in the simulation
         // $is_ltim_enabled = check_val($this->get_rules($model_id), 'ltim_enabled', 0);
@@ -3112,9 +3929,186 @@ class Simulation
 
         // log_info($data);
 
-
         // add erase deficit data
         if (isset($data['deficit'])) {
+             if (
+                isset($data['deficit']['monthly_fees_range']) &&
+                is_array($data['deficit']['monthly_fees_range']) &&
+                isset($data['deficit']['monthly_fees_range']['start']) &&
+                isset($data['deficit']['monthly_fees_range']['end']) &&
+                isset($data['deficit']['monthly_fees_range']['fee'])
+            ) {
+                $start = intval($data['deficit']['monthly_fees_range']['start']);
+                $end = intval($data['deficit']['monthly_fees_range']['end']);
+                $fee = floatval($data['deficit']['monthly_fees_range']['fee']);
+                $period = check_val($model, 'period', 0);
+
+                // $period = check_val($model, 'period', 0);
+
+                for ($i = 0; $i < $period; $i++) {
+
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (!empty($deficit_of_year)) {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                        unset($deficit_of_year['data']['monthly_fees_range']);
+                        unset($deficit_of_year['data']['custom_range_toggle']);
+                        $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                        save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                    }
+                }
+
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (empty($deficit_of_year)) {
+
+                        $deficit_of_year = [
+                            'model_id' => $model_id,
+                            'user_id' => $auth->uid(),
+                            'year' => $i,
+                            'data' => []
+                        ];
+                    } else {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                    }
+
+                    $deficit_of_year['data']['custom_range_toggle'] = 1;
+
+                    $deficit_of_year['data']['monthly_fees_range'] = [
+                        'start' => $start,
+                        'end' => $end,
+                        'fee' => $fee,
+                        'year' => $i,
+
+                    ];
+                    $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                    save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                }
+            }
+
+            if (isset($data['deficit']['monthly_fees_range_reset'])) {
+
+                $start = intval($data['deficit']['monthly_fees_range_reset']['start']);
+                $end = intval($data['deficit']['monthly_fees_range_reset']['end']);
+                $period = check_val($model, 'period', 0);
+
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (!empty($deficit_of_year)) {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                        unset($deficit_of_year['data']['monthly_fees_range']);
+                        unset($deficit_of_year['data']['custom_range_toggle']);
+                        $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                        // echo "<pre>";
+                        // print_r($deficit_of_year['data']);
+                        // echo "</pre>";
+                        save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                    }
+                }
+            }
+
+            if (
+
+                isset($data['deficit']['monthly_fees_auto_range']) &&
+                is_array($data['deficit']['monthly_fees_auto_range']) &&
+                isset($data['deficit']['monthly_fees_auto_range']['start']) &&
+                isset($data['deficit']['monthly_fees_auto_range']['end']) &&
+                isset($data['deficit']['monthly_fees_auto_range']['max_perc'])
+            ) {
+                $start = intval($data['deficit']['monthly_fees_auto_range']['start']);
+                $end = intval($data['deficit']['monthly_fees_auto_range']['end']);
+                $max_perc = floatval($data['deficit']['monthly_fees_auto_range']['max_perc']);
+                $period = check_val($model, 'period', 0);
+
+                // Clear previous auto range data for all years
+                for ($i = 0; $i < $period; $i++) {
+
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (!empty($deficit_of_year)) {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                        unset($deficit_of_year['data']['monthly_fees_auto_range']);
+                        unset($deficit_of_year['data']['custom_gradual_range_toggle']);
+                        $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                        save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                    }
+                }
+
+                // Set new auto range for selected years
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (empty($deficit_of_year)) {
+                        $deficit_of_year = [
+                            'model_id' => $model_id,
+                            'user_id' => $auth->uid(),
+                            'year' => $i,
+                            'data' => []
+                        ];
+                    } else {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                    }
+                    $deficit_of_year['data']['custom_gradual_range_toggle'] = 1;
+                    $deficit_of_year['data']['monthly_fees_auto_range'] = [
+                        'start' => $start,
+                        'end' => $end,
+                        'max_perc' => $max_perc,
+                        'year' => $i,
+                    ];
+                    $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                    save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                }
+            }
+
+            if (isset($data['deficit']['gradual_fees_range_reset_btn'])) {
+                $start = intval($data['deficit']['gradual_fees_range_reset_btn']['start']);
+                $end = intval($data['deficit']['gradual_fees_range_reset_btn']['end']);
+                $period = check_val($model, 'period', 0);
+
+                for ($i = $start; $i <= $end && $i < $period; $i++) {
+
+                    $deficit_of_year = get_element($deficitTable, [
+                        'model_id' => $model_id,
+                        'user_id' => $auth->uid(),
+                        'year' => $i
+                    ]);
+
+                    if (!empty($deficit_of_year)) {
+                        $deficit_of_year['data'] = parse_json($deficit_of_year['data']);
+                        unset($deficit_of_year['data']['monthly_fees_auto_range']);
+                        unset($deficit_of_year['data']['custom_gradual_range_toggle']);
+                        $deficit_of_year['data'] = json_encode($deficit_of_year['data']);
+                        // echo "<pre>";
+                        // print_r($deficit_of_year['data']);
+                        // echo "</pre>";
+                        save_element($deficitTable, $deficit_of_year, ['model_id', 'user_id', 'year']);
+                    }
+                }
+            }
 
             if (!empty($data['deficit']) && is_assoc($data['deficit'])) {
 
@@ -3269,7 +4263,8 @@ class Simulation
 
 
 
-        return ['success' => ''];
+        // return ['success' => ''];
+        return send_json_response(true, 200, 'success');
     }
 
     // unsplit item 
@@ -3328,7 +4323,8 @@ class Simulation
 
 
         if (!is_valid($data, 'model_id')) {
-            return ['error' => ''];
+            // return ['error' => ''];
+            return send_json_response(false, 400,  $this->errors['model_id_missing']);
         }
 
         if (!belongs_to_client($modelsTable, $data['model_id'], false, true))
@@ -3365,7 +4361,8 @@ class Simulation
             save_element($simRulesTable, ['model_id' => $data['model_id'], 'user_id' => $auth->uid(), 'rules' => $data['rules']], ['model_id', 'user_id']);
         }
 
-        return ['success' => ''];
+        // return ['success' => ''];
+        return send_json_response(true, 200, 'success');
     }
 
 
@@ -3427,7 +4424,8 @@ class Simulation
                 "period" => 29,
                 "cushion_fund" => 0,
                 "inv_keep" => 1,
-                "use_infl" => 1
+                "use_infl" => 1,
+                "disable_auto_fee_reduction" => 0
             ];
 
         $rules = parse_json(check_val(get_element($simRulesTable, ['model_id' => $model_id, 'user_id' => $auth->uid()]), 'rules', []), []);
@@ -3455,7 +4453,8 @@ class Simulation
             "cushion_fund" => $cushion_fund,
             "cash_reserve_threshold" => $cash_reserve_threshold,
             "inv_keep" => 1,
-            "use_infl" => 1
+            "use_infl" => 1,
+            "disable_auto_fee_reduction" => 0
         ];
 
         foreach ($default_rules as $k => $v) {
@@ -3465,7 +4464,15 @@ class Simulation
         return $rules;
     }
 
+      // Helper: Get mf_perc for a specific year (array or single value supported)
 
+    private function get_mf_perc($simulation_rules, $year){
+        $mf_perc_mf_perc = check_val($simulation_rules, 'mf_perc_per_year', 0);
+        if (is_array($mf_perc_mf_perc)) {
+            return isset($mf_perc_mf_perc[$year]) ? $mf_perc_mf_perc[$year] : (is_array($mf_perc_mf_perc) && count($mf_perc_mf_perc) > 0 ? end($mf_perc_mf_perc) : 0);
+        }
+        return $mf_perc_mf_perc;
+    }
 
     public function compare($model_id)
     {
@@ -3750,6 +4757,8 @@ class Simulation
     private $errors = [
         "client_id" => "Please choose an Association !",
         "model_id" => "Please choose a Model !",
+        "deficit_year" => "Please choose a Deficit Year !",
+        "model_id_missing" => "Model ID is not valid",
         "not_allowed" => "Unauthorized Access",
         "missing" => "This Model doesn't exist !",
         "version_name" => "Version Name invalid !",
