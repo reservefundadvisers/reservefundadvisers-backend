@@ -4369,7 +4369,7 @@ class Simulation
     // update simulation model item data
     public function update($data)
     {
-        global $simSplitsTable, $simSplitsLTIMTable, $modelsTable, $clientsTable, $auth;
+        global $simSplitsTable, $simSplitsLTIMTable, $modelsTable, $clientsTable, $auth , $simDeficitTable, $simDeficitLTIMTable;
 
         // the id is pregenerated, so if it doesnt exist just add it as is
         // and the parent_id is the master item id
@@ -4404,7 +4404,8 @@ class Simulation
             delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id AND year >= 0', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
 
 
-        return ['success' => ''];
+        // return ['success' => ''];
+        return send_json_response(true, 200, 'success');
     }
 
     private function get_rules($model_id)
