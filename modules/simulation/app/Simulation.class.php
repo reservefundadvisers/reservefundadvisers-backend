@@ -3811,7 +3811,10 @@ class Simulation
 
         if (empty($custom_range_years[$year]) && empty($custom_gradual_range_years[$year])) {
             // Handle remaining deficit
-            $remain_to_cover = abs($deficit) - $total_covered ? $total_covered : 0;
+            if (!isset($total_covered)) {
+                $total_covered = 0;
+            }
+            $remain_to_cover = abs($deficit) - $total_covered ;
             if ($remain_to_cover > 0 && $auto_monthly_fees_inc[$year] < $max_inc) {
                 $prev_mf = $year == 0 ? $default_monthly_fee : $auto_monthly_fees[$year - 1];
                 $curr_mf = $auto_monthly_fees[$year];
@@ -4509,10 +4512,12 @@ class Simulation
         $uid = $auth->uid();
 
         if (empty($model_id))
-            return ["error" => $this->errors['model_id']];
+            // return ["error" => $this->errors['model_id']];
+            return send_json_response(false, 400, $this->errors['model_id']);
 
         if (!belongs_to_client($modelsTable, $model_id, false, true))
-            return ["error" => $this->errors['not_allowed']];
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         $conds = ['model_id' => $model_id, '*user_id' => $uid];
 
@@ -4531,21 +4536,26 @@ class Simulation
             'ORDER BY row_id DESC'
         );
 
-        return $versions;
+        // return $versions;
+        return send_json_response(true, 200, 'success', ["data" => $versions]);
     }
 
     // save versions
     public function save_version($data)
     {
+        rfa_create_log('save_version', $data);
+        // return send_json_response(true, 200, 'success');
         global $auth, $modelsTable, $simSplitsTable, $simDeficitTable, $simRulesTable, $simVersionTable;
 
         $model_id = check_val($data, 'model_id');
 
         if (empty($model_id))
-            return ["error" => $this->errors['model_id']];
+            // return ["error" => $this->errors['model_id']];
+            return send_json_response(false, 400, $this->errors['model_id']);
 
         if (!belongs_to_client($modelsTable, $model_id, false, true))
-            return ["error" => $this->errors['not_allowed']];
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         $uid = $auth->uid();
 
@@ -4570,7 +4580,8 @@ class Simulation
 
             $name = trim(check_val($data, 'name'));
             if (empty($name))
-                return ["error" => $this->errors['version_name']];
+                // return ["error" => $this->errors['version_name']];
+                return send_json_response(false, 400, $this->errors['version_name']);
         }
 
 
@@ -4580,19 +4591,32 @@ class Simulation
         $version_data['rules'] = $this->get_rules($model_id);
         $version_data['deficit'] = get_elements($simDeficitTable, ['model_id' => $model_id, 'user_id' => $uid]); // get deficits;
         $version_data['splits'] = get_elements($simSplitsTable, ['model_id' => $model_id, 'user_id' => $uid]); // get deficits;
-        $version_data['simulation'] = $this->simulation(['model_id' => $model_id]); // get deficits;
+        $version_data['simulation'] = $this->simulation(['model_id' => $model_id], true); // get deficits;
 
         $data['data'] = json_encode($version_data);
 
 
 
+
         $res = save_element($simVersionTable, $data);
 
-
+        rfa_create_log('save_version_result', $res);
         if ($res === false)
-            return ['error' => ''];
+            // return ['error' => ''];
+            return send_json_response(false, 500, '');
 
-        return ['success' => ''];
+        // Get the saved version ID
+        $saved_version_id = null;
+        if (!empty($version_id)) {
+            // When updating existing version, use the provided version_id
+            $saved_version_id = $version_id;
+        } else {
+            // When creating new version, use the returned ID from save_element
+            $saved_version_id = $res;
+        }
+
+        // return ['success' => '', 'version_id' => $saved_version_id];
+        return send_json_response(true, 200, 'success', ['version_id' => $saved_version_id]);
     }
 
     // edit version prop
@@ -4605,10 +4629,12 @@ class Simulation
 
 
         if (empty($version_id))
-            return ["error" => $this->errors['version_id']];
+            // return ["error" => $this->errors['version_id']];
+            return send_json_response(false, 400, $this->errors['version_id']);
 
         if (!belongs_to_user($simVersionTable, $version_id))
-            return ["error" => $this->errors['not_allowed']];
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         if (isset($data['model_id']))
             unset($data['model_id']);
@@ -4624,9 +4650,11 @@ class Simulation
 
 
         if ($res === false)
-            return ['error' => ''];
+            // return ['error' => ''];
+            return send_json_response(false, 500, '');
 
-        return ['success' => ''];
+        // return ['success' => ''];
+        return send_json_response(true, 200, 'success');
     }
 
     // delete version
@@ -4639,19 +4667,23 @@ class Simulation
 
 
         if (empty($version_id))
-            return ["error" => $this->errors['version_id']];
+            // return ["error" => $this->errors['version_id']];
+            return send_json_response(false, 400, $this->errors['version_id']);
 
         if (!belongs_to_user($simVersionTable, $version_id))
-            return ["error" => $this->errors['not_allowed']];
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
 
         $res = delete_elements_by_cond($simVersionTable, 'id = :id AND user_id = :user_id', ['id' => $version_id, 'user_id' => $uid]);
 
 
         if (!empty($res))
-            return ['error' => $res];
+            // return ['error' => $res];
+            return send_json_response(false, 500, $res);
         else
-            return ['success' => ''];
+            // return ['success' => ''];
+            return send_json_response(true, 200, 'success');
     }
 
     // load versions
@@ -4664,7 +4696,8 @@ class Simulation
 
 
         if (empty($version_id))
-            return ["error" => $this->errors['version_id']];
+            // return ["error" => $this->errors['version_id']];
+            return send_json_response(false, 400, $this->errors['version_id']);
 
 
         $version = get_element($simVersionTable, ['id' => $version_id]);
@@ -4672,7 +4705,8 @@ class Simulation
         $model_id = $version['model_id'];
 
         if (!belongs_to_client($modelsTable, $model_id, false, true))
-            return ["error" => $this->errors['not_allowed']];
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         $version_data = parse_json($version['data']);
 
@@ -4745,7 +4779,8 @@ class Simulation
         }
 
 
-        return ['success' => ''];
+        // return ['success' => ''];
+        return send_json_response(true, 200, 'success');
     }
 
     // compare versions
