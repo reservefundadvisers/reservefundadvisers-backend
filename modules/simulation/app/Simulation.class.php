@@ -1162,7 +1162,9 @@ class Simulation
             // log_info($existing_inv['sy'] . " - " . $model['fiscal_year'] . " = " .$start_year, $existing_inv, $ret_strategies);
             // $existing_inv['existing'] = 1;
             // $process_inv_strategies($existing_inv, $start_year, -1);
-
+            if(!isset($ret_strategies)){
+                $ret_strategies = [];
+            }
             // add as existing propagated
             foreach ($ret_strategies as $ret_strategy) {
 
@@ -2553,6 +2555,10 @@ class Simulation
         // add propagated inv strategy
         // $ret_strategies = array_reverse($ret_strategies); // reverse order to prepend current year strategy over old ones
         // var_dump($ret_strategies);
+        if(!isset($ret_strategies)){
+            $ret_strategies = [];
+        }
+        
         foreach ($ret_strategies as $ret_strategy) {
 
             // log_info($ret_strategy);
