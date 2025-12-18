@@ -575,7 +575,15 @@ class Simulation
 
                 // update actual cost and keep the same until new value
                 if (isset($spendings_actuals[$item_id][$i]))
-                    $actual_cost = $spendings_actuals[$item_id][$i];
+                    // $actual_cost = $spendings_actuals[$item_id][$i];
+                // Maintain continuity, but do NOT override updated cost
+                    if (
+                        isset($spendings_actuals[$item_id][$i]) &&
+                        floatval($item['cost']) == floatval($spendings_actuals[$item_id][$i])
+                    ) {
+                        $actual_cost = floatval($item['cost']);
+                    }
+
                 // $cost_ratio = $actual_cost / $cost;
 
                 // log_info("$name -> $i = $actual_cost");
@@ -592,12 +600,33 @@ class Simulation
                     // log_info($item['name']." -> $at = $actual_cost");
 
                     // Generate new id of the master so it can be stored in model_sims instead of master one
+                    // array_push(
+                    //     $spending_data[$from + ($i * $redundancy)],
+                    //     [
+                    //         'id' => generate_id(),
+                    //         'name' => $item['name'],
+                    //         'cost' => $actual_cost,
+                    //         'is_sirs' => $is_sirs,
+                    //         'year' => $at,
+                    //         'redundancy' => $redundancy,
+                    //         'redundancy_at' => $i,
+                    //         'parent_id' => $item['id'],
+                    //         'split_of' => '',
+                    //         'splits' => 0
+                    //     ]
+                    // );
+                    $original_cost = isset($spendings_actuals[$item_id][$i])
+                        ? $spendings_actuals[$item_id][$i]
+                        : null;
+
                     array_push(
                         $spending_data[$from + ($i * $redundancy)],
                         [
                             'id' => generate_id(),
                             'name' => $item['name'],
                             'cost' => $actual_cost,
+                            'actual_cost' => $original_cost,
+                            'is_cost_edited' => $original_cost !== null ? 1 : 0,
                             'is_sirs' => $is_sirs,
                             'year' => $at,
                             'redundancy' => $redundancy,
@@ -636,12 +665,33 @@ class Simulation
 
                         // log_info("$split_spending_year (Split)");
 
+                        // array_push(
+                        //     $spending_data[$split_spending_year],
+                        //     [
+                        //         'id' => $split['id'],
+                        //         'name' => $item['name'],
+                        //         'cost' => $split['cost'],
+                        //         'is_sirs' => $is_sirs,
+                        //         'year' => $split_spending_year,
+                        //         'redundancy' => $redundancy,
+                        //         'redundancy_at' => $i,
+                        //         'parent_id' => $split['parent_id'],
+                        //         'split_of' => $split['split_of'],
+                        //         'splits' => $split['splits']
+                        //     ]
+                        // );
+                        $original_cost = isset($spendings_actuals[$item_id][$i])
+                            ? $spendings_actuals[$item_id][$i]
+                            : null;
+
                         array_push(
                             $spending_data[$split_spending_year],
                             [
                                 'id' => $split['id'],
                                 'name' => $item['name'],
                                 'cost' => $split['cost'],
+                                'actual_cost' => $original_cost,
+                                'is_cost_edited' => $original_cost !== null ? 1 : 0,
                                 'is_sirs' => $is_sirs,
                                 'year' => $split_spending_year,
                                 'redundancy' => $redundancy,
@@ -829,6 +879,10 @@ class Simulation
 
                 }
 
+                //If deficit_per_unit is not set
+                if(!isset($deficit_per_unit)){
+                    $deficit_per_unit = 0;
+                }
                 // Now optimize all years, skipping custom range years
 
                 if ($rule_mf_auto == 1) {
@@ -4264,7 +4318,114 @@ class Simulation
             ['model_id' => $data['model_id'], 'user_id' => $auth->uid(), 'year' => $split_min_year]
         );
 
+        // ================================
+        // Handle actual cost updates
+        // ================================
+        if (isset($data['actual_cost_update']) && !empty($data['actual_cost_update'])) {
+            global $simActualTable, $modelItemsTable;
 
+            foreach ($data['actual_cost_update'] as $costUpdate) {
+
+                if (
+                    !isset($costUpdate['item_id']) ||
+                    !isset($costUpdate['redundancy_at']) ||
+                    !isset($costUpdate['actual_cost'])
+                ) {
+                    continue;
+                }
+
+                $itemId       = $costUpdate['item_id'];
+                $redundancyAt = intval($costUpdate['redundancy_at']);
+                $newCost      = floatval($costUpdate['actual_cost']);
+
+                // Fetch model item
+                $modelItem = get_element($modelItemsTable, [
+                    'id' => $itemId,
+                    'model_id' => $model_id
+                ]);
+
+                if (empty($modelItem)) {
+                    continue;
+                }
+
+                // Check if backup (original cost) already exists
+                $existingActual = get_element($simActualTable, [
+                    'model_id' => $model_id,
+                    'item_id' => $itemId,
+                    'redundancy_at' => $redundancyAt
+                ]);
+
+                // Store original cost ONLY once
+                if (empty($existingActual)) {
+                    save_element($simActualTable, [
+                        'model_id' => $model_id,
+                        'item_id' => $itemId,
+                        'redundancy_at' => $redundancyAt,
+                        'actual_cost' => floatval($modelItem['cost'])
+                    ]);
+                }
+
+                // Update working cost
+                $modelItem['cost'] = $newCost;
+                save_element($modelItemsTable, $modelItem);
+            }
+        }
+
+        // ================================
+        // Handle actual cost resets
+        // ================================
+        if (isset($data['actual_cost_reset']) && !empty($data['actual_cost_reset'])) {
+            global $simActualTable, $modelItemsTable;
+
+            foreach ($data['actual_cost_reset'] as $costReset) {
+
+                if (
+                    !isset($costReset['item_id']) ||
+                    !isset($costReset['redundancy_at'])
+                ) {
+                    continue;
+                }
+
+                $itemId       = $costReset['item_id'];
+                $redundancyAt = intval($costReset['redundancy_at']);
+
+                // Fetch backup cost
+                $actual = get_element($simActualTable, [
+                    'model_id' => $model_id,
+                    'item_id' => $itemId,
+                    'redundancy_at' => $redundancyAt
+                ]);
+
+                if (empty($actual)) {
+                    continue; // nothing to reset
+                }
+
+                // Fetch model item
+                $modelItem = get_element($modelItemsTable, [
+                    'id' => $itemId,
+                    'model_id' => $model_id
+                ]);
+
+                if (empty($modelItem)) {
+                    continue;
+                }
+
+                // Restore original cost
+                $modelItem['cost'] = floatval($actual['actual_cost']);
+                save_element($modelItemsTable, $modelItem);
+
+                // Remove backup
+                delete_elements_by_cond(
+                    $simActualTable,
+                    'model_id = :model_id AND item_id = :item_id AND redundancy_at = :redundancy_at',
+                    [
+                        'model_id' => $model_id,
+                        'item_id' => $itemId,
+                        'redundancy_at' => $redundancyAt
+                    ]
+                );
+            }
+        }
 
         // return ['success' => ''];
         return send_json_response(true, 200, 'success');
@@ -4717,12 +4878,14 @@ class Simulation
 
 
 
+
         // add deficit data
         $deficits = check_val($version_data, 'deficit', []);
         if (!empty($deficits)) {
             foreach ($deficits as $deficit) {
                 $deficit['user_id'] = $uid;     // set user id
                 $deficit['id'] = '';        // unset id
+                // $deficit['version_id'] = $version_id; // track which version is loaded
 
                 // log_info($deficit);
 
