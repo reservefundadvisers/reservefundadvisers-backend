@@ -4710,7 +4710,6 @@ class Simulation
     // save versions
     public function save_version($data)
     {
-        rfa_create_log('save_version', $data);
         // return send_json_response(true, 200, 'success');
         global $auth, $modelsTable, $simSplitsTable, $simDeficitTable, $simRulesTable, $simVersionTable;
 
@@ -4767,7 +4766,6 @@ class Simulation
 
         $res = save_element($simVersionTable, $data);
 
-        rfa_create_log('save_version_result', $res);
         if ($res === false)
             // return ['error' => ''];
             return send_json_response(false, 500, '');

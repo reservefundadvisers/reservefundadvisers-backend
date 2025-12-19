@@ -434,7 +434,7 @@ class Models
                         "monthly_fees" => "Monthly Fees invalid !"];
 
     private $success = [ "sucess" => "Operation completed successfully!",
-                         "deleted" => "Selected model(s) deleted successfully!" ];
+                         "deleted" => "Selected model deleted successfully!" ];
 
 
 }
