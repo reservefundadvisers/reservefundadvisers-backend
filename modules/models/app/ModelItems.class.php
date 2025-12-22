@@ -186,6 +186,11 @@ class Models
                     // is_sirs boolean → only true when sirs_item
                     $is_sirs = ($normalized_type === 'sirs_item') ? 1 : 0;
 
+                    // Safely process actual_cost to ensure it's a valid number
+                    $actual_cost_raw = trim($cells[5]);
+                    $actual_cost_processed = preg_replace('/[^\d.]/', '', $actual_cost_raw);
+                    $actual_cost = $actual_cost_processed === '' ? 0 : floatval($actual_cost_processed);
+
                     $item = [
                         'name' => trim($cells[0]),
                         'redundancy' => intval(preg_replace('/\D/', '', $cells[1])), // expected_life = redundancy
@@ -193,7 +198,7 @@ class Models
                         'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
                         'is_sirs' => $is_sirs,  
                         'item_type' => $normalized_type,
-                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
+                        'actual_cost' => $actual_cost,
                     ];
                     if (!empty($item['name']) || $item['redundancy'] > 0 || $item['remaining_life'] > 0) {
                         $model_items[] = $item;
@@ -259,7 +264,15 @@ class Models
                     if (!is_numeric($item['estimated_cost'])) $item['estimated_cost'] = 0;
                 }
                 if (isset($item['actual_cost'])) {
-                    if (!is_numeric($item['actual_cost'])) $item['actual_cost'] = 0;
+                    // Ensure actual_cost is a valid number, not an empty string
+                    $actual_cost = trim($item['actual_cost']);
+                    if ($actual_cost === '' || $actual_cost === null || !is_numeric($actual_cost)) {
+                        $item['actual_cost'] = 0;
+                    } else {
+                        $item['actual_cost'] = floatval($actual_cost);
+                    }
+                } else {
+                    $item['actual_cost'] = 0;
                 }
                 if(isset($item['item_type'])) {
                     if($item['item_type'] === 'sirs_item'){
@@ -364,7 +377,14 @@ class Models
 
         foreach ($items as $redundancy_at => $costs) {
             foreach ($costs as $item_id => $actual_cost) {
-                if (intval($actual_cost) <= 0) continue;
+                // Ensure actual_cost is a valid number, not an empty string
+                $actual_cost_trimmed = trim($actual_cost);
+                if ($actual_cost_trimmed === '' || $actual_cost_trimmed === null || !is_numeric($actual_cost_trimmed)) {
+                    continue; // Skip invalid actual_cost values
+                }
+                
+                $actual_cost = floatval($actual_cost_trimmed);
+                if ($actual_cost <= 0) continue;
 
 
                 // delete all splits and keep moves

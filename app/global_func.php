@@ -591,6 +591,9 @@ function save_element($table, $data){
         // $data['updated_at'] = time();
         checkInsertData($data, $table);
         
+        // Sanitize data before update
+        $data = sanitizeDataForDB($data, $table);
+        
         try{
             $db->update($table, ['id' => $update ], $data);        
             $result = $update;
@@ -604,6 +607,9 @@ function save_element($table, $data){
         
         // $data['created_at'] = time();
         checkInsertData($data, $table);
+        
+        // Sanitize data before insert
+        $data = sanitizeDataForDB($data, $table);
         
         //if(isset($data['id']))unset($data['id']);
         $data['id'] = !isset($data['id']) || empty(trim($data['id'])) ? generate_id() : $data['id'];
@@ -1084,6 +1090,43 @@ function rfa_create_log($log)
 
     // Append log to file
     file_put_contents($logFile, $message, FILE_APPEND);
+}
+
+/**
+ * Sanitize data for database insertion to prevent type errors
+ * Converts empty strings to appropriate default values based on field type
+ * 
+ * @param array $data The data array to sanitize
+ * @param string $table The database table name for context
+ * @return array The sanitized data array
+ */
+function sanitizeDataForDB($data, $table) {
+    // Common numeric fields that should not be empty strings
+    $numeric_fields = [
+        'actual_cost', 'estimated_cost', 'cost', 'redundancy', 'remaining_life',
+        'is_sirs', 'user_id', 'client_id', 'model_id', 'item_id', 'year',
+        'amount', 'quantity', 'price', 'total', 'balance', 'deficit'
+    ];
+    
+    foreach ($data as $key => $value) {
+        // Skip if key is not a string or if value is null
+        if (!is_string($key) || $value === null) continue;
+        
+        // If this is a numeric field and value is empty string, set to 0
+        if (in_array($key, $numeric_fields) && $value === '') {
+            $data[$key] = 0;
+        }
+        // If this looks like a cost field and value is empty string, set to 0.0
+        else if (strpos($key, 'cost') !== false && $value === '') {
+            $data[$key] = 0.0;
+        }
+        // If this is a boolean field and value is empty string, set to 0
+        else if (strpos($key, 'is_') !== false && $value === '') {
+            $data[$key] = 0;
+        }
+    }
+    
+    return $data;
 }
 
 ?>

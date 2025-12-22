@@ -200,6 +200,11 @@ class Models
                     // is_sirs boolean → only true when sirs_item
                     $is_sirs = ($normalized_type === 'sirs_item') ? 1 : 0;
 
+                    // Safely process actual_cost to ensure it's a valid number
+                    $actual_cost_raw = trim($cells[5]);
+                    $actual_cost_processed = preg_replace('/[^\d.]/', '', $actual_cost_raw);
+                    $actual_cost = $actual_cost_processed === '' ? 0 : floatval($actual_cost_processed);
+
                     $item = [
                         'name' => trim($cells[0]),
                         'expected_life' => intval(preg_replace('/\D/', '', $cells[1])),
@@ -207,7 +212,7 @@ class Models
                         'estimated_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[3])),
                         'is_sirs' => $is_sirs,
                         'item_type' => $normalized_type,
-                        'actual_cost' => floatval(preg_replace('/[^\d.]/', '', $cells[5])),
+                        'actual_cost' => $actual_cost,
                         
                     ];
                     if(!empty($item['name']) || $item['expected_life'] > 0 || $item['remaining_life'] > 0 ){
