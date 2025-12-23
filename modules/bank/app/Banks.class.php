@@ -54,7 +54,7 @@ class Banks
 
         $banks = get_elements($banksTable, $conds, '*');
         if (!$banks){
-            return send_json_response(false, 400, $this->errors['not_found']);
+            return send_json_response(true, 200, $this->errors['not_found']);
         }
 
         return send_json_response(true, 200, $this->success['sucess'], ['banks' => $banks]);

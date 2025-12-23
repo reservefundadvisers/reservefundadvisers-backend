@@ -789,6 +789,9 @@ class Simulation
 
         $last_deficit = -1;
 
+        // Initialize deficit_per_unit to prevent undefined variable errors
+        $deficit_per_unit = 0;
+
         /* ********************** */
 
 
