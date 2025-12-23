@@ -341,48 +341,110 @@ class BankDetail
 
     public function edit($data)
     {
-        global $auth, $bankDetailsTables;
+        global $bankDetailsTables;
 
-        if (empty($data['bank_id']) || empty($data['type_id'])) {
-            return send_json_response(false, 400, 'bank_id and type_id are required');
+        if (empty($data['bank_id']) || empty($data['type_id']) || empty($data['type'])) {
+            return send_json_response(false, 400, 'bank_id, type_id and type are required');
         }
 
-        if (empty($data['group_id'])) {
-            return send_json_response(false, 400, 'group_id is required');
-        }
-
-        // Determine fields per type
+        // Fields per type
         if ($data['type'] === 'cd') {
             $field_names = ['duration', 'interest', 'minimum_amount', 'panalty', 'remarks'];
         } elseif ($data['type'] === 'hys') {
             $field_names = ['interest', 'minimum_amount', 'is_demand_deposit', 'remarks'];
         } else {
-            return send_json_response(false, 400, 'Invalid type value');
+            return send_json_response(false, 400, 'Invalid type');
         }
 
-        $group_ids = $data['group_id'];
+        $group_ids = $data['group_id'] ?? [];
         if (!is_array($group_ids)) {
             $group_ids = [$group_ids];
         }
 
         $updated = 0;
         $inserted = 0;
+        $deleted = 0;
 
-        // Loop through each group (row)
-        foreach ($group_ids as $i => $group_id) {
-
-            // Load existing records for this group
-            $existing_rows = get_elements($bankDetailsTables, [
+        /* =====================================================
+        * DELETE REMOVED GROUPS (SYNC)
+        * ===================================================== */
+        $existingGroups = get_elements(
+            $bankDetailsTables,
+            [
                 'bank_id' => $data['bank_id'],
-                'type_id' => $data['type_id'],
-                'group_id' => $group_id
-            ]);
+                'type_id' => $data['type_id']
+            ],
+            'group_id'
+        );
 
-            // Skip if group not found
-            if (empty($existing_rows)) {
+        $existingGroupIds = array_unique(array_column($existingGroups, 'group_id'));
+
+        // FE groups (ignore empty = new rows)
+        $feGroupIds = array_filter($group_ids, function ($gid) {
+            return !empty($gid);
+        });
+
+        // Groups removed in FE
+        $groupsToDelete = array_diff($existingGroupIds, $feGroupIds);
+
+        foreach ($groupsToDelete as $gid) {
+            $cond = "bank_id = '" . addslashes($data['bank_id']) . "'
+                    AND type_id = '" . addslashes($data['type_id']) . "'
+                    AND group_id = '" . addslashes($gid) . "'";
+            delete_elements_by_cond($bankDetailsTables, $cond);
+            $deleted++;
+        }
+
+        /* =====================================================
+        * UPSERT (UPDATE + INSERT)
+        * ===================================================== */
+        $total_rows = count($data[$field_names[0]] ?? []);
+
+        for ($i = 0; $i < $total_rows; $i++) {
+
+            $group_id = $group_ids[$i] ?? null;
+
+            // Load existing rows for this group
+            $existing_rows = [];
+            if (!empty($group_id)) {
+                $existing_rows = get_elements($bankDetailsTables, [
+                    'bank_id' => $data['bank_id'],
+                    'type_id' => $data['type_id'],
+                    'group_id' => $group_id
+                ]);
+            }
+
+            /* -------------------------------
+            * NEW ROW (Add More)
+            * ------------------------------- */
+            if (empty($group_id) || empty($existing_rows)) {
+
+                $group_id = generate_id();
+
+                foreach ($field_names as $field) {
+                    if (!isset($data[$field][$i])) continue;
+
+                    $value = trim((string)$data[$field][$i]);
+                    if ($value === '') continue;
+
+                    save_element($bankDetailsTables, [
+                        'id' => generate_id(),
+                        'bank_id' => $data['bank_id'],
+                        'type_id' => $data['type_id'],
+                        'group_id' => $group_id,
+                        'field_name' => $field,
+                        'field_value' => $value
+                    ]);
+
+                    $inserted++;
+                }
+
                 continue;
             }
 
+            /* -------------------------------
+            * EXISTING ROW (UPDATE)
+            * ------------------------------- */
             foreach ($field_names as $field) {
                 if (!isset($data[$field][$i])) continue;
 
@@ -393,44 +455,32 @@ class BankDetail
                 });
 
                 if (!empty($existing_field)) {
-                    // Update existing field
-                    $existing_field = array_values($existing_field)[0];
-                    $update_result = update_element(
+                    $row = array_values($existing_field)[0];
+                    update_element(
                         $bankDetailsTables,
                         ['field_value' => $value],
-                        ['id' => $existing_field['id']]
+                        ['id' => $row['id']]
                     );
-
-                    if ($update_result !== false) {
-                        $updated++;
-                    }
+                    $updated++;
                 } else {
-                    // Insert if new field missing
-                    $insert_data = [
+                    save_element($bankDetailsTables, [
                         'id' => generate_id(),
                         'bank_id' => $data['bank_id'],
                         'type_id' => $data['type_id'],
                         'group_id' => $group_id,
                         'field_name' => $field,
                         'field_value' => $value
-                    ];
-
-                    $insert_result = save_element($bankDetailsTables, $insert_data);
-                    if ($insert_result !== false) {
-                        $inserted++;
-                    }
+                    ]);
+                    $inserted++;
                 }
             }
         }
 
-        // if ($updated === 0 && $inserted === 0) {
-        //     return send_json_response(false, 400, 'No fields were updated or inserted');
-        // }
-
-        return send_json_response(true, 200, 'Bank details updated successfully', [
+        return send_json_response(true, 200, 'Bank details synced successfully', [
             'updated' => $updated,
             'inserted' => $inserted,
-            'total_groups' => count($group_ids)
+            'deleted' => $deleted,
+            'total_rows' => $total_rows
         ]);
     }
 

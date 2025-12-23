@@ -4955,7 +4955,7 @@ class Simulation
 
 
         // return ['success' => ''];
-        return send_json_response(true, 200, 'success');
+        return send_json_response(true, 200, 'success',[ 'loaded_version_id' => $version_id ]);
     }
 
     // compare versions
