@@ -146,6 +146,9 @@ $bankUsersTable = 'user_banks';
 $configTable = 'config';
 $checkoutsTable = 'checkouts';
 
+$aiDocumentsTable = 'ai_documents';
+
+
 //File upload directory
 $upload_dir_association = 'uploads/associations/';
 $upload_dir_banks = 'uploads/banks/';
@@ -183,6 +186,8 @@ $db_table_cols = [
                     $bankTypesTable => ['row_id', 'id', 'name', 'keyword', 'description', 'active', 'created_at', 'updated_at'],
                     $bankDetailsTables => ['row_id', 'id', 'bank_id', 'user_id' ,'type_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
                     $bankUsersTable => ['row_id', 'id', 'bank_id', 'user_id', 'created_at', 'updated_at'],
+
+                    $aiDocumentsTable => ['row_id', 'id', 'user_id', 'pdf_path', 'assistant_id', 'thread_id', 'run_id', 'extracted_json', 'created_at', 'status'],
                 ];
 
 
