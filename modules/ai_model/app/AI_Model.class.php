@@ -108,11 +108,13 @@ class AI_Model
         rfa_create_log("[AI_MODEL][STEP 4][SUCCESS] run_id={$run['id']} thread_id={$run['thread_id']}");
 
         update_element($aiDocumentsTable, [
+            'assistant_id'   => $this->assistantId,
             'openai_file_id' => $file['id'],
-            'thread_id'      => $run['thread_id'],
-            'run_id'         => $run['id'],
-            'run_payload'    => json_encode($run)
+            'thread_id'     => $run['thread_id'],
+            'run_id'        => $run['id'],
+            'run_payload'   => json_encode($run)
         ], ['id' => $docId]);
+
 
         /* ---------- STEP 5: WAIT FOR COMPLETION ---------- */
         rfa_create_log('[AI_MODEL][STEP 5][START] Polling run status');
@@ -128,7 +130,8 @@ class AI_Model
         /* ---------- STEP 6: SAVE RESULT ---------- */
         update_element($aiDocumentsTable, [
             'extracted_json' => json_encode($result, JSON_UNESCAPED_UNICODE),
-            'status' => 'completed'
+            'status'         => 'completed',
+            'completed_at'   => date('Y-m-d H:i:s')
         ], ['id' => $docId]);
 
         rfa_create_log('[AI_MODEL][DONE] Document processed successfully');
