@@ -258,7 +258,7 @@ class BankUser
 
         // For set, we might update updated_at or other fields, but since the table has limited fields, perhaps just update timestamp
         $update_data = [
-            'updated_at' => time()
+            'updated_at' => timestamp_to_datetime(time())
         ];
 
         $result = update_element($bankUsersTable, $update_data, ['id' => $id]);

@@ -226,7 +226,7 @@ class Models
                 if ($ret_id === false)
                     return send_json_response(false, 404, $this->errors['not_found']);
 
-                set_element($modelsTable, ['updated_at' => time(), 'id' => $model_id]);
+                set_element($modelsTable, ['updated_at' => timestamp_to_datetime(time()), 'id' => $model_id]);
 
                 return send_json_response(true, 200, 'Model Items Created Successfully', ['data' => ['model_id' => $model_id]]);
             } catch (Exception $e) {
@@ -295,7 +295,7 @@ class Models
                 return send_json_response(false, 404, $this->errors['not_found']);
             }
 
-            $response = set_element($modelsTable, ['updated_at' => time(), 'id' => $model_id]);
+            $response = set_element($modelsTable, ['updated_at' => timestamp_to_datetime(time()), 'id' => $model_id]);
 
             // Determine the success message based on whether this was an update or create
             $success_message = $is_updated ? 'Model Items Updated Successfully' : 'Model Items Created Successfully';

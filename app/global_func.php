@@ -1093,6 +1093,22 @@ function rfa_create_log($log)
 }
 
 /**
+ * Convert Unix timestamp to MySQL datetime format
+ * 
+ * @param int|string $timestamp Unix timestamp (seconds since epoch)
+ * @return string MySQL datetime format (Y-m-d H:i:s)
+ */
+function timestamp_to_datetime($timestamp) {
+    // Ensure timestamp is numeric
+    if (!is_numeric($timestamp)) {
+        $timestamp = strtotime($timestamp);
+    }
+    
+    // Convert to MySQL datetime format
+    return date('Y-m-d H:i:s', (int)$timestamp);
+}
+
+/**
  * Sanitize data for database insertion to prevent type errors
  * Converts empty strings to appropriate default values based on field type
  * 
