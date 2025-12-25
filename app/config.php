@@ -148,6 +148,9 @@ $checkoutsTable = 'checkouts';
 
 $aiDocumentsTable = 'ai_documents';
 
+// OpenAI Configuration - These will be loaded by AI_Model class
+$assistantId = '';
+$apiKey = '';
 
 //File upload directory
 $upload_dir_association = 'uploads/associations/';

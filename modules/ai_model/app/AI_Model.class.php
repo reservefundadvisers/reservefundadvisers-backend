@@ -3,243 +3,221 @@
 class AI_Model
 {
     private $module_name = 'AI_Model';
+    private $assistantId;
+    private $apiKey;
 
-    function __construct() {}
+    public function __construct()
+    {
+        $this->assistantId = getenv('OPENAI_ASSISTANT_ID') ?: ($_ENV['OPENAI_ASSISTANT_ID'] ?? '');
+        $this->apiKey     = getenv('OPENAI_API_KEY') ?: ($_ENV['OPENAI_API_KEY'] ?? '');
+
+        rfa_create_log('[AI_MODEL][INIT] Assistant ID: ' . ($this->assistantId ?: 'NOT SET'));
+        rfa_create_log('[AI_MODEL][INIT] API Key: ' . ($this->apiKey ? 'SET' : 'NOT SET'));
+
+        if (!$this->assistantId || !$this->apiKey) {
+            rfa_create_log('[AI_MODEL][INIT][FAIL] Missing OpenAI ENV variables');
+        }
+    }
 
     public function process($cmd, $data)
     {
-        $response = "";
-
-        switch ($cmd) {
-            case 'get':
-                $response = $this->get($data);
-                break;
-            case 'save':
-                $response = $this->save($data);
-                break;
-            case 'set':
-                $response = $this->set($data);
-                break;
-            case 'delete':
-                $response = $this->delete($data);
-                break;
+        if ($cmd !== 'save') {
+            return send_json_response(false, 400, 'Invalid command');
         }
 
-        return $response;
+        return $this->save($data);
     }
 
     /* =====================================================
-       SAVE – Upload PDF & create DB record
+       SAVE – FULL AI PIPELINE
     ===================================================== */
     public function save($data)
     {
         global $auth, $aiDocumentsTable;
 
+        rfa_create_log('[AI_MODEL][STEP 1][START] Processing PDF');
+
+        /* ---------- STEP 1: LOCAL PDF UPLOAD ---------- */
         if (empty($_FILES)) {
-            return send_json_response(false, 400, 'PDF file is required');
+            rfa_create_log('[AI_MODEL][STEP 1][FAIL] No PDF uploaded');
+            return send_json_response(false, 400, 'PDF file required');
         }
 
-        // Use existing helper (PDF-specific wrapper)
         $upload = $this->handle_pdf_upload($_FILES, 'uploads/ai');
 
-        if ($upload['success'] === false) {
+        if (!$upload['success']) {
+            rfa_create_log('[AI_MODEL][STEP 1][FAIL] ' . $upload['message']);
             return send_json_response(false, 400, $upload['message']);
         }
 
-        $save_data = [
+        rfa_create_log('[AI_MODEL][STEP 1][SUCCESS] PDF stored at ' . $upload['path']);
+
+        /* ---------- STEP 2: DB RECORD ---------- */
+        $docId = save_element($aiDocumentsTable, [
             'user_id'  => $auth->uid(),
             'pdf_path' => $upload['path'],
-            'status'   => 'uploaded'
-        ];
-        rfa_create_log(print_r($save_data, true), 'AI Model - Save Data');
+            'status'   => 'processing'
+        ]);
 
-        $id = save_element($aiDocumentsTable, $save_data);
-        rfa_create_log("Inserted ID: $id", 'AI Model - Save ID');
-        if ($id === false) {
-            return send_json_response(false, 500, 'Error saving AI document');
+        if (!$docId) {
+            rfa_create_log('[AI_MODEL][STEP 2][FAIL] DB insert failed');
+            return send_json_response(false, 500, 'DB insert failed');
         }
 
-        return send_json_response(true, 201, 'PDF uploaded successfully', [
-            'document_id' => $id
+        rfa_create_log("[AI_MODEL][STEP 2][SUCCESS] Document ID: {$docId}");
+
+        /* ---------- STEP 3: OPENAI FILE UPLOAD ---------- */
+        rfa_create_log('[AI_MODEL][STEP 3][START] Uploading file to OpenAI');
+
+        $file = $this->uploadFileToOpenAI($upload['path']);
+
+        if (empty($file['id'])) {
+            return $this->fail($docId, 'OpenAI file upload failed');
+        }
+
+        rfa_create_log('[AI_MODEL][STEP 3][SUCCESS] OpenAI file_id: ' . $file['id']);
+
+        /* ---------- STEP 4: CREATE THREAD + RUN ---------- */
+        rfa_create_log('[AI_MODEL][STEP 4][START] Creating thread + run');
+
+        $run = $this->openaiRequest(
+            'POST',
+            'https://api.openai.com/v1/threads/runs',
+            [
+                'assistant_id' => $this->assistantId,
+                'thread' => [
+                    'messages' => [[
+                        'role' => 'user',
+                        'content' => [[
+                            'type' => 'text',
+                            'text' => 'Read the attached PDF and extract all required fields exactly per instructions.'
+                        ]],
+                        'attachments' => [[
+                            'file_id' => $file['id'],
+                            'tools' => [['type' => 'file_search']]
+                        ]]
+                    ]]
+                ]
+            ]
+        );
+
+        if (empty($run['id']) || empty($run['thread_id'])) {
+            return $this->fail($docId, 'Thread/Run creation failed');
+        }
+
+        rfa_create_log("[AI_MODEL][STEP 4][SUCCESS] run_id={$run['id']} thread_id={$run['thread_id']}");
+
+        update_element($aiDocumentsTable, [
+            'openai_file_id' => $file['id'],
+            'thread_id'      => $run['thread_id'],
+            'run_id'         => $run['id'],
+            'run_payload'    => json_encode($run)
+        ], ['id' => $docId]);
+
+        /* ---------- STEP 5: WAIT FOR COMPLETION ---------- */
+        rfa_create_log('[AI_MODEL][STEP 5][START] Polling run status');
+
+        $result = $this->waitForResult($run['thread_id'], $run['id']);
+
+        if ($result === null) {
+            return $this->fail($docId, 'AI extraction failed');
+        }
+
+        rfa_create_log('[AI_MODEL][STEP 5][SUCCESS] JSON extracted');
+
+        /* ---------- STEP 6: SAVE RESULT ---------- */
+        update_element($aiDocumentsTable, [
+            'extracted_json' => json_encode($result, JSON_UNESCAPED_UNICODE),
+            'status' => 'completed'
+        ], ['id' => $docId]);
+
+        rfa_create_log('[AI_MODEL][DONE] Document processed successfully');
+
+        return send_json_response(true, 201, 'PDF processed successfully', [
+            'document_id' => $docId
         ]);
     }
 
     /* =====================================================
-       SET – Send PDF to OpenAI Assistant
+       POLLING
     ===================================================== */
-    public function set($data)
+    private function waitForResult(string $threadId, string $runId): ?array
     {
-        global $aiDocumentsTable;
+        for ($i = 1; $i <= 40; $i++) {
+            sleep(1);
 
-        if (empty($data['id'])) {
-            return send_json_response(false, 400, 'Document ID is required');
+            $run = $this->openaiRequest(
+                'GET',
+                "https://api.openai.com/v1/threads/{$threadId}/runs/{$runId}"
+            );
+
+            rfa_create_log("[AI_MODEL][STEP 5][WAIT {$i}] status={$run['status']}");
+
+            if ($run['status'] === 'completed') {
+                $messages = $this->openaiRequest(
+                    'GET',
+                    "https://api.openai.com/v1/threads/{$threadId}/messages"
+                );
+
+                foreach ($messages['data'] as $msg) {
+                    if ($msg['role'] === 'assistant') {
+                        return json_decode($msg['content'][0]['text']['value'], true);
+                    }
+                }
+            }
+
+            if (in_array($run['status'], ['failed', 'cancelled', 'expired'])) {
+                rfa_create_log('[AI_MODEL][STEP 5][FAIL] Run ended with status ' . $run['status']);
+                return null;
+            }
         }
 
-        $id = trim($data['id']);
-
-        if (!exists($aiDocumentsTable, ['id' => $id])) {
-            return send_json_response(false, 404, 'Document not found');
-        }
-
-        $doc = get_elements($aiDocumentsTable, ['id' => $id])[0];
-
-        // 1. Upload file to OpenAI
-        $file = $this->uploadFileToOpenAI($doc['pdf_path']);
-
-        if (empty($file['id'])) {
-            return send_json_response(false, 500, 'Failed to upload PDF to AI');
-        }
-
-        // 2. Create thread
-        $thread = $this->openaiRequest(
-            'POST',
-            'https://api.openai.com/v1/threads',
-            [
-                'messages' => [[
-                    'role' => 'user',
-                    'content' => 'Extract structured JSON from this PDF.',
-                    'attachments' => [[
-                        'file_id' => $file['id']
-                    ]]
-                ]]
-            ]
-        );
-
-        // 3. Run assistant
-        $run = $this->openaiRequest(
-            'POST',
-            "https://api.openai.com/v1/threads/{$thread['id']}/runs",
-            [
-                'assistant_id' => getenv('OPENAI_ASSISTANT_ID')
-            ]
-        );
-
-        $update = update_element(
-            $aiDocumentsTable,
-            [
-                'assistant_id' => getenv('OPENAI_ASSISTANT_ID'),
-                'thread_id'    => $thread['id'],
-                'run_id'       => $run['id'],
-                'status'       => 'processing'
-            ],
-            ['id' => $id]
-        );
-
-        if ($update === false) {
-            return send_json_response(false, 500, 'Error updating AI document');
-        }
-
-        return send_json_response(true, 200, 'AI processing started');
+        rfa_create_log('[AI_MODEL][STEP 5][FAIL] Timeout waiting for run');
+        return null;
     }
 
     /* =====================================================
-       GET – Poll status & store extracted JSON
+       FAILURE HANDLER
     ===================================================== */
-    public function get($data)
+    private function fail($docId, string $reason)
     {
         global $aiDocumentsTable;
 
-        if (empty($data['id'])) {
-            return send_json_response(false, 400, 'Document ID is required');
-        }
+        update_element($aiDocumentsTable, ['status' => 'failed'], ['id' => $docId]);
+        rfa_create_log('[AI_MODEL][FAIL] ' . $reason);
 
-        $id = trim($data['id']);
-
-        if (!exists($aiDocumentsTable, ['id' => $id])) {
-            return send_json_response(false, 404, 'Document not found');
-        }
-
-        $doc = get_elements($aiDocumentsTable, ['id' => $id])[0];
-
-        $run = $this->openaiRequest(
-            'GET',
-            "https://api.openai.com/v1/threads/{$doc['thread_id']}/runs/{$doc['run_id']}"
-        );
-
-        if ($run['status'] !== 'completed') {
-            return send_json_response(true, 200, 'Processing', [
-                'status' => $run['status']
-            ]);
-        }
-
-        $messages = $this->openaiRequest(
-            'GET',
-            "https://api.openai.com/v1/threads/{$doc['thread_id']}/messages"
-        );
-
-        $json = $messages['data'][0]['content'][0]['text']['value'];
-
-        update_element(
-            $aiDocumentsTable,
-            [
-                'extracted_json' => $json,
-                'status' => 'completed'
-            ],
-            ['id' => $id]
-        );
-
-        return send_json_response(true, 200, 'Completed', json_decode($json, true));
+        return send_json_response(false, 500, $reason);
     }
 
     /* =====================================================
-       DELETE
+       FILE HANDLING
     ===================================================== */
-    public function delete($data)
-    {
-        global $aiDocumentsTable;
-
-        if (empty($data['id'])) {
-            return send_json_response(false, 400, 'ID is required');
-        }
-
-        if (!exists($aiDocumentsTable, ['id' => $data['id']])) {
-            return send_json_response(false, 404, 'Document not found');
-        }
-
-        delete_elements_by_cond(
-            $aiDocumentsTable,
-            'id = :id',
-            ['id' => $data['id']]
-        );
-
-        return send_json_response(true, 200, 'AI document deleted');
-    }
-
-    /* =====================================================
-       INTERNAL HELPERS
-    ===================================================== */
-
     private function handle_pdf_upload($fileInput, $dir)
     {
-        // Minimal wrapper aligned with your helper style
         $file = $fileInput[array_key_first($fileInput)];
 
         if ($file['error'] !== UPLOAD_ERR_OK) {
             return ['success' => false, 'message' => 'Upload error'];
         }
 
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if ($ext !== 'pdf') {
+        if (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'pdf') {
             return ['success' => false, 'message' => 'Only PDF allowed'];
         }
 
         $root = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/';
         $path = $root . trim($dir, '/') . '/';
-
-        if (!is_dir($path)) {
-            mkdir($path, 0777, true);
-        }
+        if (!is_dir($path)) mkdir($path, 0777, true);
 
         $name = uniqid('pdf_', true) . '.pdf';
         move_uploaded_file($file['tmp_name'], $path . $name);
 
-        return [
-            'success' => true,
-            'path' => '/' . trim($dir, '/') . '/' . $name
-        ];
+        return ['success' => true, 'path' => '/' . trim($dir, '/') . '/' . $name];
     }
 
-    private function uploadFileToOpenAI($publicPath)
+    /* =====================================================
+       OPENAI HELPERS
+    ===================================================== */
+    private function uploadFileToOpenAI(string $publicPath): array
     {
         $fullPath = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . $publicPath;
 
@@ -247,9 +225,7 @@ class AI_Model
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . getenv('OPENAI_API_KEY')
-            ],
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $this->apiKey],
             CURLOPT_POSTFIELDS => [
                 'purpose' => 'assistants',
                 'file' => new CURLFile($fullPath)
@@ -262,17 +238,20 @@ class AI_Model
         return json_decode($res, true);
     }
 
-    private function openaiRequest($method, $url, $payload = null)
+    private function openaiRequest($method, $url, $payload = null): array
     {
-        $ch = curl_init($url);
+        $headers = [
+            'Authorization: Bearer ' . $this->apiKey,
+            'Content-Type: application/json',
+            'OpenAI-Beta: assistants=v2'
+        ];
 
+        $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . getenv('OPENAI_API_KEY'),
-                'Content-Type: application/json'
-            ]
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 60
         ]);
 
         if ($payload) {

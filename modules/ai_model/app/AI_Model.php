@@ -5,6 +5,19 @@ include_once('../../../app/global_func.php');
 
 include_once('AI_Model.class.php');
 
+use Dotenv\Dotenv;
+use PHPMailer\PHPMailer\Exception;
+
+// Load environment variables
+try {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../../../');
+    $dotenv->load();
+} catch (Exception $e) {
+    // Handle the exception if .env file is missing or cannot be loaded
+    // rfa_create_log("[OTP] Could not load .env file: " . $e->getMessage());
+    return false;
+}
+
 // check if logged in and validated 
 if (!$auth->isValidated()) {
     
