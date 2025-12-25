@@ -2072,7 +2072,7 @@ class Simulation
         $results = get_elements(
             $clientsTable,
             $conds,
-            "$clientsTable.id, $clientsTable.association",
+            "$clientsTable.id, $clientsTable.association, $clientsTable.address, $clientsTable.address2, $clientsTable.city, $clientsTable.state, $clientsTable.zip",
             "ORDER BY $clientsTable.association ASC" . check_val($pagination, 'query')
         );
 
