@@ -53,11 +53,18 @@ class AI_Model
         rfa_create_log('[AI_MODEL][STEP 1][SUCCESS] PDF stored at ' . $upload['path']);
 
         /* ---------- STEP 2: DB RECORD ---------- */
-        $docId = save_element($aiDocumentsTable, [
+        $docData = [
             'user_id'  => $auth->uid(),
             'pdf_path' => $upload['path'],
             'status'   => 'processing'
-        ]);
+        ];
+
+        // Only add 'client_id' if it exists
+        if (!empty($data['client_id'])) {
+            $docData['client_id'] = $data['client_id'];
+        }
+
+        $docId = save_element($aiDocumentsTable, $docData);
 
         if (!$docId) {
             rfa_create_log('[AI_MODEL][STEP 2][FAIL] DB insert failed');
