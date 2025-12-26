@@ -19,6 +19,8 @@ class AI_Model_Provider
                 return $this->publish($data);
             case 'save_model_id':
                 return $this->save_model_id($data);
+            case 'delete':
+                return $this->delete($data);
             default:
                 break;
         }
