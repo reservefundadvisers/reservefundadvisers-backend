@@ -2,6 +2,7 @@
 
 include_once('../../../app/init.php');
 include_once('../../../app/global_func.php');
+include_once('../../../app/mail.php');
 
 include_once('AI_Model_Provider.class.php');
 

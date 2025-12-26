@@ -15,9 +15,12 @@ class AI_Model_Provider
                 return $this->edit($data);
             case 'delete':
                 return $this->delete($data);
-            case 'pubslish':
+            case 'publish':
                 return $this->publish($data);
-            break;
+            case 'save_model_id':
+                return $this->save_model_id($data);
+            default:
+                break;
         }
         return null;
     }
@@ -46,6 +49,8 @@ class AI_Model_Provider
                 $conds,
                 "$aiDocumentsTable.id,
                 $aiDocumentsTable.user_id,
+                $aiDocumentsTable.model_id,
+                $aiDocumentsTable.client_id,
                 $aiDocumentsTable.status,
                 $aiDocumentsTable.admin_approval_status,
                 $aiDocumentsTable.pdf_path,
@@ -148,6 +153,7 @@ class AI_Model_Provider
 
         return send_json_response(true, 200, 'Success', ['message' => 'Updated successfully']);
     }
+
     /**
      * Admin can delete an AI document record
      */
@@ -173,12 +179,155 @@ class AI_Model_Provider
      */
     public function publish($data)
     {
-        if (!is_valid($data, 'id') || !is_valid($data, 'admin_approval_status') || !is_valid($data, 'user_id')) return send_json_response(false, 400, 'Invalid request');
+        global $aiDocumentsTable;
 
-        $allowed = ['complete'];
-        if (!in_array($data['admin_approval_status'], $allowed)) return send_json_response(false, 400, 'Invalid status');
+        if (!is_valid($data, 'id') || !is_valid($data, 'publish') || !is_valid($data, 'user_id') || !is_valid($data, 'model_id')) return send_json_response(false, 400, 'Invalid request');
+        $status = ['complete', 'in_review'];
 
-        return send_json_response(true, 200, 'Success', ['message' => 'Published successfully']);
+        if ($data['publish'] == true) {
+            // perform publish actions here (e.g., make model live)
+            $update = set_property(
+                $aiDocumentsTable,
+                [
+                    'id' => $data['id'],
+                    'admin_approval_status' => $status[0]
+                ]
+            );
+
+            $userName = $this->getUserName($data['user_id']);
+            $userEmail = $this->getUserEmail($data['user_id']);
+            $modelName = $this->getModelName($data['model_id']);
+            $accessUrl = $_ENV['FRONTEND_URL'] ?? '';
+
+            if ($update) {
+                $template = emailTemplatePublishModel($userName, $modelName, $accessUrl);
+                $subject = $template['subject'] ?? '';
+                $body = $template['body'] ?? '';
+
+                if (empty($userEmail) || empty($subject) || empty($body)) {
+                    return send_json_response(false, 500, 'Failed to send notification email');
+                }
+
+                $res = sendOtpEmail($userEmail, $subject, $body);
+
+                if ($res) {
+                    return send_json_response(true, 200, 'Success', ['message' => 'Published successfully']);
+                } else {
+                    return send_json_response(false, 500, 'Failed to send notification email');
+                }
+            } else {
+                return send_json_response(false, 500, 'Failed to publish');
+            }
+        } else {
+            // perform unpublish actions here (e.g., take model offline)
+            $update = set_property(
+                $aiDocumentsTable,
+                [
+                    'id' => $data['id'],
+                    'admin_approval_status' => $status[1]
+                ]
+            );
+
+            if ($update) {
+                return send_json_response(true, 200, 'Success', ['message' => 'Unpublished successfully']);
+            } else {
+                return send_json_response(false, 500, 'Failed to unpublish');
+            }
+        }
     }
 
+    /**
+     * Saves a model ID against an AI document record
+     *
+     * @param array $data - an associative array containing the AI document record ID and model ID
+     *
+     * @return array - a JSON response containing the result of the operation
+     *
+     * @throws Exception - throws an exception if the model ID does not exist
+     */
+    public function save_model_id($data)
+    {
+        global $aiDocumentsTable, $modelsTable;
+
+        if (!is_valid($data, 'id') || !is_valid($data, 'model_id')) return send_json_response(false, 400, 'Invalid request');
+
+        $modelId = $data['model_id'];
+        $modelExists = get_elements(
+            $modelsTable,
+            ['id' => $modelId],
+            "COUNT(id) AS count"
+        );
+
+        if (isset($modelExists[0]['count']) && $modelExists[0]['count'] == 0) {
+            return send_json_response(false, 400, 'Model ID does not exist');
+        }
+
+        $update = set_property(
+            $aiDocumentsTable,
+            [
+                'id' => $data['id'],
+                'model_id' => $data['model_id'],
+                'admin_approval_status' => 'in_review'
+            ]
+        );
+
+        if (!$update) return send_json_response(false, 500, 'Failed to update model ID');
+
+        return send_json_response(true, 200, 'Success', ['message' => 'Model ID saved successfully']);
+    }
+
+    /**
+     * Retrieves the full name of a user with the given ID.
+     *
+     * @param int $userId The ID of the user
+     * @return string The full name of the user, or 'User' if not found
+     */
+    private function getUserName($userId)
+    {
+        $userDetails = get_elements('users', ['id' => $userId]);
+        $user = $userDetails[0] ?? [];
+        $userFullName = $user['fn'] . ' ' . $user['ln'];
+
+        return $userFullName ?? 'User';
+    }
+
+    /**
+     * Returns the name of a model given its ID.
+     * If the model does not exist, returns 'Your AI Model'.
+     *
+     * @param int $modelId The ID of the model.
+     *
+     * @return string The name of the model.
+     */
+    private function getModelName($modelId)
+    {
+        global $modelsTable;
+
+        $conds = ['id' => $modelId];
+
+        $modelName = get_elements(
+            $modelsTable,
+            $conds,
+            "$modelsTable.name",
+            "LIMIT 1"
+        );
+
+        $modelName = !empty($modelName) ? $modelName[0]['name'] : 'Your AI Model';
+        return $modelName;
+    }
+
+    /**
+     * Returns the email address of the user with the given ID.
+     *
+     * @param int $userId The ID of the user
+     * @return string The email address of the user, or an empty string if not found
+     */
+    private function getUserEmail($userId)
+    {
+        $userDetails = get_elements('users', ['id' => $userId]);
+        $user = $userDetails[0] ?? [];
+        $userEmail = $user['email'] ?? '';
+
+        return $userEmail;
+    }
 }

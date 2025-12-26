@@ -48,3 +48,20 @@ function emailTemplateInviteMember($recipientName, $senderName ,$inviteUrl, $pro
         </div>"
     ];
 }
+
+function emailTemplatePublishModel($recipientName, $modelName, $accessUrl) {
+    return [
+        'subject' => "Your AI Model '$modelName' is Published",
+        'body' => "
+        <div style='font-family: Arial; padding:20px;'>
+            <h2>Model Published Successfully</h2>
+            <p>Dear <strong>$recipientName</strong>,</p>
+            <p>We are excited to inform you that your AI model '<strong>$modelName</strong>' has been successfully published.</p>
+            <p>You can access your published model here:</p>
+            <p style='text-align:center;'>
+                <a href='$accessUrl' style='padding:10px 20px; background:#4CAF50; color:#fff; text-decoration:none; border-radius:5px;'>Access Your Model</a>
+            </p>
+            <p>Thank you for using our platform!</p>
+        </div>"
+    ];
+}
