@@ -33,7 +33,7 @@ class AI_Model_Provider
      */
     public function list($data)
     {
-        global $aiDocumentsTable;
+        global $aiDocumentsTable, $usersTable;
 
         $data = is_array($data) ? $data : [];
 
@@ -110,13 +110,21 @@ class AI_Model_Provider
 
         /* fetch paginated data */
         $results = get_elements(
-            $aiDocumentsTable,
+            "$aiDocumentsTable 
+            LEFT JOIN $usersTable 
+                ON $usersTable.id = $aiDocumentsTable.user_id",
             $conds,
-            "$aiDocumentsTable.id,
+            "
+            $aiDocumentsTable.id,
             $aiDocumentsTable.user_id,
             $aiDocumentsTable.status,
             $aiDocumentsTable.pdf_path,
-            $aiDocumentsTable.admin_approval_status",
+            $aiDocumentsTable.admin_approval_status,
+
+            $usersTable.fn AS user_first_name,
+            $usersTable.ln  AS user_last_name,
+            $usersTable.email      AS user_email
+            ",
             " ORDER BY $aiDocumentsTable.row_id DESC LIMIT $offset, $size"
         );
 
