@@ -179,12 +179,33 @@ class AI_Model_Provider
      */
     public function publish($data)
     {
-        global $aiDocumentsTable;
+        global $aiDocumentsTable, $modelsTable;
 
         if (!is_valid($data, 'id') || !is_valid($data, 'publish') || !is_valid($data, 'user_id') || !is_valid($data, 'model_id')) return send_json_response(false, 400, 'Invalid request');
         $status = ['complete', 'in_review'];
 
         if ($data['publish'] == true) {
+
+            $modelId = $data['model_id'];
+            $modelExists = get_elements(
+                $modelsTable,
+                ['id' => $modelId],
+                "COUNT(id) AS count"
+            );
+
+            if (isset($modelExists[0]['count']) && $modelExists[0]['count'] == 0) {
+                return send_json_response(false, 400, 'Model ID does not exist');
+            }else{
+                //update model active status to 1
+                $updateModel = set_property(
+                    $modelsTable,
+                    [
+                        'id' => $data['model_id'],
+                        'active' => 1
+                    ]
+                );
+            }
+
             // perform publish actions here (e.g., make model live)
             $update = set_property(
                 $aiDocumentsTable,
