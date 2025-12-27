@@ -93,7 +93,7 @@ class AI_Model_Provider
 
         /* if no filter provided, still exclude rejected */
         if (!isset($conds['raw'])) {
-            $conds['raw'] = "$aiDocumentsTable.admin_approval_status != 'rejected'";
+            $conds['raw'] = "$aiDocumentsTable.admin_approval_status != 'rejected' AND $aiDocumentsTable.status = 'completed'";
         }
 
         /* pagination setup */
