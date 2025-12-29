@@ -53,6 +53,7 @@ class AI_Model_Provider
                 $aiDocumentsTable.user_id,
                 $aiDocumentsTable.model_id,
                 $aiDocumentsTable.client_id,
+                $aiDocumentsTable.thread_id,
                 $aiDocumentsTable.status,
                 $aiDocumentsTable.admin_approval_status,
                 $aiDocumentsTable.pdf_path,
