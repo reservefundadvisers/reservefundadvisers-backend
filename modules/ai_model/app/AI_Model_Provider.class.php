@@ -21,6 +21,8 @@ class AI_Model_Provider
                 return $this->save_model_id($data);
             case 'delete':
                 return $this->delete($data);
+            case 'conversation':
+                return $this->storeConversation($data);
             default:
                 break;
         }
@@ -266,6 +268,74 @@ class AI_Model_Provider
                 return send_json_response(false, 500, 'Failed to unpublish');
             }
         }
+    }
+
+    public function storeConversation($data)
+    {
+        global $aiDocumentsTable;
+
+        if (!is_valid($data, 'id')) {
+            return send_json_response(false, 400, 'Invalid request');
+        }
+
+        $docId = $data['id'];
+
+        // Fetch existing conversation
+        $existingConversationJson = get_element(
+            $aiDocumentsTable,
+            ['id' => $docId],
+            'conversation'
+        );
+
+        $conversation = [];
+
+        if (!empty($existingConversationJson)) {
+            if (is_string($existingConversationJson)) {
+                $decoded = json_decode($existingConversationJson, true);
+                $conversation = is_array($decoded) ? $decoded : [];
+            } elseif (is_array($existingConversationJson)) {
+                $conversation = $existingConversationJson;
+            }
+        }
+
+
+        // Append new question
+        if (!empty($data['question'])) {
+            $conversation[] = [
+                'role' => 'user',
+                'content' => $data['question'],
+                'created_at' => time()
+            ];
+        }
+
+        // Append new answer
+        if (!empty($data['answer'])) {
+            $conversation[] = [
+                'role' => 'assistant',
+                'content' => $data['answer'],
+                'created_at' => time()
+            ];
+        }
+
+        if (empty($conversation)) {
+            return send_json_response(false, 400, 'No conversation data');
+        }
+
+        $update = set_property(
+            $aiDocumentsTable,
+            [
+                'id' => $docId,
+                'conversation' => json_encode($conversation)
+            ]
+        );
+
+        if ($update) {
+            return send_json_response(true, 200, 'Success', [
+                'message' => 'Conversation appended successfully'
+            ]);
+        }
+
+        return send_json_response(false, 500, 'Failed to save conversation');
     }
 
     /**

@@ -190,7 +190,7 @@ $db_table_cols = [
                     $bankDetailsTables => ['row_id', 'id', 'bank_id', 'user_id' ,'type_id', 'group_id', 'field_name',	'field_value', 'created_at', 'updated_at'],
                     $bankUsersTable => ['row_id', 'id', 'bank_id', 'user_id', 'created_at', 'updated_at'],
 
-                    $aiDocumentsTable => ['row_id', 'id', 'user_id','model_id', 'client_id', 'pdf_path', 'assistant_id', 'thread_id', 'run_id', 'openai_file_id', 'extracted_json','run_payload', 'error_message', 'created_at', 'completed_at', 'status','admin_approval_status'],
+                    $aiDocumentsTable => ['row_id', 'id', 'user_id','model_id', 'client_id', 'pdf_path', 'assistant_id', 'thread_id', 'run_id', 'openai_file_id', 'extracted_json', 'conversation', 'run_payload', 'error_message', 'created_at', 'completed_at', 'status','admin_approval_status'],
                 ];
 
 
