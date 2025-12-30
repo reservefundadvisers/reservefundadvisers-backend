@@ -23,6 +23,8 @@ class AI_Model_Provider
                 return $this->delete($data);
             case 'conversation':
                 return $this->storeConversation($data);
+            case 'get_conversation':
+                return $this->getConversation($data);
             default:
                 break;
         }
@@ -336,6 +338,42 @@ class AI_Model_Provider
         }
 
         return send_json_response(false, 500, 'Failed to save conversation');
+    }
+
+    /**
+     * Retrieve a single AI document record's conversation
+     *
+     * @param array $data - an associative array containing the AI document record ID
+     *
+     * @return array - a JSON response containing the conversation data
+     */
+    public function getConversation($data) {
+        global $aiDocumentsTable;
+
+          /* ================= SINGLE RECORD ================= */
+        if (is_valid($data, 'id')) {
+
+            $conds = [
+                'id' => $data['id'],
+                '!admin_approval_status' => 'rejected'
+            ];
+
+            // fetch single record safely using get_elements
+            $record = get_elements(
+                $aiDocumentsTable,
+                $conds,
+                "$aiDocumentsTable.id,
+                $aiDocumentsTable.user_id,
+                $aiDocumentsTable.conversation",
+                "LIMIT 1"
+            );
+
+            // get first element if exists, else empty
+            $record = !empty($record) ? $record[0] : [];
+
+            return send_json_response(true, 200, 'Success', ['data' => $record]);
+        }
+
     }
 
     /**
