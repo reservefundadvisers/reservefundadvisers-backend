@@ -190,13 +190,23 @@ if(isset($_POST['cmd'])){
     // forgot password
     else if($cmd == 'forgot_password'){
 
-        $res = $auth->generate_reset(trim(check_val($_POST, 'username')));
+        $response = $auth->forgot_password($_POST);
+
+        if($response && isset($response['success']) && $response['success'])
+            send_json_response(true, 200, $auth->successmsg[0] ?? 'Success', ['user_id' => $response['user_id'] ?? '']);
+        else 
+            send_json_response(false, 400, $auth->errormsg[0] ?? 'Error');
+
+    }
+
+    else if($cmd == 'update_user_password'){
+
+        $res = $auth->update_user_password($_POST);
 
         if($res)
-            die(json_encode(['success' => $lang[$loc]['auth']['resetpass_email_sent']]));
+            send_json_response(true, 200, $auth->successmsg[0] ?? 'Success');
         else 
-            die(json_encode(['error' => $auth->errormsg[0]]));
-
+            send_json_response(false, 400, $auth->errormsg[0] ?? 'Error');
     }
 
     // forgot password

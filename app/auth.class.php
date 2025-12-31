@@ -451,6 +451,67 @@ class Auth
 
 		return $reset_key;
 	}
+
+	/**
+	 * Forgot password
+	 * @param array $data contains the username
+	 * @return array contains the success status and user_id
+	 */
+	function forgot_password($data)
+	{
+		include("config.php");
+		include("lang.php");
+		include('mail.php');
+
+		$username = trim($data['username']);
+
+		$user = get_element('users', ['username'=>$username]);
+		$userID = $user['id'] ?? '';
+		$otp = generate_otp();
+
+		if(empty($username)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_username_empty']; return ['success' => false, 'user_id' => '']; }
+		else if(empty($user)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_username_invalid']; return ['success' => false, 'user_id' => '']; }
+
+		$template = emailTemplateForgotPassword($username, $otp);
+
+		$subject = $template['subject'] ?? '';
+		$body = $template['body'] ?? '';
+
+		$response = $this->insert_otp($user['id'], $otp , 'forgot_password', 'email');
+		if(!$response) { $this->errormsg[] = 'Failed to insert OTP'; return ['success' => false, 'user_id' => $userID]; }
+
+		$sent = sendOtpEmail($user['email'], $subject, $body);
+		$message = 'OTP has been sent successfully via email.';
+
+		if($sent) { $this->successmsg[] = $message; return ['success' => true, 'user_id' => $userID]; }
+		else { $this->errormsg[] = 'Failed to send OTP'; return ['success' => false, 'user_id' => $userID]; }
+	}
+
+	/**
+	 * Updates a user's password
+	 * @param array $data contains the user ID and password
+	 * @return bool success status
+	 */
+	function update_user_password($data)
+	{
+		$username = trim($data['user_id']);
+		$password = trim($data['password']);
+
+		if(empty($username)){ $this->errormsg[] = 'User ID cannot be empty'; return false; }
+		if(empty($password)){ $this->errormsg[] = 'Password cannot be empty'; return false; }
+
+		$user = get_element('users', ['username'=>$username]);
+		$hashed_password = $this->hashpass($password);
+
+		if(empty($user)){ $this->errormsg[] = 'User not found'; return false; }
+
+		$query = $this->mysqli->prepare("UPDATE users SET password=? WHERE username=? LIMIT 1");
+		$query->bind_param("ss", $hashed_password, $username);
+		$query->execute();
+		$query->close();
+
+		return true;
+	}
 	
 	/*
 	* Provides an associative array of user info based on session hash
@@ -1049,7 +1110,11 @@ class Auth
 			case 'email':
 				if (function_exists('sendOtpEmail')) {
 					$recipientName = "$first_name $last_name";
-					$template = emailTemplateOTP($recipientName, $otp, "Reserve Fund System");
+					if($purpose == 'signup'){
+						$template = emailTemplateOTP($recipientName, $otp, "Reserve Fund System");
+					}else if($purpose == 'forgot_password'){
+						$template = emailTemplateForgotPassword($recipientName, $otp);
+					}
 
 					$subject = $template['subject'] ?? ''   ;
 					$body = $template['body'] ?? '';
