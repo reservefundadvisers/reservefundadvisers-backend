@@ -16,20 +16,18 @@ function emailTemplateOTP($recipientName, $otp, $validMinutes = 10) {
     ];
 }
 
-function emailTemplateForgotPassword($recipientName, $resetUrl) {
+function emailTemplateForgotPassword($recipientName, $otp, $validMinutes = 10) {
     return [
         'subject' => 'Reset Your Password',
-        'body' => "
-        <div style='font-family: Arial; padding:20px;'>
-            <h2>Password Reset Request</h2>
-            <p>Hello <strong>$recipientName</strong>,</p>
-            <p>We received a request to reset your password.</p>
-            <p>Click the button below:</p>
-            <p style='text-align:center;'>
-                <a href='$resetUrl' style='padding:10px 20px; background:#4CAF50; color:#fff; text-decoration:none; border-radius:5px;'>Reset Password</a>
-            </p>
-            <p>If you didn’t request this, simply ignore this email.</p>
-        </div>"
+        'body' => '<div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 5px; max-width: 600px; margin: auto;">
+                        <h2 style="color: #4CAF50; text-align: center;">Your One-Time Password (OTP)</h2>
+                        <p>Dear ' . htmlspecialchars($recipientName) . ',</p>
+                        <p>Your One-Time Password (OTP) for forgetting the password is:</p>
+                        <p style="font-size: 24px; font-weight: bold; color: #333; text-align: center; margin: 20px 0;">' . htmlspecialchars($otp) . '</p>
+                        <p>This OTP is valid for ' . htmlspecialchars($validMinutes) . ' minutes. Please do not share this OTP with anyone.</p>
+                        <p>To complete your forgetting the password, please enter the OTP in the system.</p>
+                        <p>Thank you,<br>Reserve Funds Advisers Team</p>
+                    </div>'
     ];
 }
 
