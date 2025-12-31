@@ -34,6 +34,7 @@ class AI_Model
     public function save($data)
     {
         global $auth, $aiDocumentsTable;
+        $isChatOnly = isset($data['is_admin_chat_only']) ? $data['is_admin_chat_only'] : 0;
 
         rfa_create_log('[AI_MODEL][STEP 1][START] Processing PDF');
 
@@ -56,7 +57,8 @@ class AI_Model
         $docData = [
             'user_id'  => $auth->uid(),
             'pdf_path' => $upload['path'],
-            'status'   => 'processing'
+            'status'   => 'processing',
+            'is_admin_chat_only' => $isChatOnly
         ];
 
         // Only add 'client_id' if it exists

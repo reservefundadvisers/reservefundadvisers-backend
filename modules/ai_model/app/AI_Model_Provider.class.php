@@ -73,32 +73,44 @@ class AI_Model_Provider
 
         /* ================= LIST ================= */
         $conds = [];
+        $isAdminChatOnly = isset($data['is_admin_chat_only']) ? $data['is_admin_chat_only'] : 0;
 
         /* ================= FILTER ================= */
-        if (is_valid($data, 'admin_approval_status')) {
+        if ($isAdminChatOnly) {
+            // When is_admin_chat_only is true, only filter by that field
+            // Skip admin_approval_status filters, but still exclude rejected
+            $conds['is_admin_chat_only'] = 1;
+            $conds['!admin_approval_status'] = 'rejected';
+        } else {
+            // Default behavior: is_admin_chat_only = false
+            // Apply normal admin_approval_status filters
+            $conds['is_admin_chat_only'] = 0;
 
-            $statuses = $data['admin_approval_status'];
-            if (!is_array($statuses)) {
-                $statuses = [$statuses];
+            if (is_valid($data, 'admin_approval_status')) {
+
+                $statuses = $data['admin_approval_status'];
+                if (!is_array($statuses)) {
+                    $statuses = [$statuses];
+                }
+
+                // allowed values
+                $valid = ['pending', 'complete', 'in_review'];
+                $statuses = array_values(array_intersect($statuses, $valid));
+
+                if (!empty($statuses)) {
+
+                    // ALWAYS use raw SQL
+                    $conds['raw'] =
+                        "$aiDocumentsTable.admin_approval_status IN ('" .
+                        implode("','", $statuses) .
+                        "') AND $aiDocumentsTable.admin_approval_status != 'rejected'";
+                }
             }
 
-            // allowed values
-            $valid = ['pending', 'complete', 'in_review'];
-            $statuses = array_values(array_intersect($statuses, $valid));
-
-            if (!empty($statuses)) {
-
-                // ALWAYS use raw SQL
-                $conds['raw'] =
-                    "$aiDocumentsTable.admin_approval_status IN ('" .
-                    implode("','", $statuses) .
-                    "') AND $aiDocumentsTable.admin_approval_status != 'rejected'";
+            /* if no filter provided, still exclude rejected */
+            if (!isset($conds['raw'])) {
+                $conds['raw'] = "$aiDocumentsTable.admin_approval_status != 'rejected' AND $aiDocumentsTable.status = 'completed'";
             }
-        }
-
-        /* if no filter provided, still exclude rejected */
-        if (!isset($conds['raw'])) {
-            $conds['raw'] = "$aiDocumentsTable.admin_approval_status != 'rejected' AND $aiDocumentsTable.status = 'completed'";
         }
 
         /* pagination setup */
@@ -125,6 +137,7 @@ class AI_Model_Provider
             $aiDocumentsTable.status,
             $aiDocumentsTable.pdf_path,
             $aiDocumentsTable.admin_approval_status,
+            $aiDocumentsTable.is_admin_chat_only,
 
             $usersTable.fn AS user_first_name,
             $usersTable.ln  AS user_last_name,
