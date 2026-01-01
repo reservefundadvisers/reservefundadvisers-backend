@@ -469,8 +469,8 @@ class Auth
 		$userID = $user['id'] ?? '';
 		$otp = generate_otp();
 
-		if(empty($username)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_username_empty']; return ['success' => false, 'user_id' => '']; }
-		else if(empty($user)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_username_invalid']; return ['success' => false, 'user_id' => '']; }
+		if(empty($username)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_email_empty']; return ['success' => false, 'user_id' => '']; }
+		else if(empty($user)){ $this->errormsg[] = $lang[$loc]['auth']['resetpass_email_invalid']; return ['success' => false, 'user_id' => '']; }
 
 		$template = emailTemplateForgotPassword($username, $otp);
 
@@ -483,7 +483,7 @@ class Auth
 		$sent = sendOtpEmail($user['email'], $subject, $body);
 		$message = 'OTP has been sent successfully via email.';
 
-		if($sent) { $this->successmsg[] = $message; return ['success' => true, 'user_id' => $userID]; }
+		if($sent) { $this->successmsg[] = $message; return ['success' => true, 'user_id' => $userID,'email' => $user['email']]; }
 		else { $this->errormsg[] = 'Failed to send OTP'; return ['success' => false, 'user_id' => $userID]; }
 	}
 

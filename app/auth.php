@@ -192,8 +192,12 @@ if(isset($_POST['cmd'])){
 
         $response = $auth->forgot_password($_POST);
 
-        if($response && isset($response['success']) && $response['success'])
-            send_json_response(true, 200, $auth->successmsg[0] ?? 'Success', ['user_id' => $response['user_id'] ?? '']);
+        if($response && isset($response['success']) && $response['success']) {
+            send_json_response(true, 200, $auth->successmsg[0] ?? 'Success', [
+                'user_id' => $response['user_id'] ?? '',
+                'email'   => $response['email'] ?? ''  // Add this line to include the email in the response
+            ]);
+        }
         else 
             send_json_response(false, 400, $auth->errormsg[0] ?? 'Error');
 
