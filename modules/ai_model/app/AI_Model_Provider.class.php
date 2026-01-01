@@ -25,6 +25,8 @@ class AI_Model_Provider
                 return $this->storeConversation($data);
             case 'get_conversation':
                 return $this->getConversation($data);
+            case 'store_conversation_pdf':
+                return $this->storeConversationPDF($data);
             default:
                 break;
         }
@@ -61,6 +63,7 @@ class AI_Model_Provider
                 $aiDocumentsTable.status,
                 $aiDocumentsTable.admin_approval_status,
                 $aiDocumentsTable.pdf_path,
+                $aiDocumentsTable.ai_chat_pdfs  ,
                 $aiDocumentsTable.extracted_json",
                 "LIMIT 1"
             );
@@ -427,6 +430,173 @@ class AI_Model_Provider
         if (!$update) return send_json_response(false, 500, 'Failed to update model ID');
 
         return send_json_response(true, 200, 'Success', ['message' => 'Model ID saved successfully']);
+    }
+
+    /**
+     * Stores a PDF file against an AI document record
+     *
+     * @param array $data - an associative array containing the AI document record ID and optional file_key_id
+     *
+     * @return array - a JSON response containing the result of the operation
+     *
+     * @throws Exception - throws an exception if the AI document record ID does not exist or if the PDF file is missing
+     */
+    public function storeConversationPDF($data)
+    {
+        global $aiDocumentsTable;
+
+        if (!is_valid($data, 'id')) {
+            return send_json_response(false, 400, 'Invalid request');
+        }
+
+        $docId = $data['id'];
+
+        $conds = [
+            'id' => $docId,
+            '!admin_approval_status' => 'rejected'
+        ];
+
+
+        $doc = get_elements($aiDocumentsTable, $conds);
+        if (empty($doc)) {
+            return send_json_response(false, 404, 'Document not found');
+        }
+
+        $doc = $doc[0];
+
+        if (empty($_FILES)) {
+            return send_json_response(false, 400, 'PDF file required');
+        }
+
+        /* ---------- UPLOAD FILES ---------- */
+        $upload = $this->handle_pdf_upload($_FILES, 'uploads/ai/chat');
+
+        if (!$upload['success']) {
+            return send_json_response(false, 400, $upload['message']);
+        }
+
+        $paths = $upload['path']; // indexed array
+        $fileIds = $data['file_key_id'] ?? [];
+
+        /* ---------- BUILD NEW ENTRIES ---------- */
+        $newEntries = [];
+
+        foreach ($paths as $index => $path) {
+            $newEntries[] = [
+                'path'        => $path,
+                'file_key_id' => $fileIds[$index] ?? null
+            ];
+        }
+
+        $existing = [];
+
+        if (!empty($doc['ai_chat_pdfs'])) {
+            $decoded = json_decode($doc['ai_chat_pdfs'], true);
+
+            if (is_array($decoded)) {
+                foreach ($decoded as $item) {
+
+                    // Old format: string path
+                    if (is_string($item)) {
+                        $existing[] = [
+                            'path'        => $item,
+                            'file_key_id' => null
+                        ];
+                    }
+
+                    // New format: object
+                    elseif (is_array($item) && isset($item['path'])) {
+                        $existing[] = [
+                            'path'        => $item['path'],
+                            'file_key_id' => $item['file_key_id'] ?? null
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Prevent duplicates (by path OR file_key_id)
+        $merged = array_values(array_reduce(
+            array_merge($existing, $newEntries),
+            function ($carry, $item) {
+                $key = $item['file_key_id'] ?: $item['path'];
+                $carry[$key] = $item;
+                return $carry;
+            },
+            []
+        ));
+
+        /* ---------- SAVE ---------- */
+        update_element(
+            $aiDocumentsTable,
+            [
+                'ai_chat_pdfs' => json_encode($merged, JSON_UNESCAPED_SLASHES),
+                'updated_at'   => date('Y-m-d H:i:s')
+            ],
+            ['id' => $docId]
+        );
+
+        return send_json_response(true, 200, 'PDFs stored successfully', [
+            'count' => count($merged)
+        ]);
+    }
+
+    /**
+     * Handles a PDF file upload and saves it to a specified directory.
+     *
+     * @param array $fileInput The file input data, either as a single file or an array of files.
+     * @param string $dir The directory to save the uploaded file to.
+     *
+     * @return array An associative array containing the success status, a public path to the uploaded file (if successful), and a message.
+     */
+    private function handle_pdf_upload($fileInput, $dir)
+    {
+        $file = $fileInput[array_key_first($fileInput)];
+
+        $root = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/';
+        $basePath = $root . trim($dir, '/') . '/';
+
+        if (!is_dir($basePath)) {
+            mkdir($basePath, 0777, true);
+        }
+
+        $paths = [];
+
+        $isMultiple = is_array($file['name']);
+        $count = $isMultiple ? count($file['name']) : 1;
+
+        for ($i = 0; $i < $count; $i++) {
+
+            $error = $isMultiple ? $file['error'][$i] : $file['error'];
+
+            if ($error !== UPLOAD_ERR_OK) {
+                return [
+                    'success' => false,
+                    'message' => 'Upload error (code: ' . $error . ')'
+                ];
+            }
+
+            $originalName = $isMultiple ? $file['name'][$i] : $file['name'];
+            $tmpName      = $isMultiple ? $file['tmp_name'][$i] : $file['tmp_name'];
+
+            if (strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) !== 'pdf') {
+                return ['success' => false, 'message' => 'Only PDF allowed'];
+            }
+
+            $filename = uniqid('pdf_', true) . '.pdf';
+            $fullPath = $basePath . $filename;
+
+            if (!move_uploaded_file($tmpName, $fullPath)) {
+                return ['success' => false, 'message' => 'File move failed'];
+            }
+
+            $paths[] = '/' . trim($dir, '/') . '/' . $filename;
+        }
+
+        return [
+            'success' => true,
+            'path'    => $paths
+        ];
     }
 
     /**
