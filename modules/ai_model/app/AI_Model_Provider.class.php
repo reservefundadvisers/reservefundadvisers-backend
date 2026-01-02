@@ -28,6 +28,7 @@ class AI_Model_Provider
             case 'store_conversation_pdf':
                 return $this->storeConversationPDF($data);
             default:
+                send_json_response(false, 400, 'Invalid Command');
                 break;
         }
         return null;
