@@ -478,6 +478,7 @@ class AI_Model_Provider
 
         $paths = $upload['path']; // indexed array
         $fileIds = $data['file_key_id'] ?? [];
+        $fileNames = $data['file_name'] ?? [];
 
         /* ---------- BUILD NEW ENTRIES ---------- */
         $newEntries = [];
@@ -485,7 +486,8 @@ class AI_Model_Provider
         foreach ($paths as $index => $path) {
             $newEntries[] = [
                 'path'        => $path,
-                'file_key_id' => $fileIds[$index] ?? null
+                'file_key_id' => $fileIds[$index] ?? null,
+                'file_name' => $fileNames[$index] ?? null
             ];
         }
 
@@ -501,7 +503,8 @@ class AI_Model_Provider
                     if (is_string($item)) {
                         $existing[] = [
                             'path'        => $item,
-                            'file_key_id' => null
+                            'file_key_id' => null,
+                            'file_name' => null
                         ];
                     }
 
@@ -509,7 +512,8 @@ class AI_Model_Provider
                     elseif (is_array($item) && isset($item['path'])) {
                         $existing[] = [
                             'path'        => $item['path'],
-                            'file_key_id' => $item['file_key_id'] ?? null
+                            'file_key_id' => $item['file_key_id'] ?? null,
+                            'file_name' => $item['file_name'] ?? null  
                         ];
                     }
                 }
