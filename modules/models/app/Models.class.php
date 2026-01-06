@@ -23,6 +23,7 @@ class Models
         switch($cmd){
             case 'load': $response = view($this->module_name, 'models.php'); break;
             case 'get': $response = $this->list($data); break;
+            case 'get_model_name': $response = $this->get_model_name($data); break;
             case 'edit': $response = $this->edit($data); break;
             case 'save': $response = $this->save($data); break;     
             case 'delete': $response = $this->delete($data); break;  
@@ -86,6 +87,34 @@ class Models
         
     }
 
+    public function get_model_name($data){
+        global $auth, $modelsTable;
+
+        $name = trim(check_val($data, 'name', check_val($data, 'model_name', '')));
+
+        if($auth->checkRoleType('client')){
+            $client_id = $auth->clientId();
+        }else{
+            $client_id = check_val($data, 'client_id', null);
+        }
+
+        if(empty($client_id) || $name === ''){
+            return send_json_response(false, 400, 'Missing required fields.');
+        }
+
+        $conds = ['client_id' => $client_id, 'name' => $name];
+        if(is_valid($data, 'id')){
+            $conds['!id'] = $data['id'];
+        }else if(is_valid($data, 'model_id')){
+            $conds['!id'] = $data['model_id'];
+        }
+
+        if(exists($modelsTable, $conds)){
+            return send_json_response(false, 400, 'Model name is already in use.');
+        }
+
+        return send_json_response(true, 200, 'Model name is available.');
+    }
 
     public function edit($data){
         global $modelsTable, $simDeficitTable, $simDeficitLTIMTable, $simSplitsTable, $simSplitsLTIMTable;

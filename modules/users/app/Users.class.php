@@ -219,8 +219,8 @@ class Users
         $user_info = $auth->sessioninfo();
         if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
 
-        $user_data = get_element($usersTable, ['id' => $user_info['uid']], 'position_id');
-        $user_info['position_id'] = $user_data['position_id'];
+        $user_data = get_element($usersTable, ['id' => $user_info['uid']], '*');
+        $user_info['userdata'] = $user_data;
 
         $user_client_id = get_element($usersTable, ['id' => $user_info['uid']], 'client_id');
 

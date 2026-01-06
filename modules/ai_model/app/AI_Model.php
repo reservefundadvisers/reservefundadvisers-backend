@@ -36,11 +36,11 @@ $className = 'AI_Model';
 
 // commands permissions
 $allowed_cmd =  [
-    'get' => ['admin'],
-    'edit' => ['admin'],
-    'save' => ['admin'],
-    'delete' => ['admin'],
-    'set' => ['admin']
+    'get' => ['admin','client_admin','company_admin','manager'],
+    'edit' => ['admin','client_admin','company_admin','manager'],
+    'save' => ['admin','client_admin','company_admin','manager'],
+    'delete' => ['admin','client_admin','company_admin','manager'],
+    'set' => ['admin','client_admin','company_admin','manager']
 ];
 
 $request = check_request();
