@@ -311,6 +311,26 @@ class Models
             return send_json_response(false, 400, $ret['error']);
         }
 
+        $model_name_conds = [
+            'client_id' => $data['client_id'],
+            'name'      => check_val($data, 'name', '')
+        ];
+
+        if (is_valid($data, 'id')) {
+            // UPDATE: allow current name, but block duplicates
+            if (exists($modelsTable, array_merge(
+                $model_name_conds,
+                ['id !=' => $data['id']]
+            ))) {
+                return send_json_response(false, 400, 'Model name is already in use.');
+            }
+        } else {
+            // CREATE: name must be unique
+            if (exists($modelsTable, $model_name_conds)) {
+                return send_json_response(false, 400, 'Model name is already in use.');
+            }
+        }
+
         $data['fiscal_year'] = check_val($data, 'fiscal_year', date('Y', time()));
         $data['starting_amount'] = floatval(check_val($data, 'total_reserve_fees_onhand', 0)) + floatval(check_val($data, 'total_sirs_fund_onhand', 0));
 
