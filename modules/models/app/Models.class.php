@@ -320,7 +320,7 @@ class Models
             // UPDATE: allow current name, but block duplicates
             if (exists($modelsTable, array_merge(
                 $model_name_conds,
-                ['id !=' => $data['id']]
+                ['!id' => $data['id']]
             ))) {
                 return send_json_response(false, 400, 'Model name is already in use.');
             }
