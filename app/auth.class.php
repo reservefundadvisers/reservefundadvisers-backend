@@ -500,7 +500,7 @@ class Auth
 		if(empty($username)){ $this->errormsg[] = 'User ID cannot be empty'; return false; }
 		if(empty($password)){ $this->errormsg[] = 'Password cannot be empty'; return false; }
 
-		$user = get_element('users', ['username'=>$username]);
+		$user = get_element('users', ['id'=>$username]);
 		$hashed_password = $this->hashpass($password);
 
 		if(empty($user)){ $this->errormsg[] = 'User not found'; return false; }
@@ -570,7 +570,45 @@ class Auth
 
 		return $auth_code;
 	}
-	
+
+	function verify_token($token){
+		global $usersTable;
+
+		$token = $token['token'] ?? '';
+
+		if (empty($token)) {
+			return ['success' => false, 'message' => 'Token is empty.'];
+		}
+
+		$user_info = get_elements($usersTable, ['invite_token' => $token], 'id, active');
+
+		if (!empty($user_info) && isset($user_info[0]['active'])) {
+			$user_active_status = $user_info[0]['active'];
+
+			if ($user_active_status == 0) {
+
+			$update_data = [
+					'active' => 1,   
+					// 'invite_token' => null   
+				];
+
+				$update_condition = [
+					'id' => $user_info[0]['id'] 
+				];
+				
+				$update_user = update_element($usersTable, $update_data, $update_condition);
+			}
+
+			return [
+				'success' => true,
+				'message' => 'User has been verified.',
+				'data' => $user_info[0]
+			];
+		} else {
+			return ['success' => false, 'message' => 'Please contact admin. This token is invalid or expired.'];
+		}
+	}
+
 
 	
 
@@ -1480,7 +1518,7 @@ class Auth
 	}
 
 	function generate_token($length = 64) {
-		$characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?/';
+		$characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 		$charactersLength = strlen($characters);
 		$randomString = '';
 		for ($i = 0; $i < $length; $i++) {

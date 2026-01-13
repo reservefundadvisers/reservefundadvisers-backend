@@ -166,7 +166,7 @@ $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_m
 
 $db_table_cols = [ 
 
-                    $usersTable => ['id', 'username', 'password', 'role', 'client_id', 'position_id','position_role_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'opt-in', 'active', 'created_at'],
+                    $usersTable => ['id', 'username', 'password', 'role', 'client_id', 'position_id','position_role_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'opt-in', 'active', 'invite_token', 'created_at'],
                     $clientsTable => ['id', 'association','association_property_manager_name', 'company', 'company_id','media', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
                     $clientPositionsTable => ['row_id', 'id', 'value', 'client_id'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],

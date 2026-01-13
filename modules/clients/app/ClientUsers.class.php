@@ -185,6 +185,10 @@ class ClientUsers
                 $template = emailTemplateInviteMember($receipientName, $sendername , $invite_url,  'Our Platform');
                 $sent = sendOtpEmail($data['email'], $template['subject'], $template['body']);
 
+                if($sent){
+                    //Update DB with token
+                   $invite =  save_element($usersTable, ['id'=>$ret_id, 'invite_token'=>$token]);
+                }
             }
         }
 

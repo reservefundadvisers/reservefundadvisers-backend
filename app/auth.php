@@ -250,7 +250,7 @@ if(isset($_POST['cmd'])){
         $name  = ($user['fn'] ?? '') . ' ' . ($user['ln'] ?? '');
         $email =$user['email'] ?? '';
         $url =  $_ENV['FRONTEND_URL'] ?? ''; 
-        $inviteLink = $url . "invite-member?token=some_random_token";
+        $inviteLink = $url . "invite-member?token=" . $user['invite_token'];
         $sendername = $auth->user_fnln() ?? '';
 
         $template = emailTemplateInviteMember($name, $sendername, $inviteLink, "Reserve Fund System");
@@ -294,6 +294,18 @@ if(isset($_POST['cmd'])){
             send_json_response(true, 200, $lang[$loc]['auth']['signup_otp_sent']);
         else 
            send_json_response(false, 400, $auth->errormsg[0]);
+    }
+
+    else if($cmd == 'verify_token') {
+        $res = $auth->verify_token($_POST); 
+
+        if ($res['success'] && isset($res['data']) && $res['data']) {
+            send_json_response(true, 200, $res['message'] ?? 'Success', [
+                'data' => $res['data'] ?? '',
+            ]);
+        } else {
+            send_json_response(false, 400, $res['message'] ?? 'Verification failed');
+        }
     }
 
     
