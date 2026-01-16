@@ -505,7 +505,7 @@ class Auth
 
 		if(empty($user)){ $this->errormsg[] = 'User not found'; return false; }
 
-		$query = $this->mysqli->prepare("UPDATE users SET password=? WHERE username=? LIMIT 1");
+		$query = $this->mysqli->prepare("UPDATE users SET password=? WHERE id=? LIMIT 1");
 		$query->bind_param("ss", $hashed_password, $username);
 		$query->execute();
 		$query->close();
@@ -589,7 +589,7 @@ class Auth
 
 			$update_data = [
 					'active' => 1,   
-					// 'invite_token' => null   
+					'invite_token' => null   
 				];
 
 				$update_condition = [
