@@ -847,6 +847,7 @@ class Auth
 		$city = check_val($data, 'city', '');
 		$state = check_val($data, 'state', '');
 		$zip = check_val($data, 'zip', '');
+		$user_role = check_val($data, 'role', '');
 
 		if(empty($position_id)){
 			$error = ['key' => 'POSITION','message' => $lang[$loc]['auth']['signup_position_error']];
@@ -883,6 +884,10 @@ class Auth
 			return false;
 		}
 
+		if(empty($user_role)){
+			$user_role = 'client_admin';
+		}
+
 		$email_conds = ['email'=>$email]; 
 		$mobile_conds = ['phone'=>$mobile_number, 'country_code'=>$country_code];
 		if(!empty($uid)){
@@ -912,10 +917,10 @@ class Auth
 			'id'=>generate_id('users'),
 			'first_name'=>$first_name, 
 			'last_name'=>$last_name, 
-			'email'=>$email, 
-			'username'=>$email, 
-			'password'=>$password, 
-			'role'=>'client_admin', 
+			'email'=>$email,
+			'username'=>$email,
+			'password'=>$password,
+			'role'=> $user_role, 
 			'position_id'=>$position_id,
 			'country_code'=>$country_code,
 			'mobile_number'=>$mobile_number,
