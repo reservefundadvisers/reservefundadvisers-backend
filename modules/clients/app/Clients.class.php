@@ -286,13 +286,26 @@ class Clients
     }
 
     public function save_company_by_name($data){
-        global $clientsTable;
+        global $clientsTable, $upload_dir_company;
 
         if(!is_valid($data, 'company_name')){
             return send_json_response(false, 400, 'Company Name is required !');
         }
+        
+        if(!empty($_FILES['media'])){
+            $image_upload = handle_file_upload($_FILES['media'], $upload_dir_company);
+            // Upload the file
+            if ($image_upload['success'] === true) {
+                $image_path = $image_upload['path'];
+                $data['media'] = $image_path;
+            }
+        }
 
-        $company_id = save_element($clientsTable, ['company'=>$data['company_name'], 'type'=>'company']);
+        $data['type'] = 'company';
+        $data['company'] = $data['company_name'];
+
+        // save
+        $company_id = save_element($clientsTable, $data);
 
         if($company_id === false){
             return send_json_response(false, 400, $this->errors['internal_error']);
