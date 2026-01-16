@@ -214,7 +214,7 @@ class Users
      * @return array User profile session information or error message.
      */
     public function getProfile($data){
-        global $auth, $usersTable, $usersTable, $modelsTable;
+        global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable;
 
         $user_info = $auth->sessioninfo();
         if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
@@ -224,9 +224,21 @@ class Users
 
         $user_client_id = get_element($usersTable, ['id' => $user_info['uid']], 'client_id');
 
+        $user_position_key = get_element($clientPositionsTable, ['id' => $user_info['userdata']['position_id']], 'position_key');
+
+        if(!empty($user_position_key)){
+            $user_info['userdata']['position_key'] = $user_position_key['position_key'];
+            $user_info['profile_type'] = $user_position_key['position_key'];
+        }
+
         $user_info['is_association_created'] = false;
-        if(!empty($user_client_id['client_id'])){
+        if(!empty($user_client_id['client_id']) && !empty($user_info['association'])){
             $user_info['is_association_created'] = true;
+        }
+
+        $user_info['is_company_created'] = false;
+        if(!empty($user_info['company'])){
+            $user_info['is_company_created'] = true;
         }
 
         // $user_info['is_association_created'] = $user_client_id ? true : false;
