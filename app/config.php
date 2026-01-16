@@ -155,6 +155,7 @@ $apiKey = '';
 //File upload directory
 $upload_dir_association = 'uploads/associations/';
 $upload_dir_banks = 'uploads/banks/';
+$upload_dir_company = 'uploads/company/';
 
 $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_model'=>1, 'hold'=>1, 'opt'=>['pd', 'pm']],
                             // 'cdars'=>['name'=>'CD Account Registry Service (CDARS)', 'show_model'=>1, 'hold'=>1, 'opt'=>['pd', 'pm']],
@@ -167,8 +168,8 @@ $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_m
 $db_table_cols = [ 
 
                     $usersTable => ['id', 'username', 'password', 'role', 'client_id', 'position_id','position_role_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'opt-in', 'active', 'invite_token', 'created_at'],
-                    $clientsTable => ['id', 'association','association_property_manager_name', 'company', 'company_id','media', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
-                    $clientPositionsTable => ['row_id', 'id', 'value', 'client_id'], 
+                    $clientsTable => ['id', 'association','association_property_manager_name', 'company', 'company_details', 'company_id', 'media', 'tag_line', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
+                    $clientPositionsTable => ['row_id', 'id', 'value', 'client_id', 'position_key'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],
                     $modelsTable => ['row_id', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'investment_rate_of_return', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirs_fund_onhand' ,'active', 'updated_at', 'created_at'],
                     $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'item_category_id ', 'is_sirs','item_type'],
