@@ -1,0 +1,9 @@
+[18-Jan-2026 10:50:10 UTC] send_otp: lookup start user_id=617
+[18-Jan-2026 10:50:10 UTC] PHP Fatal error:  Uncaught Simplon\Mysql\MysqlException: {"query":"SELECT * FROM users WHERE  row = :row  ","params":{"row":617},"errorInfo":{"message":"SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '= 617' at line 1","file":"\/var\/www\/html\/reservefundadvisers-backend\/vendor\/simplon\/mysql\/src\/Mysql.php","line":625}} in /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php:645
+Stack trace:
+#0 /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php(207): Simplon\Mysql\Mysql->prepareSelect()
+#1 /var/www/html/reservefundadvisers-backend/app/global_func.php(303): Simplon\Mysql\Mysql->fetchRow()
+#2 /var/www/html/reservefundadvisers-backend/app/auth.class.php(1146): get_element()
+#3 /var/www/html/reservefundadvisers-backend/app/auth.php(291): Auth->send_otp()
+#4 {main}
+  thrown in /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php on line 645
