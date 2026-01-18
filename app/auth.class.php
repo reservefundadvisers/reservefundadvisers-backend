@@ -1125,7 +1125,7 @@ class Auth
 		}
 
 		// --- Fetch user details ---
-		$user_details = get_element('users', ['row_id' => $user_id]);
+		$user_details = get_element('users', ['id' => $user_id]);
 		// Some callers/passengers return the numeric auto-increment row id (e.g. 614)
 		// while the `users.id` column is a varchar. Try the `row` column fallback.
 		// if (empty($user_details) && is_numeric($user_id)) {
