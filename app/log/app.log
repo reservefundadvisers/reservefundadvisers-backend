@@ -7,3 +7,19 @@ Stack trace:
 #3 /var/www/html/reservefundadvisers-backend/app/auth.php(291): Auth->send_otp()
 #4 {main}
   thrown in /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php on line 645
+[18-Jan-2026 11:00:38 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /var/www/html/reservefundadvisers-backend/app/global_func.php:360
+Stack trace:
+#0 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(47): get_elements()
+#1 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(20): ClientPositions->list()
+#2 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientUsers.class.php(23): ClientPositions->process()
+#3 /var/www/html/reservefundadvisers-backend/modules/clients/app/clientUsers.php(88): ClientUsers->process()
+#4 {main}
+  thrown in /var/www/html/reservefundadvisers-backend/app/global_func.php on line 360
+[18-Jan-2026 11:00:51 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /var/www/html/reservefundadvisers-backend/app/global_func.php:360
+Stack trace:
+#0 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(47): get_elements()
+#1 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(20): ClientPositions->list()
+#2 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientUsers.class.php(23): ClientPositions->process()
+#3 /var/www/html/reservefundadvisers-backend/modules/clients/app/clientUsers.php(88): ClientUsers->process()
+#4 {main}
+  thrown in /var/www/html/reservefundadvisers-backend/app/global_func.php on line 360
