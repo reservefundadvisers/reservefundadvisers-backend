@@ -1125,12 +1125,33 @@ class Auth
 		}
 
 		// --- Fetch user details ---
-		$user_details = get_element('users', ['row_id' => $user_id]);
-		// Some callers/passengers return the numeric auto-increment row id (e.g. 614)
-		// while the `users.id` column is a varchar. Try the `row` column fallback.
-		// if (empty($user_details) && is_numeric($user_id)) {
-		// 	$user_details = get_element('users', ['row' => intval($user_id)]);
-		// }
+		// Accept either the string `users.id` or numeric auto-increment row identifiers.
+		$user_details = [];
+
+		// Log the incoming user id
+		if (function_exists('log_info')) log_info("send_otp: lookup start user_id={$user_id}");
+
+		// 1) try lookup by users.id (string identifier)
+		$user_details = get_element('users', ['id' => $user_id]);
+		if (!empty($user_details)){
+			if (function_exists('log_info')) log_info("send_otp: found user by id={$user_id}");
+		} else {
+			// 2) try common numeric column names used across environments
+			if (is_numeric($user_id)) {
+				$intId = intval($user_id);
+				$user_details = get_element('users', ['row_id' => $intId]);
+				if (!empty($user_details)){
+					if (function_exists('log_info')) log_info("send_otp: found user by row_id={$intId}");
+				} else {
+					$user_details = get_element('users', ['row' => $intId]);
+					if (!empty($user_details)){
+						if (function_exists('log_info')) log_info("send_otp: found user by row={$intId}");
+					}
+				}
+			}
+		}
+
+		if (function_exists('log_info')) log_info('send_otp: lookup result present=' . (!empty($user_details) ? '1' : '0'));
 
 		if (empty($user_details)) {
 			$this->errormsg[] = 'The User is not found';
@@ -1144,7 +1165,10 @@ class Auth
 		$country_code = $user_details['country_code'] ?? '';
 
 		$otp = generate_otp();
-		$response = $this->insert_otp($user_id, $otp , $purpose, $type);
+
+		// Prefer canonical users.id (varchar) for OTP user_id when available
+		$otp_user_id = $user_details['id'] ?? $user_id;
+		$response = $this->insert_otp($otp_user_id, $otp , $purpose, $type);
 
 		if(!$response){
 			$this->errormsg[] = 'The OTP Failed to generate.';
