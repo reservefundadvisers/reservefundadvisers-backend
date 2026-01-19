@@ -216,15 +216,34 @@ class Users
     public function getProfile($data){
         global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable;
 
-        $user_info = $auth->sessioninfo();
-        if(empty($user_info))return send_json_response(false, 404, $this->errors['not_found']);
+        try {
+            // Log API call start
+            rfa_create_log('[USERS][PROFILE][START] Getting user profile');
+
+            $user_info = $auth->sessioninfo();
+            if(empty($user_info)){
+                rfa_create_log('[USERS][PROFILE][FAIL] User info not found or session invalid');
+                return send_json_response(false, 404, $this->errors['not_found']);
+            }
 
         $user_data = get_element($usersTable, ['id' => $user_info['uid']], '*');
+        if(empty($user_data)){
+            rfa_create_log('[USERS][PROFILE][ERROR] Failed to retrieve user data from database for User ID: ' . $user_info['uid']);
+            return send_json_response(false, 500, 'Failed to retrieve user data');
+        }
         $user_info['userdata'] = $user_data;
 
+        rfa_create_log('[USERS][PROFILE][LOG] User ID: ' . $user_info['uid'] . ', Role: ' . ($user_data['role'] ?? 'N/A'));
+
         $user_client_id = get_element($usersTable, ['id' => $user_info['uid']], 'client_id');
+        if($user_client_id === false){
+            rfa_create_log('[USERS][PROFILE][ERROR] Failed to retrieve client_id for User ID: ' . $user_info['uid']);
+        }
 
         $user_position_key = get_element($clientPositionsTable, ['id' => $user_info['userdata']['position_id']], 'position_key');
+        if($user_position_key === false && !empty($user_info['userdata']['position_id'])){
+            rfa_create_log('[USERS][PROFILE][ERROR] Failed to retrieve position_key for position_id: ' . $user_info['userdata']['position_id']);
+        }
 
         if(!empty($user_position_key)){
             $user_info['userdata']['position_key'] = $user_position_key['position_key'];
@@ -246,10 +265,19 @@ class Users
         $user_info['is_models_created'] = false;
         if($user_client_id){
             $user_client_models = get_elements($modelsTable, ['client_id' => $user_client_id]);
+            if($user_client_models === false){
+                rfa_create_log('[USERS][PROFILE][ERROR] Failed to retrieve models for client_id: ' . ($user_client_id['client_id'] ?? 'N/A'));
+            }
             $user_info['is_models_created'] = $user_client_models ? true : false;
         }
 
-        return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
+        rfa_create_log('[USERS][PROFILE][SUCCESS] Profile data retrieved successfully for User ID: ' . $user_info['uid']);
+
+            return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
+        } catch (Exception $e) {
+            rfa_create_log('[USERS][PROFILE][EXCEPTION] Unexpected error occurred: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
+            return send_json_response(false, 500, 'An unexpected error occurred: ' . $e->getMessage());
+        }
     }
 
     public function username_exists($username, $id = null){
