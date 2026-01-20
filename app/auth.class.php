@@ -488,14 +488,16 @@ class Auth
 	}
 
 	/**
-	 * Updates a user's password
-	 * @param array $data contains the user ID and password
+	 * Updates a user's password and mobile number
+	 * @param array $data contains the user ID, password, mobile number, and country code
 	 * @return bool success status
 	 */
 	function update_user_password($data)
 	{
 		$username = trim($data['user_id']);
 		$password = trim($data['password']);
+		$mobile_number = trim($data['mobile_number'] ?? '');
+		$country_code = trim($data['country_code'] ?? '');
 
 		if(empty($username)){ $this->errormsg[] = 'User ID cannot be empty'; return false; }
 		if(empty($password)){ $this->errormsg[] = 'Password cannot be empty'; return false; }
@@ -505,11 +507,16 @@ class Auth
 
 		if(empty($user)){ $this->errormsg[] = 'User not found'; return false; }
 
-		$query = $this->mysqli->prepare("UPDATE users SET password=? WHERE id=? LIMIT 1");
-		$query->bind_param("ss", $hashed_password, $username);
+		// Update password and optionally mobile number
+		// if(!empty($mobile_number) && !empty($country_code)){
+			$query = $this->mysqli->prepare("UPDATE users SET password=?, phone=?, country_code=? WHERE id=? LIMIT 1");
+			$query->bind_param("ssss", $hashed_password, $mobile_number, $country_code, $username);
+		// }
+		
 		$query->execute();
 		$query->close();
 
+		$this->successmsg[] = 'Password updated successfully';
 		return true;
 	}
 	
@@ -580,29 +587,38 @@ class Auth
 			return ['success' => false, 'message' => 'Token is empty.'];
 		}
 
-		$user_info = get_elements($usersTable, ['invite_token' => $token], 'id, active');
+		// Get full user details by selecting all fields
+		$user_info = get_elements($usersTable, ['invite_token' => $token]);
 
 		if (!empty($user_info) && isset($user_info[0]['active'])) {
 			$user_active_status = $user_info[0]['active'];
+			$user_id = $user_info[0]['id'];
 
 			if ($user_active_status == 0) {
 
-			$update_data = [
+				$update_data = [
 					'active' => 1,   
 					'invite_token' => null   
 				];
 
 				$update_condition = [
-					'id' => $user_info[0]['id'] 
+					'id' => $user_id
 				];
 				
 				$update_user = update_element($usersTable, $update_data, $update_condition);
+				
+				// Fetch the updated user record to return fresh data
+				$updated_user_info = get_element($usersTable, ['id' => $user_id]);
+				
+				if (!empty($updated_user_info)) {
+					$user_info[0] = $updated_user_info;
+				}
 			}
 
 			return [
 				'success' => true,
 				'message' => 'User has been verified.',
-				'data' => $user_info[0]
+				'data' => $user_info[0]  // Returns full updated user record
 			];
 		} else {
 			return ['success' => false, 'message' => 'Please contact admin. This token is invalid or expired.'];
