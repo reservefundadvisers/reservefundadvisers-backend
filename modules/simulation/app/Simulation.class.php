@@ -437,6 +437,9 @@ class Simulation
         $rule_mf_perc = check_val($simulation_rules, 'mf_perc', 0);
 
         $disable_auto_fee_reduction = check_val($simulation_rules, 'disable_auto_fee_reduction', 0);
+        $blue_opt_requested = false;
+        $blue_opt_active = false;
+        $mf_auto_enabled = $rule_mf_auto;
 
         $rule_inf_rate = check_val($simulation_rules, 'inf_rate', 0);
         if (!is_numeric($rule_inf_rate)) {
@@ -453,6 +456,12 @@ class Simulation
         $rule_inv_keep = check_val($simulation_rules, 'inv_keep', 0) == 1;
 
         $rule_use_inflation = check_val($simulation_rules, 'use_infl', 1) == 1;
+        $blue_opt_reserve_ratio = (is_numeric($cash_reserve_threshold) && $cash_reserve_threshold > 0)
+            ? $cash_reserve_threshold
+            : 0.10;
+        if ($blue_opt_reserve_ratio < 0.10) {
+            $blue_opt_reserve_ratio = 0.10;
+        }
 
         /* ********** */
 
@@ -742,6 +751,8 @@ class Simulation
 
         $custom_range_years = array_fill(0, $period, false);
         $custom_gradual_range_years = array_fill(0, $period, false);
+        $custom_range_fees = [];
+        $custom_gradual_range_inc = [];
         // print_r($custom_range_years);
         // exit;
 
@@ -772,8 +783,6 @@ class Simulation
 
 
         /* Auto Monthly Fees Vars */
-        $processed_deficits = array();
-
         // Auto MF increase % of each year to check when max is reached
         $auto_monthly_fees_inc = array_fill(0, $period, 0);
         // $auto_monthly_fees_stop_year = -1;
@@ -786,6 +795,27 @@ class Simulation
         // Used in Auto MF Mode, to avoid widthdrawi
         $auto_monthly_fees_ltim_wth = array_fill(0, $period, -1);
 
+        $pending_fee_logs = ['MF_AUTO' => [], 'BLUE_OPT' => []];
+        $blue_opt_enabled = $blue_opt_requested;
+        $blue_opt_current_year = $period - 1;
+        $blue_opt_pending_year = -1;
+        $blue_opt_recalc_pending = false;
+        $blue_opt_backup_fee = null;
+        $blue_opt_backup_reserve = null;
+        $blue_opt_skip_logged = false;
+        $patch_global_logged = false;
+        $blue_opt_in_progress = false;
+        $blue_opt_search_active = false;
+        $blue_opt_search_low = null;
+        $blue_opt_search_high = null;
+        $blue_opt_search_target = null;
+        $blue_opt_search_best = null;
+        $blue_opt_search_start_fee = null;
+        $blue_opt_search_start_reserve = null;
+        $blue_opt_search_attempts = 0;
+        $blue_opt_search_max_attempts = 12;
+        $blue_opt_search_precision = 0.01;
+        $global_fee_auto_enabled = $mf_auto_enabled && !$blue_opt_active;
 
         $last_deficit = -1;
 
@@ -888,7 +918,7 @@ class Simulation
                 }
                 // Now optimize all years, skipping custom range years
 
-                if ($rule_mf_auto == 1) {
+                if ($mf_auto_enabled && !$blue_opt_active) {
                     for ($year_idx = 0; $year_idx < $period; $year_idx++) {
                         if (!isset($custom_range_fees))
                             $custom_range_fees = [];
@@ -904,7 +934,7 @@ class Simulation
                             $monthly_fees,
                             $rule_cushion_fund,
                             $inflation_rate,
-                            $rule_mf_auto,
+                            $mf_auto_enabled,
                             $used_manual_monthly_fees,
                             $cash_reserve_threshold,
                             $simulation_rules,
@@ -926,7 +956,7 @@ class Simulation
 
                 // After custom gradual range is set
 
-                if ($rule_mf_auto == 1) {
+                if ($mf_auto_enabled && !$blue_opt_active) {
                     for ($i = 0; $i < $period; $i++) {
                         if (!isset($simulation_rules['mf_perc_per_year'][$i]) && isset($simulation_rules['mf_perc'])) {
                             $simulation_rules['mf_perc_per_year'][$i] = $rule_mf_perc;
@@ -956,7 +986,7 @@ class Simulation
 
                 // Now optimize all years, skipping custom range years
 
-                if ($rule_mf_auto == 1) {
+                if ($mf_auto_enabled && !$blue_opt_active) {
 
                     for ($opt_year = 0; $opt_year < $period; $opt_year++) {
 
@@ -975,7 +1005,7 @@ class Simulation
                             $monthly_fees,
                             $rule_cushion_fund,
                             $inflation_rate,
-                            $rule_mf_auto,
+                            $mf_auto_enabled,
                             $used_manual_monthly_fees,
                             $cash_reserve_threshold,
                             $simulation_rules,
@@ -1000,27 +1030,30 @@ class Simulation
 
             } else if (isset($deficit_array[$year]['disable_auto_fee_reduction'])) {
                 $disable_auto_fee_reduction = $deficit_array[$year]['disable_auto_fee_reduction'];
+                $blue_opt_active = false;
+                $global_fee_auto_enabled = $mf_auto_enabled && !$blue_opt_active;
 
-
-                $this->updateMonthlyFeeInc(
-                    $i,
-                    $deficit_per_unit,
-                    $auto_monthly_fees,
-                    $auto_monthly_fees_inc,
-                    $rule_mf_perc,
-                    $monthly_fees,
-                    $rule_cushion_fund,
-                    $inflation_rate,
-                    $rule_mf_auto,
-                    $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
-                    $cash_reserve_threshold,
-                    $simulation_rules,
-                    $custom_range_years,
-                    $custom_range_fees,
-                    $custom_gradual_range_inc,
-                    $custom_gradual_range_years,
-                    $disable_auto_fee_reduction
-                );
+                if ($mf_auto_enabled && !$blue_opt_active) {
+                    $this->updateMonthlyFeeInc(
+                        $i,
+                        $deficit_per_unit,
+                        $auto_monthly_fees,
+                        $auto_monthly_fees_inc,
+                        $rule_mf_perc,
+                        $monthly_fees,
+                        $rule_cushion_fund,
+                        $inflation_rate,
+                        $mf_auto_enabled,
+                        $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
+                        $cash_reserve_threshold,
+                        $simulation_rules,
+                        $custom_range_years,
+                        $custom_range_fees,
+                        $custom_gradual_range_inc,
+                        $custom_gradual_range_years,
+                        $disable_auto_fee_reduction
+                    );
+                }
                 
             } else if (is_valid($deficit_array[$year], 'monthly_fees')) {
 
@@ -1242,9 +1275,6 @@ class Simulation
 
 
         $is_lowering_fees = false;
-        $current_auto_fee = -1;
-        $auto_fee_remaining_loop_count = 0; // used to count how many time auto-fee loops in same year when still deficit to avoid infinit loop
-        $auto_fee_remaining_loop_max = 5;
 
 
 
@@ -1254,6 +1284,8 @@ class Simulation
         $current_adjustment = '';
 
         $is_deficit_check = false;
+        $blue_opt_ran = false;
+
 
         // then managed calculations
         for ($i = 0; $i < $period; $i++) {
@@ -1284,9 +1316,6 @@ class Simulation
 
 
             // auto monthly fees
-            $is_auto_mf = $apply_auto_fees[$i]; //check_val($erase_deficit, 'monthly_fees_auto', false);
-
-
 
 
             // Loan
@@ -1406,6 +1435,9 @@ class Simulation
             // add manually specifed monthly fee for reference
             $year_calculations['mf_m'] = $manual_monthly_fees[$i];
 
+            $this->logPendingFeeAdjustment('MF_AUTO', $i, $year_calculations['fa'], $auto_monthly_fees[$i], $pending_fee_logs);
+            $this->logPendingFeeAdjustment('BLUE_OPT', $i, $year_calculations['fa'], $auto_monthly_fees[$i], $pending_fee_logs);
+
             // log_info($year_calculations);
 
             // log_info("Deficit Year ".$i.": ".$year_calculations['fa']." LTIM Ava: ".check_val($year_calculations, 'ltim_acc', 0));
@@ -1520,375 +1552,6 @@ class Simulation
 
             $auto_monthly_fees_ltim_amount[$i] = $year_calculations['ltim_p'];
             $auto_monthly_fees_ltim_wth[$i] = $ltim_withdrawn;
-            $datyear_calculationsa =$year_calculations['fa'];
-			log_info("$is_calculating"."------------"."$rule_mf_auto"."-------new fa-----"."$datyear_calculationsa"."-------mansi---------checking---------overprice---out");
-             // $is_deficit_check = false;
-
-
-            // when not lowering fees or applying cushion
-             if ($is_calculating) {
-                log_info("$is_calculating"."------------"."$rule_mf_auto"."-------mansi---------checking---------overprice----in");
-
-                // NEW: Enhanced Monthly Fee Logic - Handle high fees based on Original Fees and current fa values
-                if ($rule_mf_auto && $i == $period - 1) {
-                    // Step 1: Check ALL years to see if we have complete fa data
-                    $all_fa_available = true;
-                    $has_negative_fa = false;
-                    $total_fa_across_years = 0;
-                    $fa_values_count = 0;
-                    
-                    // Check every year for fa availability and negative values
-                    for ($check_year = 0; $check_year < $period; $check_year++) {
-                        if (isset($calculated[$check_year]['fa'])) {
-                            $fa_value = $calculated[$check_year]['fa'];
-                            $total_fa_across_years += $fa_value;
-                            $fa_values_count++;
-                            
-                            // Check if this year has negative fa value
-                            if ($fa_value < 0) {
-                                $has_negative_fa = true;
-                            }
-                        } else {
-                            $all_fa_available = false;
-                            break;
-                        }
-                    }
-                    
-                    // Step 2: If ALL fa values are available, proceed with high fee optimization
-                    if ($all_fa_available && $fa_values_count == $period) {
-                        
-                        // Calculate current MF collection vs original collection
-                        $current_total_mf_collection = 0;
-                        $original_total_collection = $monthly_fees * $housing * 12 * $period;
-                        
-                        for ($mf_year = 0; $mf_year < $period; $mf_year++) {
-                            $current_total_mf_collection += $auto_monthly_fees[$mf_year] * $housing * 12;
-                        }
-                        
-                        // NEW LOGIC: Handle high monthly fees when all fa values are non-negative
-                        if (!$has_negative_fa) {
-                            // All fa values are non-negative - check if current fees are unnecessarily high
-                            $average_fa_per_year = $total_fa_across_years / $period;
-                            
-                            // Calculate optimized collection based on Original Fees and current fa values
-                            $base_needed_collection = $original_total_collection;
-                            
-                            // If we have positive fa values, we can potentially reduce fees
-                            if ($average_fa_per_year > 0) {
-                                // Calculate potential reduction based on excess fa values
-                                $excess_fa_annual_value = $total_fa_across_years * ($housing * 12); // Convert to annual collection equivalent
-                                $safe_reduction = $excess_fa_annual_value * 0.7; // Use 70% of excess as safety margin
-                                
-                                // Don't reduce below original collection, and don't reduce more than the excess we're currently collecting
-                                $max_safe_reduction = min(
-                                    $safe_reduction,
-                                    $current_total_mf_collection - $original_total_collection
-                                );
-                                
-                                if ($max_safe_reduction > 0) {
-                                    $optimized_collection = $current_total_mf_collection - $max_safe_reduction;
-                                } else {
-                                    $optimized_collection = $current_total_mf_collection;
-                                }
-                            } else {
-                                // No positive fa, use current collection
-                                $optimized_collection = $current_total_mf_collection;
-                            }
-                            
-                            $fee_excess_ratio = $current_total_mf_collection / max($optimized_collection, $original_total_collection);
-                            
-                            // If current fees are more than 115% of optimized amount based on original fees and fa values
-                            if ($fee_excess_ratio > 1.15 && $optimized_collection < $current_total_mf_collection) {
-                                
-                                // Calculate new monthly fee based on original fees and fa optimization
-                                $optimized_yearly_collection = $optimized_collection / $period;
-                                $optimized_monthly_fee = $optimized_yearly_collection / ($housing * 12);
-                                
-                                // Ensure we don't go below the original monthly fee
-                                if ($optimized_monthly_fee < $monthly_fees) {
-                                    $optimized_monthly_fee = $monthly_fees;
-                                }
-                                
-                                // Apply the optimized fee to all auto-fee years
-                                $optimization_applied = false;
-                                for ($opt_year = 0; $opt_year < $period; $opt_year++) {
-                                    if ($apply_auto_fees[$opt_year] && !$used_manual_monthly_fees[$opt_year]) {
-                                        $old_fee = $auto_monthly_fees[$opt_year];
-                                        $auto_monthly_fees[$opt_year] = $optimized_monthly_fee;
-                                        $optimization_applied = true;
-                                        
-                                        // Recalculate the percentage change
-                                        if ($opt_year == 0) {
-                                            $auto_monthly_fees_inc[$opt_year] = $monthly_fees == 0 ? 0 :
-                                                ($auto_monthly_fees[$opt_year] - $monthly_fees) / $monthly_fees;
-                                        } else {
-                                            $auto_monthly_fees_inc[$opt_year] = $auto_monthly_fees[$opt_year - 1] == 0 ? 0 :
-                                                ($auto_monthly_fees[$opt_year] - $auto_monthly_fees[$opt_year - 1]) / $auto_monthly_fees[$opt_year - 1];
-                                        }
-                                        
-                                        log_info("High Fee Reduction Applied - Year $opt_year: $old_fee -> {$auto_monthly_fees[$opt_year]} (change: {$auto_monthly_fees_inc[$opt_year]})");
-                                    }
-                                }
-                                
-                                if ($optimization_applied) {
-                                    log_info("High Monthly Fee Reduction Applied - Based on Original Fees ($monthly_fees) and Current FA Values - Total FA: $total_fa_across_years, Average FA: $average_fa_per_year, Current Collection: $current_total_mf_collection, Optimized Collection: $optimized_collection, Excess Ratio: $fee_excess_ratio, New Monthly Fee: $optimized_monthly_fee");
-                                    
-                                    // Reset and recalculate with optimized fees
-                                    $propagated_inv_strategy = $existing_inv_strategy;
-                                    $this->initOriginalCalculation(
-                                        $calculated,
-                                        $default_calculated,
-                                        $deficit_years,
-                                        $starting_amount_o,
-                                        $monthly_fees,
-                                        $housing,
-                                        [],
-                                        $existing_inv_strategy,
-                                        $inflation_rate,
-                                        $spendings,
-                                        $period
-                                    );
-                                    
-                                    $starting_amount = $starting_amount_o;
-                                    
-                                    // Restart calculation with reduced fees
-                                    $i = -1;
-                                    continue;
-                                }
-                            } else {
-                                log_info("No High Monthly Fee Reduction Needed - Excess Ratio: $fee_excess_ratio is within acceptable range based on Original Fees and FA values");
-                            }
-                        } else {
-                            // Has negative fa values - existing deficit handling logic will continue to work
-                            log_info("High Monthly Fee Logic Skipped - Negative FA values detected, existing deficit handling will continue to work as before");
-                        }
-                    } else {
-                        log_info("High Monthly Fee Logic Skipped - Not all FA values available ($fa_values_count/$period)");
-                    }
-                }
-
-
-                // IF DEFICIT AUTO MF INCREASE
-                if (
-                    ($is_auto_mf || $rule_mf_auto) && $year_calculations['fa'] < 0  /* && array_has($deficit_years, $i) */
-                    && (!array_has($processed_deficits, $i) || (array_has($processed_deficits, $i) && $current_auto_fee == $i))
-                ) {
-
-                    log_info("Deficit Year"."$rule_mf_auto"."-------mansi---------checking---------test");
-
-                    // log_info("Deficit Year ".$i." ($current_auto_fee): ".$year_calculations['fa']." INC%: " . $auto_monthly_fees_inc[$i]);
-
-                    $deficit_per_unit = ($year_calculations['fa'] - $loan_amount - $assessment) / (12 * $housing);
-
-                    // echo "Deficit Year $i ($current_auto_fee): " . $year_calculations['fa'] . " INC%: " . $auto_monthly_fees_inc[$i] . " Deficit/Unit: $deficit_per_unit\n";
-                    // deal with extra deficit to year using auto-fee
-                    // use auto-fee loop counter to avoid infinite loop
-                    if ($current_auto_fee == $i && $auto_monthly_fees_inc[$i] < $rule_mf_perc && $auto_fee_remaining_loop_count < $auto_fee_remaining_loop_max) {
-
-                        // mansi---------checking------- Fixed: Cover ALL negative years starting from year 0 -----
-                        
-                        // Step 1: Find all negative years and calculate total deficit needed
-                        $total_deficit_all_years = 0;
-                        $deficit_years_list = [];
-                        $current_deficit = abs($deficit_per_unit);
-                        
-                        // Check current year deficit
-                        $total_deficit_all_years += $current_deficit;
-                        $deficit_years_list[$i] = $current_deficit;
-                        
-                        // mansi---------checking------- Calculate total deficit across all negative years
-                        log_info("Year $i deficit per unit: $current_deficit, Total deficit so far: $total_deficit_all_years");
-                        
-                        // Step 2: Calculate deficit per year across all years from 0 to current deficit year
-                        $years_to_cover = $i + 1; // Years 0 through $i
-                        $deficit_per_year = $total_deficit_all_years / $years_to_cover;
-                        
-                        // mansi---------checking------- Distribute deficit across years
-                        log_info("Distributing total deficit $total_deficit_all_years across $years_to_cover years = $deficit_per_year per year");
-                        
-                        // Step 3: Apply fee increase starting from year 0 through current deficit year
-                        for($start_year = 0; $start_year <= $i; $start_year++){
-                            
-                            // Skip if manual fees are already set for this year
-                            if($used_manual_monthly_fees[$start_year] == true) continue;
-                            
-                            // Calculate fee increase for this year
-                            $old_fee = $auto_monthly_fees[$start_year];
-                            
-                            if($start_year == 0){
-                                // First year: calculate increase based on original monthly fee
-                                $auto_monthly_fees[$start_year] += $deficit_per_year;
-                                $auto_monthly_fees_inc[$start_year] = $monthly_fees == 0 ? 0 : ($auto_monthly_fees[$start_year] - $monthly_fees) / $monthly_fees;
-                                
-                                // Check if percentage limit exceeded, if so, carry forward remaining deficit
-                                $max_allowed = $monthly_fees * (1 + $rule_mf_perc);
-                                if($auto_monthly_fees[$start_year] > $max_allowed){
-                                    $excess_deficit = $auto_monthly_fees[$start_year] - $max_allowed;
-                                    $auto_monthly_fees[$start_year] = $max_allowed;
-                                    $auto_monthly_fees_inc[$start_year] = $rule_mf_perc;
-                                    
-                                    // Distribute excess deficit to remaining years
-                                    $remaining_years = $i - $start_year;
-                                    if($remaining_years > 0){
-                                        $additional_per_year = $excess_deficit / $remaining_years;
-                                        // mansi---------checking------- Redistribute excess deficit
-                                        log_info("Year $start_year: Excess deficit $excess_deficit distributed to $remaining_years remaining years = $additional_per_year per year");
-                                        
-                                        // Add this to next years' deficit
-                                        for($future_year = $start_year + 1; $future_year <= $i; $future_year++){
-                                            if($used_manual_monthly_fees[$future_year] != true){
-                                                $deficit_per_year += ($additional_per_year / ($i - $start_year));
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // mansi---------checking------- Log calculation for year 0
-                                log_info("Year $start_year: Old Fee: $old_fee, New Fee: {$auto_monthly_fees[$start_year]}, Increase: {$auto_monthly_fees_inc[$start_year]}, Deficit Added: $deficit_per_year");
-                                
-                            } else {
-                                // Subsequent years: calculate increase based on previous year
-                                $auto_monthly_fees[$start_year] += $deficit_per_year;
-                                $auto_monthly_fees_inc[$start_year] = $auto_monthly_fees[$start_year - 1] == 0 ? 0 : ($auto_monthly_fees[$start_year] - $auto_monthly_fees[$start_year - 1]) / $auto_monthly_fees[$start_year - 1];
-                                
-                                // Check if percentage limit exceeded
-                                $max_allowed = $auto_monthly_fees[$start_year - 1] * (1 + $rule_mf_perc);
-                                if($auto_monthly_fees[$start_year] > $max_allowed){
-                                    $excess_deficit = $auto_monthly_fees[$start_year] - $max_allowed;
-                                    $auto_monthly_fees[$start_year] = $max_allowed;
-                                    $auto_monthly_fees_inc[$start_year] = $rule_mf_perc;
-                                    
-                                    // Distribute excess deficit to remaining years
-                                    $remaining_years = $i - $start_year;
-                                    if($remaining_years > 0){
-                                        $additional_per_remaining_year = $excess_deficit / $remaining_years;
-                                        // mansi---------checking------- Redistribute excess from subsequent years
-                                        log_info("Year $start_year: Excess deficit $excess_deficit distributed to $remaining_years remaining years = $additional_per_remaining_year per year");
-                                        
-                                        // Update deficit for remaining years
-                                        $deficit_per_year += $additional_per_remaining_year;
-                                    }
-                                }
-                                
-                                // mansi---------checking------- Log calculation for subsequent years
-                                log_info("Year $start_year: Old Fee: $old_fee, New Fee: {$auto_monthly_fees[$start_year]}, Increase: {$auto_monthly_fees_inc[$start_year]}, Previous Year Fee: {$auto_monthly_fees[$start_year - 1]}, Deficit Added: $deficit_per_year");
-                            }
-                        }
-                        
-                       // mansi---------checking------- Applied fee increase from year 0 to year $i
-                        // var_dump("1");
-                        $this->updateMonthlyFeeInc(
-                            $i,
-                            $deficit_per_unit,
-                            $auto_monthly_fees,
-                            $auto_monthly_fees_inc,
-                            $rule_mf_perc,
-                            $monthly_fees,
-                            $rule_cushion_fund,
-                            $inflation_rate,
-                            $rule_mf_auto,
-                            $used_manual_monthly_fees, /* $auto_monthly_fees_stop_year */
-                            $cash_reserve_threshold
-                        );
-                      
-
-
-                        array_push($processed_deficits, $i);
-
-                        // log_info("Adjusted MF Deficit -> $i", $auto_monthly_fees);
-
-                        // reset inv_strategies propagation
-                        $propagated_inv_strategy = $existing_inv_strategy;
-
-                        $this->initOriginalCalculation(
-                            $calculated,
-                            $default_calculated,
-                            $deficit_years,
-                            $starting_amount_o,
-                            $monthly_fees,
-                            $housing,
-                            [],
-                            $existing_inv_strategy,
-                            $inflation_rate,
-                            $spendings,
-                            $period
-                        );
-
-                        $starting_amount = $starting_amount_o;
-
-                        // increase auto-fee loop counter
-                        $auto_fee_remaining_loop_count++;
-
-                        // start over
-                        $i = -1;
-                        continue;
-
-                    } else if ($current_auto_fee >= 0 || $auto_fee_remaining_loop_count == $auto_fee_remaining_loop_max) {
-
-                        $current_auto_fee = -1;
-                        $auto_fee_remaining_loop_count = 0;
-
-                    } else {
-
-
-                        // var_dump("2");
-                        $this->updateMonthlyFeeInc(
-                            $i,
-                            $deficit_per_unit,
-                            $auto_monthly_fees,
-                            $auto_monthly_fees_inc,
-                            $rule_mf_perc,
-                            $monthly_fees,
-                            $rule_cushion_fund,
-                            $inflation_rate,
-                            $rule_mf_auto,
-                            $used_manual_monthly_fees /* $auto_monthly_fees_stop_year */
-                        );
-
-
-
-                        array_push($processed_deficits, $i);
-                        // var_dump($processed_deficits);
-                        // log_info("Adjusted MF Deficit -> $i", $auto_monthly_fees);
-
-
-                        // reset inv_strategies propagation
-                        $propagated_inv_strategy = $existing_inv_strategy;
-
-                        $this->initOriginalCalculation(
-                            $calculated,
-                            $default_calculated,
-                            $deficit_years,
-                            $starting_amount_o,
-                            $monthly_fees,
-                            $housing,
-                            [],
-                            $existing_inv_strategy,
-                            $inflation_rate,
-                            $spendings,
-                            $period
-                        );
-
-                        $starting_amount = $starting_amount_o;
-
-                        $current_auto_fee = $i;
-
-                        // init auto-fee loop counter
-                        $auto_fee_remaining_loop_count = 0;
-
-                        // start over
-                        $i = -1;
-                        continue;
-
-                    }
-                } else if ($current_auto_fee == $i) {
-                        log_info("Deficit Year"."$rule_mf_auto"."-------mansi---------checking---------test--------new");
-                    $current_auto_fee = -1;
-                }else{
-						log_info("Deficit Year"."$datyear_calculationsa".""."-------mansi---------checking---------test--------new");
-				}
-
-            }
 
 
 
@@ -1933,10 +1596,6 @@ class Simulation
             // when calculation are over
             if ($i == ($period - 1)) {
 
-                // if all adjustment operation are done, exit calculations
-                if ($is_adjusting && empty($adjustment_operations))
-                    break;
-
                 // set as adjusting when initial calculation are finished
                 if (!$is_calculating) {
                     $is_calculating = false;
@@ -1949,6 +1608,237 @@ class Simulation
                 // var_dump($current_adjustment);
 
                 // log_info($current_adjustment);
+
+                if ($global_fee_auto_enabled  ) {
+                    $auto_deficit_years = $this->getDeficitYears($calculated, $period);
+                    if (!empty($auto_deficit_years)) {
+                        if (!$patch_global_logged) {
+                            $this->appendFeeLog('PATCH_MF_AUTO', 1, 'Switching from per-year fee logic to global fee logic');
+                            $patch_global_logged = true;
+                        }
+
+                        foreach ($auto_deficit_years as $deficit_year) {
+                            
+                            $calendar_year = intval($model['fiscal_year']) + $deficit_year;
+                            $this->appendFeeLog(
+                                'PATCH_MF_AUTO',
+                                $calendar_year,
+                                'Deficit found in year ' . $calendar_year . ': ' . $this->formatLogNumber($calculated[$deficit_year]['fa'])
+                            );
+                        }
+
+                        $current_global_fee = $this->getGlobalAutoFee(
+                            $monthly_fees,
+                            $auto_monthly_fees,
+                            $used_manual_monthly_fees,
+                            $custom_range_years,
+                            $custom_gradual_range_years
+                        );
+                        $max_allowed_fee = $monthly_fees * (1 + $rule_mf_perc);
+
+                        if ($current_global_fee >= $max_allowed_fee - 0.00001) {
+                            $this->appendFeeLog(
+                                'PATCH_MF_AUTO',
+                                1,
+                                'Max increase reached at ' . $this->formatLogNumber($current_global_fee) . ', deficits remain'
+                            );
+                        } else {
+                            $required_delta = $this->calculateGlobalFeeIncrease($calculated, $period, $housing);
+                            $target_fee = $current_global_fee + $required_delta;
+                            if ($target_fee > $max_allowed_fee) {
+                                $target_fee = $max_allowed_fee;
+                            }
+
+                            if ($target_fee > $current_global_fee + 0.00001) {
+                                $this->appendFeeLog(
+                                    'PATCH_MF_AUTO',
+                                    1,
+                                    'Global fee calculation: current ' . $this->formatLogNumber($current_global_fee) .
+                                        ', increase ' . $this->formatLogNumber($required_delta) .
+                                        ', target ' . $this->formatLogNumber($target_fee) .
+                                        ', max ' . $this->formatLogNumber($max_allowed_fee)
+                                );
+                                $this->appendFeeLog(
+                                    'PATCH_MF_AUTO',
+                                    1,
+                                    'Applying monthly fee ' . $this->formatLogNumber($target_fee) .
+                                        ' from year 1 to year ' . $period
+                                );
+
+                                $this->applyGlobalMonthlyFee(
+                                    $target_fee,
+                                    $monthly_fees,
+                                    $auto_monthly_fees,
+                                    $auto_monthly_fees_inc,
+                                    $used_manual_monthly_fees,
+                                    $custom_range_years,
+                                    $custom_range_fees,
+                                    $custom_gradual_range_years,
+                                    $custom_gradual_range_inc
+                                );
+
+                                $propagated_inv_strategy = $existing_inv_strategy;
+                                $this->initOriginalCalculation(
+                                    $calculated,
+                                    $default_calculated,
+                                    $deficit_years,
+                                    $starting_amount_o,
+                                    $monthly_fees,
+                                    $housing,
+                                    [],
+                                    $existing_inv_strategy,
+                                    $inflation_rate,
+                                    $spendings,
+                                    $period
+                                );
+
+                                $starting_amount = $starting_amount_o;
+                                $i = -1;
+                                continue;
+                            }
+                        }
+                    }
+                }
+                
+if ($disable_auto_fee_reduction && !$blue_opt_ran) {
+
+    $blue_opt_ran = true;
+    log_info("Fee reduction started (backward)");
+
+    for ($y = $period - 1; $y >= 0; $y--) {
+
+        $original_fee = $auto_monthly_fees[$y];
+        $attempt_fee  = $original_fee * 0.90;
+
+        log_info("Trying reduction for year {$y}: {$original_fee} → {$attempt_fee}");
+
+        // snapshots for rollback
+        $calculated_snapshot = $calculated;
+        $default_snapshot    = $default_calculated;
+        $auto_fee_snapshot   = $auto_monthly_fees;
+        $manual_fee_snapshot = $manual_monthly_fees;
+        $used_manual_snapshot = $used_manual_monthly_fees;
+
+        // apply reduction to ONE year only
+        $auto_monthly_fees[$y]        = $attempt_fee;
+        $manual_monthly_fees[$y]      = $attempt_fee;
+        $used_manual_monthly_fees[$y] = true;
+        $auto_monthly_fees_inc[$y]    = 0;
+
+        //1 Reset unmanaged base
+        $this->initOriginalCalculation(
+            $calculated,
+            $default_calculated,
+            $deficit_years,
+            $starting_amount_o,
+            $monthly_fees,
+            $housing,
+            [],
+            $existing_inv_strategy,
+            $inflation_rate,
+            $spendings,
+            $period
+        );
+
+        // 2 Re-run MANAGED calculation (this CREATES FA)
+        $starting_amount_tmp = $starting_amount_o;
+
+        for ($k = 0; $k < $period; $k++) {
+
+            $year_calculations = $calculated[$k];
+            log_info("Starting Amount Before Calculation: {$starting_amount_tmp} for year {$k}");
+
+            $this->calculateYearData(
+                $starting_amount_tmp,
+                $auto_monthly_fees[$k],
+                $housing,
+                $invest_strategies[$k] ?? [],
+                $existing_inv_strategy,
+                $inflation_rate,
+                0,   
+                0,  
+                0,      
+                $spendings[$k],
+                [],
+                0,    
+                0,
+                0,
+                0,
+                [],
+                true,
+                $year_calculations,
+                $k,
+                "",
+                $simulation_rules
+            );
+
+            //GUARANTEE FA EXISTS
+            if (!isset($year_calculations['fa']) || !is_numeric($year_calculations['fa'])) {
+                $year_calculations['fa'] = $starting_amount_tmp;
+            }
+
+            $calculated[$k] = $year_calculations;
+
+            // advance using REAL FA
+            $starting_amount_tmp = $year_calculations['fa'];
+            log_info(   
+                "Starting amount for year {$k}: {$starting_amount_tmp}"
+            );
+        }
+
+        // 🔎 LOG RESULT AFTER RECALC
+        for ($ly = 0; $ly < $period; $ly++) {
+            log_info(
+                "YEAR {$ly} | MF: {$auto_monthly_fees[$ly]} | FA: " .
+                ($calculated[$ly]['fa'] ?? 'MISSING')
+            );
+        }
+
+        // 3 Validate all FUTURE years
+        $valid = true;
+        for ($fy = $y; $fy < $period; $fy++) {
+            if (
+                !isset($calculated[$fy]['fa']) ||
+                !is_numeric($calculated[$fy]['fa']) ||
+                $calculated[$fy]['fa'] < 0
+            ) {
+                log_info(
+                    "Deficit detected in year {$fy}: " .
+                    ($calculated[$fy]['fa'] ?? 'MISSING')
+                );
+                $valid = false;
+                break;
+            }
+        }
+
+        // 4 Rollback or accept
+        if (!$valid) {
+            $auto_monthly_fees     = $auto_fee_snapshot;
+            $manual_monthly_fees   = $manual_fee_snapshot;
+            $used_manual_monthly_fees = $used_manual_snapshot;
+            $calculated            = $calculated_snapshot;
+            $default_calculated    = $default_snapshot;
+
+            log_info("Reverted & locked year {$y}");
+        } else {
+            log_info("Reduction accepted for year {$y}");
+        }
+    }
+
+    // HARD disable auto/global logic for remainder of run
+    $mf_auto_enabled = false;
+    $global_fee_auto_enabled = false;
+
+    // ------------------------------------------
+    // FIX: Reset starting amount to original 
+    // before restarting the main loop
+    // ------------------------------------------
+    $starting_amount = $starting_amount_o; // <--- ADD THIS LINE
+
+    // restart main loop cleanly
+    $i = -1;
+    continue;
+}
 
                 // apply cushion
                 if ($current_adjustment == 'cushion') {
@@ -2090,6 +1980,10 @@ class Simulation
                     //     $starting_amount = $starting_amount_o;
                     //     $i = -1;
                     // }
+                }
+
+                if ($is_adjusting && empty($adjustment_operations) && !$blue_opt_recalc_pending && !$blue_opt_enabled) {
+                    break;
                 }
             }
         }
@@ -3595,6 +3489,559 @@ class Simulation
         return ['year' => $year, 'start_year' => $start_year, 'total_years' => $total_years, 'inc' => $inc];
     }
 
+    private function appendFeeLog($tag, $year, $message)
+    {
+        $log_path = dirname(__DIR__, 3) . '/app/log/app.log';
+        $line = '[' . $tag . '][YEAR ' . $year . '] ' . $message . PHP_EOL;
+        rfa_create_log($line, 3, $log_path);
+    }
+
+    private function appendBlueOptLog($year, $reason, $before_fee, $after_fee, $before_reserve, $after_reserve)
+    {
+        $fee_before = $before_fee === null ? 'n/a' : $this->formatLogNumber($before_fee);
+        $fee_after = $after_fee === null ? 'n/a' : $this->formatLogNumber($after_fee);
+        $reserve_before = $before_reserve === null ? 'n/a' : $this->formatLogNumber($before_reserve);
+        $reserve_after = $after_reserve === null ? 'n/a' : $this->formatLogNumber($after_reserve);
+
+        $message = $reason . ' (fee ' . $fee_before . ' -> ' . $fee_after .
+            ', reserve ' . $reserve_before . ' -> ' . $reserve_after . ')';
+        $this->appendFeeLog('BLUE_OPT', $year, $message);
+    }
+
+    private function formatLogNumber($value)
+    {
+        if (!is_numeric($value)) {
+            return strval($value);
+        }
+
+        $float = floatval($value);
+        if (floor($float) == $float) {
+            return number_format($float, 0, '.', ',');
+        }
+
+        return number_format($float, 2, '.', ',');
+    }
+
+    private function isAutoFeeAdjustableYear($year, $used_manual_monthly_fees, $custom_range_years, $custom_gradual_range_years)
+    {
+        if (!empty($used_manual_monthly_fees[$year])) {
+            return false;
+        }
+
+        if (!empty($custom_range_years[$year])) {
+            return false;
+        }
+
+        if (!empty($custom_gradual_range_years[$year])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function refreshAutoFeeIncrements(
+        $default_monthly_fee,
+        &$auto_monthly_fees,
+        &$auto_monthly_fees_inc,
+        $custom_gradual_range_years = [],
+        $custom_gradual_range_inc = []
+    )
+    {
+        $period = count($auto_monthly_fees);
+        for ($i = 0; $i < $period; $i++) {
+            if (!empty($custom_gradual_range_years[$i]) && isset($custom_gradual_range_inc[$i])) {
+                $auto_monthly_fees_inc[$i] = $custom_gradual_range_inc[$i];
+                continue;
+            }
+            $prev_fee = $i == 0 ? $default_monthly_fee : $auto_monthly_fees[$i - 1];
+            $auto_monthly_fees_inc[$i] = $prev_fee == 0 ? 0 : ($auto_monthly_fees[$i] - $prev_fee) / $prev_fee;
+        }
+    }
+
+    private function logPendingFeeAdjustment($tag, $year, $reserve_after, $fee_after, &$pending_fee_logs)
+    {
+        if (!isset($pending_fee_logs[$tag][$year])) {
+            return;
+        }
+
+        $pending = $pending_fee_logs[$tag][$year];
+        $this->appendFeeLog(
+            $tag,
+            $year,
+            'Reserve after: ' . $this->formatLogNumber($reserve_after) .
+                ' (before: ' . $this->formatLogNumber($pending['before_fa']) . ')'
+        );
+        $this->appendFeeLog(
+            $tag,
+            $year,
+            'Fee after: ' . $this->formatLogNumber($fee_after) .
+                ' (before: ' . $this->formatLogNumber($pending['before_fee']) . ')'
+        );
+
+        unset($pending_fee_logs[$tag][$year]);
+    }
+
+    private function applyFeeIncreaseForward(
+        $year,
+        $reserve_balance,
+        $housing,
+        $max_inc,
+        $default_monthly_fee,
+        &$auto_monthly_fees,
+        &$auto_monthly_fees_inc,
+        $used_manual_monthly_fees,
+        $custom_range_years,
+        $custom_gradual_range_years,
+        $custom_gradual_range_inc,
+        &$pending_fee_logs
+    ) {
+        $result = ['changed' => false, 'maxed' => false, 'remaining_deficit' => 0];
+
+        if ($reserve_balance >= 0) {
+            return $result;
+        }
+
+        if (!$this->isAutoFeeAdjustableYear($year, $used_manual_monthly_fees, $custom_range_years, $custom_gradual_range_years)) {
+            $this->appendFeeLog('MF_AUTO', $year, 'Increase skipped: manual/custom fee');
+            return $result;
+        }
+
+        $current_fee = $auto_monthly_fees[$year];
+        $prev_fee = $year == 0 ? $default_monthly_fee : $auto_monthly_fees[$year - 1];
+        $annual_units = max(1, $housing) * 12;
+        $needed_increase = abs($reserve_balance) / $annual_units;
+        $target_fee = $current_fee + $needed_increase;
+
+        if ($max_inc < 0) {
+            $max_inc = 0;
+        }
+
+        $max_allowed = $prev_fee * (1 + $max_inc);
+        if ($max_allowed < $current_fee + 0.00001) {
+            $this->appendFeeLog(
+                'MF_AUTO',
+                $year,
+                'Max increase reached, remaining deficit: ' . $this->formatLogNumber(abs($reserve_balance))
+            );
+            return $result;
+        }
+
+        if ($target_fee < $prev_fee) {
+            $target_fee = $prev_fee;
+        }
+
+        if ($target_fee > $max_allowed) {
+            $target_fee = $max_allowed;
+            $result['maxed'] = true;
+        }
+
+        if ($target_fee <= $current_fee + 0.00001) {
+            $this->appendFeeLog(
+                'MF_AUTO',
+                $year,
+                'Max increase reached, remaining deficit: ' . $this->formatLogNumber(abs($reserve_balance))
+            );
+            return $result;
+        }
+
+        $percent_change = $current_fee > 0 ? (($target_fee - $current_fee) / $current_fee) * 100 : 0;
+
+        $this->appendFeeLog(
+            'MF_AUTO',
+            $year,
+            'Fee increased from ' . $this->formatLogNumber($current_fee) .
+                ' -> ' . $this->formatLogNumber($target_fee) .
+                ' (' . $this->formatLogNumber($percent_change) . '%)'
+        );
+
+        $pending_fee_logs['MF_AUTO'][$year] = [
+            'before_fee' => $current_fee,
+            'before_fa' => $reserve_balance
+        ];
+
+        $auto_monthly_fees[$year] = $target_fee;
+        $this->refreshAutoFeeIncrements(
+            $default_monthly_fee,
+            $auto_monthly_fees,
+            $auto_monthly_fees_inc,
+            $custom_gradual_range_years,
+            $custom_gradual_range_inc
+        );
+
+        if ($result['maxed']) {
+            $covered = ($target_fee - $current_fee) * $annual_units;
+            $remaining = abs($reserve_balance) - $covered;
+            if ($remaining > 0) {
+                $result['remaining_deficit'] = $remaining;
+                $this->appendFeeLog(
+                    'MF_AUTO',
+                    $year,
+                    'Max increase reached, remaining deficit: ' . $this->formatLogNumber($remaining)
+                );
+            }
+        }
+
+        $result['changed'] = true;
+        return $result;
+    }
+
+    private function minReserveFromYear($calculated, $start_year)
+    {
+        $min_reserve = null;
+        $period = count($calculated);
+        for ($i = $start_year; $i < $period; $i++) {
+            if (!isset($calculated[$i]['fa'])) {
+                continue;
+            }
+            $fa = $calculated[$i]['fa'];
+            if ($min_reserve === null || $fa < $min_reserve) {
+                $min_reserve = $fa;
+            }
+        }
+
+        return $min_reserve === null ? 0 : $min_reserve;
+    }
+
+    private function hasAnyDeficit($calculated, $period)
+    {
+        for ($i = 0; $i < $period; $i++) {
+            if (isset($calculated[$i]['fa']) && $calculated[$i]['fa'] < 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getDeficitYears($calculated, $period)
+    {
+        $years = [];
+        for ($i = 0; $i < $period; $i++) {
+            if (isset($calculated[$i]['fa']) && $calculated[$i]['fa'] < 0) {
+                $years[] = $i;
+            }
+        }
+
+        return $years;
+    }
+
+    private function getFirstDeficitYear($calculated, $period)
+    {
+        for ($i = 0; $i < $period; $i++) {
+            if (isset($calculated[$i]['fa']) && $calculated[$i]['fa'] < 0) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    private function getAnnualExpenseForYear($calculated, $year)
+    {
+        $expense = 0;
+        if (isset($calculated[$year]['tx'])) {
+            $expense = abs($calculated[$year]['tx']);
+        } elseif (isset($calculated[$year]['sp'])) {
+            $expense = abs($calculated[$year]['sp']);
+        }
+
+        return $expense;
+    }
+
+    private function getReserveFloorForYear($calculated, $year, $reserve_ratio)
+    {
+        if ($reserve_ratio <= 0) {
+            return 0;
+        }
+
+        $expense = 0;
+        if (isset($calculated[$year]['tx'])) {
+            $expense = abs($calculated[$year]['tx']);
+        } elseif (isset($calculated[$year]['sp'])) {
+            $expense = abs($calculated[$year]['sp']);
+        }
+
+        if ($expense <= 0) {
+            return 0;
+        }
+
+        return $expense * $reserve_ratio;
+    }
+
+    private function getExpenseBasedMinFee($calculated, $year, $housing, $reserve_ratio)
+    {
+        $annual_units = max(1, $housing) * 12;
+        if ($annual_units <= 0) {
+            return 0;
+        }
+
+        $year_data = isset($calculated[$year]) ? $calculated[$year] : [];
+        $spending = abs(check_val($year_data, 'sp', 0));
+        $loss_purchase = abs(check_val($year_data, 'lp', 0));
+        $investment_income = abs(check_val($year_data, 'inv_ne', 0));
+        $ltim_income = abs(check_val($year_data, 'ltim_ne', 0));
+        $assessments = abs(check_val($year_data, 'assessment', check_val($year_data, 'assess', 0)));
+        $loans = abs(check_val($year_data, 'loan_amount', check_val($year_data, 'loan_t', 0)));
+        $other_income = abs(check_val($year_data, 'other_income', 0));
+
+        $net_expense = $spending + $loss_purchase - $investment_income - $ltim_income - $assessments - $loans - $other_income;
+        if ($net_expense < 0) {
+            $net_expense = 0;
+        }
+
+        $buffer_ratio = $reserve_ratio > 0 ? $reserve_ratio : 0;
+        $target_amount = $net_expense * (1 + $buffer_ratio);
+
+        return $target_amount / $annual_units;
+    }
+
+    private function getFirstReserveBreachYear($calculated, $period, $reserve_ratio)
+    {
+        if ($reserve_ratio <= 0) {
+            return null;
+        }
+
+        for ($i = 0; $i < $period; $i++) {
+            if (!isset($calculated[$i]['fa'])) {
+                continue;
+            }
+
+            $reserve_floor = $this->getReserveFloorForYear($calculated, $i, $reserve_ratio);
+            if ($reserve_floor > 0 && $calculated[$i]['fa'] < $reserve_floor) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    private function getMinReserveInfoFromYear($calculated, $start_year)
+    {
+        $min_reserve = null;
+        $min_year = null;
+        $period = count($calculated);
+
+        for ($i = $start_year; $i < $period; $i++) {
+            if (!isset($calculated[$i]['fa'])) {
+                continue;
+            }
+            $fa = $calculated[$i]['fa'];
+            if ($min_reserve === null || $fa < $min_reserve) {
+                $min_reserve = $fa;
+                $min_year = $i;
+            }
+        }
+
+        return [
+            'reserve' => $min_reserve === null ? 0 : $min_reserve,
+            'year' => $min_year
+        ];
+    }
+
+    private function getGlobalAutoFee(
+        $default_monthly_fee,
+        $auto_monthly_fees,
+        $used_manual_monthly_fees,
+        $custom_range_years,
+        $custom_gradual_range_years
+    ) {
+        $period = count($auto_monthly_fees);
+        for ($i = 0; $i < $period; $i++) {
+            if ($this->isAutoFeeAdjustableYear($i, $used_manual_monthly_fees, $custom_range_years, $custom_gradual_range_years)) {
+                return $auto_monthly_fees[$i];
+            }
+        }
+
+        return $default_monthly_fee;
+    }
+
+    private function calculateGlobalFeeIncrease($calculated, $period, $housing)
+    {
+        $annual_units = max(1, $housing) * 12;
+        $required_delta = 0;
+
+        for ($i = 0; $i < $period; $i++) {
+            if (!isset($calculated[$i]['fa']) || $calculated[$i]['fa'] >= 0) {
+                continue;
+            }
+
+            $years_covered = $i + 1;
+            $delta = abs($calculated[$i]['fa']) / ($annual_units * $years_covered);
+            if ($delta > $required_delta) {
+                $required_delta = $delta;
+            }
+        }
+
+        return $required_delta;
+    }
+
+    private function applyGlobalMonthlyFee(
+        $fee,
+        $default_monthly_fee,
+        &$auto_monthly_fees,
+        &$auto_monthly_fees_inc,
+        $used_manual_monthly_fees,
+        $custom_range_years,
+        $custom_range_fees,
+        $custom_gradual_range_years,
+        $custom_gradual_range_inc
+    ) {
+        $period = count($auto_monthly_fees);
+        for ($i = 0; $i < $period; $i++) {
+            if (!$this->isAutoFeeAdjustableYear($i, $used_manual_monthly_fees, $custom_range_years, $custom_gradual_range_years)) {
+                if (!empty($custom_range_years[$i]) && isset($custom_range_fees[$i])) {
+                    $auto_monthly_fees[$i] = $custom_range_fees[$i];
+                }
+                continue;
+            }
+
+            $auto_monthly_fees[$i] = $fee;
+        }
+
+        $this->refreshAutoFeeIncrements(
+            $default_monthly_fee,
+            $auto_monthly_fees,
+            $auto_monthly_fees_inc,
+            $custom_gradual_range_years,
+            $custom_gradual_range_inc
+        );
+    }
+
+    private function calculateGlobalReductionForYear(
+        $year,
+        $calculated,
+        $housing,
+        $current_fee,
+        $default_monthly_fee,
+        $max_inc
+    ) {
+        $annual_units = max(1, $housing) * 12;
+        $min_info = $this->getMinReserveInfoFromYear($calculated, $year);
+
+        if ($min_info['reserve'] <= 0 || $min_info['year'] === null) {
+            return null;
+        }
+
+        $max_reduction_fee = floor($min_info['reserve'] / $annual_units);
+        if ($max_reduction_fee <= 0) {
+            return null;
+        }
+
+        $allowed_reduction = min($max_reduction_fee, $current_fee - $default_monthly_fee);
+        if ($allowed_reduction <= 0) {
+            return null;
+        }
+
+        $step_limit = $max_inc > 0 ? $current_fee * $max_inc : $allowed_reduction;
+        $reduction = min($allowed_reduction, $step_limit);
+        $new_fee = $current_fee - $reduction;
+
+        if ($new_fee < $default_monthly_fee) {
+            $new_fee = $default_monthly_fee;
+        }
+
+        if ($new_fee >= $current_fee - 0.00001) {
+            return null;
+        }
+
+        return $new_fee;
+    }
+
+    private function applyFeeReductionReversePass(
+        $period,
+        $housing,
+        $default_monthly_fee,
+        $max_inc,
+        &$auto_monthly_fees,
+        &$auto_monthly_fees_inc,
+        $used_manual_monthly_fees,
+        $custom_range_years,
+        $custom_gradual_range_years,
+        $custom_gradual_range_inc,
+        $calculated,
+        &$pending_fee_logs
+    ) {
+        $changed_years = [];
+        $annual_units = max(1, $housing) * 12;
+
+        for ($year = $period - 1; $year >= 0; $year--) {
+            if (!$this->isAutoFeeAdjustableYear($year, $used_manual_monthly_fees, $custom_range_years, $custom_gradual_range_years)) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: manual/custom fee');
+                continue;
+            }
+
+            if (!isset($calculated[$year]['fa'])) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: missing reserve data');
+                continue;
+            }
+
+            $min_future_reserve = $this->minReserveFromYear($calculated, $year);
+            if ($min_future_reserve <= 0) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: no surplus available');
+                continue;
+            }
+
+            $max_reduction_fee = floor($min_future_reserve / $annual_units);
+            if ($max_reduction_fee <= 0) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: insufficient surplus');
+                continue;
+            }
+
+            $current_fee = $auto_monthly_fees[$year];
+            $min_fee = $default_monthly_fee;
+            $allowed_reduction = min($max_reduction_fee, $current_fee - $min_fee);
+            if ($allowed_reduction <= 0) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: fee at minimum');
+                continue;
+            }
+
+            $step_limit = $max_inc > 0 ? $current_fee * $max_inc : $allowed_reduction;
+            $reduction = min($allowed_reduction, $step_limit);
+            $new_fee = $current_fee - $reduction;
+
+            if ($new_fee >= $current_fee - 0.00001) {
+                $this->appendFeeLog('BLUE_OPT', $year, 'Reduction skipped: no measurable change');
+                continue;
+            }
+
+            $percent_change = $current_fee > 0 ? (($current_fee - $new_fee) / $current_fee) * 100 : 0;
+
+            $this->appendFeeLog(
+                'BLUE_OPT',
+                $year,
+                'Surplus detected: ' . $this->formatLogNumber($calculated[$year]['fa']) .
+                    ' Reserve before: ' . $this->formatLogNumber($calculated[$year]['fa'])
+            );
+            $this->appendFeeLog(
+                'BLUE_OPT',
+                $year,
+                'Fee reduced from ' . $this->formatLogNumber($current_fee) .
+                    ' -> ' . $this->formatLogNumber($new_fee) .
+                    ' (' . $this->formatLogNumber($percent_change) . '%)'
+            );
+
+            $pending_fee_logs['BLUE_OPT'][$year] = [
+                'before_fee' => $current_fee,
+                'before_fa' => $calculated[$year]['fa']
+            ];
+
+            $auto_monthly_fees[$year] = $new_fee;
+            $changed_years[] = $year;
+        }
+
+        if (!empty($changed_years)) {
+            $this->refreshAutoFeeIncrements(
+                $default_monthly_fee,
+                $auto_monthly_fees,
+                $auto_monthly_fees_inc,
+                $custom_gradual_range_years,
+                $custom_gradual_range_inc
+            );
+        }
+
+        return $changed_years;
+    }
+
     private function updateMonthlyFeeInc(
         $year,
         $deficit,
@@ -3616,6 +4063,10 @@ class Simulation
     ) {
         // print_r($disable_auto_fee_reduction);
         // exit;
+
+        if ($disable_auto_fee_reduction == 1) {
+            return;
+        }
 
         $is_optimize_all = $rule_mf_auto;
         $start_year = $is_optimize_all ? 0 : $year;
@@ -3974,63 +4425,8 @@ class Simulation
                 $auto_monthly_fees_inc[$y] = $inced_by;
             }
         } else {
-            // $disable_auto_reduction = isset($simulation_rules['disable_auto_fee_reduction']) &&
-            //     $simulation_rules['disable_auto_fee_reduction'] == 1;
-            // Handle years after deficit is clearedion);
-            // if (isset($simulation_rules['disable_auto_fee_reduction']) && $simulation_rules['disable_auto_fee_reduction'] == 1) {
-            
-            for ($y = $year + 1; $y < count($auto_monthly_fees); $y++) {
-
-                if (!empty($custom_range_years[$y]) && $custom_range_years[$y] === true) {
-                    $auto_monthly_fees[$y] = $custom_range_fees[$y];
-                    continue;
-                }
-
-                if (!empty($custom_gradual_range_years[$y]) && $custom_gradual_range_years[$y] === true) {
-                    $auto_monthly_fees_inc[$y] = $custom_gradual_range_inc[$y];
-                    continue;
-                }
-
-                if (!empty($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
-                    continue;
-                }
-
-                $prev_mf = $auto_monthly_fees[$y - 1];
-                $new_mf = $prev_mf * (1 - $max_inc); // Decrease by %
-
-                if ($new_mf < $default_monthly_fee) {
-                    $new_mf = $default_monthly_fee; // Ensure it doesn't go below the default fee
-                }
-
-                // if ($new_mf < 0) {
-                //     $new_mf = 0; // Ensure it doesn't go below the default fee
-                // }
-
-                $auto_monthly_fees[$y] = $new_mf;
-                $auto_monthly_fees_inc[$y] = -$max_inc; // Negative increment for decrease
-            }
-            // } else {
-            //     // When auto reduction is ENABLED, use the OLD LOGIC approach
-            //     // Based on your old logic, when deficit <= 0, there's no special handling
-            //     // Just continue with the current fees without any auto-reduction
-
-            //     for ($y = $year + 1; $y < count($auto_monthly_fees); $y++) {
-            //         if (!empty($custom_range_years[$y]) && $custom_range_years[$y] === true) {
-            //             $auto_monthly_fees[$y] = $custom_range_fees[$y];
-            //             continue;
-            //         }
-            //         if (!empty($custom_gradual_range_years[$y]) && $custom_gradual_range_years[$y] === true) {
-            //             $auto_monthly_fees_inc[$y] = $custom_gradual_range_inc[$y];
-            //             continue;
-            //         }
-            //         if (!empty($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
-            //             continue;
-            //         }
-            //         // Keep the fee at the same level (no reduction) - like in old logic
-            //         $auto_monthly_fees[$y] = $auto_monthly_fees[$y - 1];
-            //         $auto_monthly_fees_inc[$y] = 0; // No change
-            //     }
-            // }
+            // Fee reductions are handled by the reverse-pass blue-line logic.
+            return;
         }
 
         if (empty($custom_range_years[$year]) && empty($custom_gradual_range_years[$year])) {

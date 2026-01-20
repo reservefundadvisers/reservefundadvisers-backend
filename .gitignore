@@ -1,3 +1,5 @@
 /rfa
 /vendor/
 .env
+/uploads/
+/git-ignore/
