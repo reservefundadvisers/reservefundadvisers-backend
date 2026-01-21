@@ -129,6 +129,7 @@ $clientPositionRolesTable = 'client_position_roles';
 $modelsTable = 'models';
 $modelItemsTable = 'model_items';
 $modelItemCategoriesTable = 'model_item_categories';
+$userModelsTable = 'user_models';
 $simActualTable = 'simulation_actual';
 $simSplitsTable = 'simulation_splits';
 $simDeficitTable = 'simulation_deficit';

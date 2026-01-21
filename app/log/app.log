@@ -1,25 +1,96 @@
-[18-Jan-2026 10:50:10 UTC] send_otp: lookup start user_id=617
-[18-Jan-2026 10:50:10 UTC] PHP Fatal error:  Uncaught Simplon\Mysql\MysqlException: {"query":"SELECT * FROM users WHERE  row = :row  ","params":{"row":617},"errorInfo":{"message":"SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '= 617' at line 1","file":"\/var\/www\/html\/reservefundadvisers-backend\/vendor\/simplon\/mysql\/src\/Mysql.php","line":625}} in /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php:645
+[21-Jan-2026 15:30:29 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:29 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
 Stack trace:
-#0 /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php(207): Simplon\Mysql\Mysql->prepareSelect()
-#1 /var/www/html/reservefundadvisers-backend/app/global_func.php(303): Simplon\Mysql\Mysql->fetchRow()
-#2 /var/www/html/reservefundadvisers-backend/app/auth.class.php(1146): get_element()
-#3 /var/www/html/reservefundadvisers-backend/app/auth.php(291): Auth->send_otp()
-#4 {main}
-  thrown in /var/www/html/reservefundadvisers-backend/vendor/simplon/mysql/src/Mysql.php on line 645
-[18-Jan-2026 11:00:38 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /var/www/html/reservefundadvisers-backend/app/global_func.php:360
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:30 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:30 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
 Stack trace:
-#0 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(47): get_elements()
-#1 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(20): ClientPositions->list()
-#2 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientUsers.class.php(23): ClientPositions->process()
-#3 /var/www/html/reservefundadvisers-backend/modules/clients/app/clientUsers.php(88): ClientUsers->process()
-#4 {main}
-  thrown in /var/www/html/reservefundadvisers-backend/app/global_func.php on line 360
-[18-Jan-2026 11:00:51 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /var/www/html/reservefundadvisers-backend/app/global_func.php:360
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:47 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
 Stack trace:
-#0 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(47): get_elements()
-#1 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientPositions.class.php(20): ClientPositions->list()
-#2 /var/www/html/reservefundadvisers-backend/modules/clients/app/ClientUsers.class.php(23): ClientPositions->process()
-#3 /var/www/html/reservefundadvisers-backend/modules/clients/app/clientUsers.php(88): ClientUsers->process()
-#4 {main}
-  thrown in /var/www/html/reservefundadvisers-backend/app/global_func.php on line 360
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:47 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRow() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:303
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(229): get_element('users', Array, '*')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(26): Users->getProfile(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/users.php(54): Users->process('profile', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 303
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:383
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/Clients.class.php(97): get_elements_join('clients', Array, 'LEFT JOIN users...', 'clients.*, IFNU...', 'GROUP BY client...')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/Clients.class.php(37): Clients->list(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/clients.php(59): Clients->process('get_client', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 383
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:360
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(359): get_elements('config')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/Simulation.class.php(61): Simulation->init_config()
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/simulation/app/simulation.php(51): Simulation->__construct()
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 360
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRow() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:303
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(229): get_element('users', Array, '*')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(26): Users->getProfile(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/users.php(54): Users->process('profile', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 303
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRowMany() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:383
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/Clients.class.php(97): get_elements_join('clients', Array, 'LEFT JOIN users...', 'clients.*, IFNU...', 'GROUP BY client...')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/Clients.class.php(37): Clients->list(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/clients/app/clients.php(59): Clients->process('get_client', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 383
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRow() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:303
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(229): get_element('users', Array, '*')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(26): Users->getProfile(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/users.php(54): Users->process('profile', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 303
+[21-Jan-2026 15:30:50 UTC] PHP Deprecated:  Automatic conversion of false to array is deprecated in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/auth.class.php on line 74
+[21-Jan-2026 15:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetchRow() on null in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php:303
+Stack trace:
+#0 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(229): get_element('users', Array, '*')
+#1 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/Users.class.php(26): Users->getProfile(Array)
+#2 /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/modules/users/app/users.php(54): Users->process('profile', Array)
+#3 {main}
+  thrown in /Applications/XAMPP/xamppfiles/htdocs/reservefundadvisers-backend/app/global_func.php on line 303
