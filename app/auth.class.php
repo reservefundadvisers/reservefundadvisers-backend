@@ -584,7 +584,7 @@ class Auth
 		$token = $token['token'] ?? '';
 
 		if (empty($token)) {
-			return ['success' => false, 'message' => 'Token is empty.'];
+			send_json_response(false, 401, 'Unauthorized Access');
 		}
 
 		// Get full user details by selecting all fields
@@ -615,13 +615,9 @@ class Auth
 				}
 			}
 
-			return [
-				'success' => true,
-				'message' => 'User has been verified.',
-				'data' => $user_info[0]  // Returns full updated user record
-			];
+			send_json_response(true, 200, 'User has been verified.', $user_info[0]);
 		} else {
-			return ['success' => false, 'message' => 'Please contact admin. This token is invalid or expired.'];
+			send_json_response(false, 401, 'Please contact admin. This token is invalid or expired.');
 		}
 	}
 

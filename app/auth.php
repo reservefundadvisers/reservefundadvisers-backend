@@ -250,7 +250,20 @@ if(isset($_POST['cmd'])){
         $name  = ($user['fn'] ?? '') . ' ' . ($user['ln'] ?? '');
         $email =$user['email'] ?? '';
         $url =  $_ENV['FRONTEND_URL'] ?? ''; 
-        $inviteLink = $url . "invite-member?token=" . $user['invite_token'];
+        $user_token = $user['invite_token'] ?? '';
+
+        if(empty($user_token)){
+            $user_token = $auth->generate_token(64);
+            $update_data = [
+                'invite_token' => $user_token
+            ];
+            $update_condition = [
+                'id' => $user['id']
+            ];
+            $update_user = update_element('users', $update_data, $update_condition);
+        }
+        
+        $inviteLink = $url . "invite-member?token=" . $user_token;
         $sendername = $auth->user_fnln() ?? '';
 
         $template = emailTemplateInviteMember($name, $sendername, $inviteLink, "Reserve Fund System");

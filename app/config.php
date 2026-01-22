@@ -173,6 +173,7 @@ $db_table_cols = [
                     $clientPositionsTable => ['row_id', 'id', 'value', 'client_id', 'position_key'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],
                     $modelsTable => ['row_id', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'investment_rate_of_return', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirs_fund_onhand' ,'active', 'updated_at', 'created_at'],
+                    $userModelsTable => ['row_id', 'id', 'user_id', 'model_id', 'client_id','created_at', 'updated_at'],
                     $modelItemsTable => ['row_id', 'id', 'parent_id', 'model_id', 'name', 'redundancy', 'remaining_life', 'cost', 'estimated_cost', 'actual_cost', 'item_category_id ', 'is_sirs','item_type'],
                     $modelItemCategoriesTable => ['row_id', 'id', 'name'],
                     $simActualTable => ['row_id', 'id', 'item_id', 'model_id', 'redundancy_at', 'actual_cost'],

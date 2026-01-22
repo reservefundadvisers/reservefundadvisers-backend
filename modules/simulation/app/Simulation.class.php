@@ -2142,7 +2142,7 @@ if ($disable_auto_fee_reduction && !$blue_opt_ran) {
 
     public function list_model($data)
     {
-        global $auth, $modelsTable;
+        global $auth, $modelsTable, $userModelsTable;
 
 
         $pagination = format_pagination($data);
@@ -2150,6 +2150,28 @@ if ($disable_auto_fee_reduction && !$blue_opt_ran) {
 
         $conds = array();
         $conds['client_id'] = $auth->checkRole('client_admin') || $auth->checkRole('client_user') ? $auth->clientId() : check_val($data, 'client_id', $auth->clientId());
+
+        // User permissions - fetch allowed model IDs based on user_id AND client_id
+        if($auth->checkRole('client_user')){
+            $allowed_models = get_elements($userModelsTable, [
+                'user_id' => $auth->uid(),
+                'client_id' => $auth->clientId()
+            ], "$userModelsTable.model_id");
+
+             // Extract only the model IDs into an array
+            $allowed_model_ids = array_map(function($item) {
+                return $item['model_id'];
+            }, $allowed_models);
+
+            // If no models are allowed, return an empty result
+            if (empty($allowed_model_ids)) {
+                return send_json_response(true, 200, $this->success['getted'], ['data' => []]);
+            }
+
+            // Add condition to filter models by the allowed model IDs
+            // Use comma prefix to trigger IN clause in format_where_cond
+            $conds[',' . $modelsTable . '.id'] = $allowed_model_ids;
+        }
 
         if ($is_pagination) {
             $count = get_element($modelsTable, $conds, "COUNT($modelsTable.id) AS count");
