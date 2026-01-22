@@ -42,7 +42,7 @@ class ClientUsers
 
 
     public function list($data){
-        global $auth, $usersTable, $clientPositionsTable, $clientPositionRolesTable, $roles_name, $roles_badge;
+        global $auth, $usersTable, $clientPositionsTable, $clientPositionRolesTable, $userModelsTable;
 
 
         if(!is_valid($data, 'client_id'))return ['error' => $this->errors['client_id']];
@@ -79,6 +79,20 @@ class ClientUsers
             if($user['id'] == $auth->uid()){
                 unset($results[$key]);
                 break;;
+            }
+        }
+
+        # Check if model_id is provided and add is_invited_for_model flag
+        $model_id = check_val($data, 'model_id', null);
+        if(!empty($model_id)){
+            $client_id = $data['client_id'];
+            foreach($results as $key => $user){
+                $invitation = get_element($userModelsTable, [
+                    'user_id' => $user['id'],
+                    'model_id' => $model_id,
+                    'client_id' => $client_id
+                ]);
+                $results[$key]['is_invited_for_model'] = !empty($invitation);
             }
         }
 
