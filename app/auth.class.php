@@ -598,7 +598,7 @@ class Auth
 
 				$update_data = [
 					'active' => 1,   
-					'invite_token' => null   
+					// 'invite_token' => null   
 				];
 
 				$update_condition = [
