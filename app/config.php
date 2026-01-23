@@ -53,8 +53,8 @@ $loc = "en"; // Language of Auth Class output : en / fr
 // roles :
 // ------------------------
 
-$roles = ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'client_user', ];
-$client_roles = ['company_admin', 'company_user', 'client_admin', 'client_user'];
+$roles = ['admin', 'manager', 'company_admin', 'company_user', 'property_manager', 'client_admin', 'client_user', ];
+$client_roles = ['company_admin', 'company_user', 'property_manager','client_admin', 'client_user'];
 
 // roles human readable names
 $roles_name['company_admin'] = 'administrator';

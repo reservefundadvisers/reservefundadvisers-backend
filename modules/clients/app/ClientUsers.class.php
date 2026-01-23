@@ -52,7 +52,7 @@ class ClientUsers
         $conds = format_conds($data, "( $usersTable.fn LIKE :search OR $usersTable.ln LIKE :search OR $usersTable.username LIKE :search OR
                                         $clientPositionsTable.value LIKE :search OR $clientPositionRolesTable.value LIKE :search OR $usersTable.email LIKE :search OR $usersTable.phone LIKE :search )");
 
-        $conds[',role'] = ['client_admin', 'client_user', 'company_admin', 'company_user'];
+        $conds[',role'] = ['client_admin', 'client_user', 'property_manager', 'company_admin', 'company_user'];
         $conds['client_id'] = $data['client_id'];
         /* ******* */
 

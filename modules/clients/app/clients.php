@@ -24,15 +24,15 @@
     // commands permissions
     $allowed_cmd =  [
                         'load_company' => ['admin', 'manager'],
-                        'get_company' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'get_company' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'edit_company' => ['admin', 'manager'],
                         'save_company' => ['admin', 'manager'],
-                        'create_company_by_name' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'create_company_by_name' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         
                         'load_client' => ['admin', 'manager', 'company_admin'],
-                        'get_client' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
+                        'get_client' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
                         'edit_client' => ['admin', 'manager', 'company_admin'],
-                        'save_client' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'save_client' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'delete' => ['admin', 'manager', 'company_admin'],
                         'set' => ['admin', 'manager', 'company_admin']
                     ];

@@ -29,7 +29,7 @@
                         'save' => ['admin'],
                         'delete' => ['admin'],
                         'set' => ['admin'],
-                        'profile' => ['admin', 'manager', 'client_admin', 'client_user', 'company_admin', 'company_user']
+                        'profile' => ['admin', 'manager', 'client_admin', 'client_user', 'property_manager','company_admin', 'company_user']
                     ];
 
     $request = check_request();

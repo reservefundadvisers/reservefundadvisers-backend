@@ -35,6 +35,7 @@ class Clients
             case 'create': $response = $this->save_company_by_name($data); break;
             case 'load': $response = view($this->module_name, $this->type.'.php'); break;
             case 'get': $response = $this->list($data); break;
+            case 'getassociationlist': $response = $this->get_association_by_company_id($data); break;
             case 'edit': $response = $this->edit($data); break;
             case 'save': $response = $this->save($data); break;     
             case 'delete': $response = $this->delete($data); break;  
@@ -119,6 +120,21 @@ class Clients
         
     }
 
+    public function get_association_by_company_id($data){
+        global $auth, $clientsTable;
+
+        if(!is_valid($data, 'company_id') && !is_valid($data, 'client_id')){
+            return send_json_response(false, 400, 'company_id or client_id is required !');
+        }
+
+        if(is_valid($data, 'company_id')){
+            $conds['company_id'] = $data['company_id'];
+            $clients_by_company_id = get_elements($clientsTable, $conds, "*", "ORDER BY row_id ASC");
+
+            return send_json_response(true, 200, '', ['companies' => $clients_by_company_id]);
+
+        }
+    }
 
     public function edit($data){
         global $auth, $clientsTable;
@@ -286,7 +302,7 @@ class Clients
     }
 
     public function save_company_by_name($data){
-        global $clientsTable, $upload_dir_company;
+        global $clientsTable, $upload_dir_company, $auth, $usersTable;;
 
         if(!is_valid($data, 'company_name')){
             return send_json_response(false, 400, 'Company Name is required !');
@@ -310,6 +326,12 @@ class Clients
         if($company_id === false){
             return send_json_response(false, 400, $this->errors['internal_error']);
         }
+
+        update_element(
+            $usersTable,
+            ['client_id' => $company_id],
+            ['id' => $auth->uid()]
+        );
 
         return send_json_response(true, 200, $this->success['success'], ['company_id'=>$company_id]);
     }
