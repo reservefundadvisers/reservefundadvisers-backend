@@ -59,7 +59,7 @@
                         'get' => ['admin', 'manager', 'company_admin','client_admin'],
                         'view' => ['admin', 'manager', 'company_admin'],
                         'edit' => ['admin', 'manager', 'company_admin' ,'client_admin'],
-                        'save' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'save' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'delete' => ['admin', 'manager', 'company_admin', 'client_admin'],
                         'set' => ['admin', 'manager', 'company_admin']
                     ];

@@ -214,7 +214,7 @@ class Users
      * @return array User profile session information or error message.
      */
     public function getProfile($data){
-        global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable;
+        global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable, $userAssociationsTable, $userCompaniesTable, $clientsTable;
 
         try {
             // Log API call start
@@ -257,12 +257,60 @@ class Users
         }
 
         // get company profile
-        if(!empty($user_info['client_type']) && $user_info['client_type'] == 'company'){
+        if(!empty($user_info['client_type']) && $user_info['client_type'] == 'company' || $user_info['role'] == 'property_manager'){
             $company_profile = get_element('clients', ['id' => $user_info['client_id']], '*');
             if(!empty($company_profile)){
                 $user_info['company_profile'] = $company_profile;
             }
         }
+
+        // Get user's associations list from user_associations table
+        $user_associations = get_elements($userAssociationsTable, ['user_id' => $user_info['uid']], '*', "ORDER BY created_at DESC");
+        $associations_list = [];
+        if(!empty($user_associations)){
+            foreach($user_associations as $association){
+                // Get the association/client details
+                $association_details = get_element($clientsTable, ['id' => $association['client_id']], 'id, association, company, type, email, media, phone, address, address2, city, zip, state');
+                if(!empty($association_details)){
+                    $associations_list[] = $association_details;
+                }
+            }
+        }
+        $user_info['associations_list'] = $associations_list;
+
+        // Get user's companies list from user_companies table
+        $user_companies = get_elements($userCompaniesTable, ['user_id' => $user_info['uid']], '*', "ORDER BY created_at DESC");
+        
+        $companies_list = [];
+        if(!empty($user_companies)){
+            foreach($user_companies as $company){
+                // Get the company details
+                $company_details = get_element($clientsTable, ['id' => $company['company_id']], 'id, company, company_details, type, tag_line, media, email, phone, address, address2, city, zip, state');
+                if(!empty($company_details)){
+                    $companies_list[] = $company_details;
+                }
+            }
+        }
+        
+        // If company list is empty and user is a property_manager, get parent's companies
+        if(empty($companies_list) && $user_info['role'] == 'property_manager'){
+            $parent_user = get_element($usersTable, ['id' => $user_info['uid']], 'parent_user_id');
+            
+            if(!empty($parent_user['parent_user_id'])){
+                $parent_companies = get_elements($userCompaniesTable, ['user_id' => $parent_user['parent_user_id']], '*', "ORDER BY created_at DESC");
+            
+                if(!empty($parent_companies)){
+                    foreach($parent_companies as $company){
+                        // Get the company details
+                        $company_details = get_element($clientsTable, ['id' => $company['company_id']], 'id, company, company_details, type, tag_line, media, email, phone, address, address2, city, zip, state');
+                        if(!empty($company_details)){
+                            $companies_list[] = $company_details;
+                        }
+                    }
+                }
+            }
+        }
+        $user_info['companies_list'] = $companies_list;
 
         return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
         } catch (Exception $e) {

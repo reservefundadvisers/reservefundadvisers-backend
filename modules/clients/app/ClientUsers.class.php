@@ -204,6 +204,13 @@ class ClientUsers
                    $invite =  save_element($usersTable, ['id'=>$ret_id, 'invite_token'=>$token]);
                 }
             }
+
+            $paren_data = [
+                'id' => $ret_id,
+                'parent_user_id' => $auth->uid()
+            ];
+            save_element($usersTable, $paren_data);
+
         }
 
         return send_json_response(true, 200, $this->success['success'], ['id'=>$ret_id]);

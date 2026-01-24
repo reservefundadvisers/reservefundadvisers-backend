@@ -158,7 +158,7 @@ class Clients
     }
 
     public function save($data){
-        global $auth, $clientsTable, $upload_dir_association;
+        global $auth, $clientsTable, $upload_dir_association, $userAssociationsTable, $userCompaniesTable;
 
         if(!empty($_FILES['profile_picture'])){
             $image_upload = handle_file_upload($_FILES['profile_picture'], $upload_dir_association);
@@ -209,13 +209,35 @@ class Clients
         $client_id = save_element($clientsTable, $data);
 
         if($client_id === false)
-            return send_json_response(false, 500, $this->errors['not_allowed']);    
+            return send_json_response(false, 500, $this->errors['not_allowed']);
 
-        if($isNew){
-            // Update the logged-in user's client_id in the users table
-            global $usersTable;
-            $update_result = update_element($usersTable, ['client_id' => $client_id], ['id' => $auth->uid()]);
-        }
+        // Add record to user_associations table for tracking
+            if($isNew){
+                if($this->type == 'client'){
+
+                    $association_data = [
+                        'id' => generate_id(),
+                        'user_id' => $auth->uid(),
+                        'client_id' => $client_id
+                    ];
+
+                    $created_association = save_element($userAssociationsTable, $association_data);
+                }else if($this->type == 'company'){
+                    // For company type, link user to company
+                    $company_data = [
+                        'id' => generate_id(),
+                        'user_id' => $auth->uid(),
+                        'company_id' => $client_id
+                    ];
+
+                    $created_company = save_element($userCompaniesTable, $company_data);
+                }
+            
+                
+                // Update the logged-in user's client_id in the users table
+                global $usersTable;
+                $update_result = update_element($usersTable, ['client_id' => $client_id], ['id' => $auth->uid()]);
+            }
 
         if($isNew && isset($data['admin_fn']) && isset($data['admin_ln']) && isset($data['admin_email'])){
 
@@ -302,7 +324,7 @@ class Clients
     }
 
     public function save_company_by_name($data){
-        global $clientsTable, $upload_dir_company, $auth, $usersTable;;
+        global $clientsTable, $upload_dir_company, $auth, $usersTable, $userCompaniesTable;;
 
         if(!is_valid($data, 'company_name')){
             return send_json_response(false, 400, 'Company Name is required !');
@@ -326,6 +348,13 @@ class Clients
         if($company_id === false){
             return send_json_response(false, 400, $this->errors['internal_error']);
         }
+
+        // Add record to user_companies table for tracking
+        $company_data = [
+            'user_id' => $auth->uid(),
+            'company_id' => $company_id
+        ];
+        save_element($userCompaniesTable, $company_data);
 
         update_element(
             $usersTable,
