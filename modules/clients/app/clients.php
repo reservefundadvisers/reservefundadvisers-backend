@@ -26,7 +26,7 @@
                         'load_company' => ['admin', 'manager'],
                         'get_company' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'edit_company' => ['admin', 'manager'],
-                        'save_company' => ['admin', 'manager'],
+                        'save_company' => ['admin', 'manager', 'property_manager'],
                         'create_company_by_name' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         
                         'load_client' => ['admin', 'manager', 'company_admin'],
