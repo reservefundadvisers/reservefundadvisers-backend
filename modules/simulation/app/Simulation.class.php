@@ -5544,7 +5544,7 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
     // get versions
     public function get_version($data)
     {
-        global $auth, $modelsTable, $simVersionTable, $usersTable, $userCompaniesTable;
+        global $auth, $modelsTable, $simVersionTable, $usersTable;
 
         $model_id = check_val($data, 'model_id');
         $uid = $auth->uid();
@@ -5553,29 +5553,9 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
             // return ["error" => $this->errors['model_id']];
             return send_json_response(false, 400, $this->errors['model_id']);
 
-        if (!belongs_to_client($modelsTable, $model_id, false, true)){
-            // Allow `property_manager` if they are associated with the model's company
-            if(method_exists($auth, 'role') && $auth->role() === 'property_manager'){
-                $model = get_element($modelsTable, ['id' => $model_id], 'company_id');
-                $model_company_id = isset($model['company_id']) ? $model['company_id'] : null;
-
-                $allowed_for_pm = false;
-                if(!empty($model_company_id)){
-                    // If session clientId equals company id (company session)
-                    if(method_exists($auth, 'clientId') && $auth->clientId() == $model_company_id) $allowed_for_pm = true;
-
-                    // Or if user is linked to that company via user_companies table
-                    if(!$allowed_for_pm && isset($userCompaniesTable) && exists($userCompaniesTable, ['user_id' => $auth->uid(), 'company_id' => $model_company_id])) $allowed_for_pm = true;
-                }
-
-                if(!$allowed_for_pm){
-                    return send_json_response(false, 403, $this->errors['not_allowed']);
-                }
-                // else: allowed, continue
-            }else{
-                return send_json_response(false, 403, $this->errors['not_allowed']);
-            }
-        }
+        if (!belongs_to_client($modelsTable, $model_id, false, true))
+            // return ["error" => $this->errors['not_allowed']];
+            return send_json_response(false, 403, $this->errors['not_allowed']);
 
         $conds = ['model_id' => $model_id, '*user_id' => $uid];
 
