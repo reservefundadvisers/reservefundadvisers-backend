@@ -23,14 +23,14 @@
 
     // commands permissions
     $allowed_cmd =  [
-                        'get' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
-                        'edit' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
-                        'save' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
-                        'delete' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
-                        'set' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
+                        'get' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
+                        'edit' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
+                        'save' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
+                        'delete' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
+                        'set' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
 
-                        'edit_actual' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin'],
-                        'save_actual' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin']
+                        'edit_actual' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager'],
+                        'save_actual' => ['admin', 'manager', 'company_admin', 'company_user', 'client_admin', 'property_manager']
                     ];
 
     $request = check_request();
