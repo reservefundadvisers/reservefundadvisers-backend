@@ -188,7 +188,7 @@ class ClientUsers
             $role = $auth->role();
 
             // send invite email only for these roles
-            if($role == 'client_admin' || $role == 'company_admin' || $role == 'admin' || $role == 'manager'){
+            if(in_array($role, ['client_admin','company_admin','admin','manager','property_manager'])){
 
                 $url = $_ENV['FRONTEND_URL'] ?? '';
                 $token = $auth->generate_token(64);

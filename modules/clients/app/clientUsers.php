@@ -56,11 +56,11 @@
 
     // commands permissions
     $allowed_cmd =  [
-                        'get' => ['admin', 'manager', 'company_admin','client_admin'],
+                        'get' => ['admin', 'manager', 'company_admin','client_admin', 'property_manager'],
                         'view' => ['admin', 'manager', 'company_admin'],
                         'edit' => ['admin', 'manager', 'company_admin' ,'client_admin'],
                         'save' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
-                        'delete' => ['admin', 'manager', 'company_admin', 'client_admin'],
+                        'delete' => ['admin', 'manager', 'company_admin', 'client_admin','property_manager'],
                         'set' => ['admin', 'manager', 'company_admin']
                     ];
 
