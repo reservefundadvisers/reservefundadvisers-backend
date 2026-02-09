@@ -3057,9 +3057,15 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
 
     public function loanMonthlyPayment($amount, $interest, $numOfMonths)
     {
+        // Ensure amount is a numeric value (convert 'null' string or other non-numeric to 0)
+        $amount = is_numeric($amount) ? floatval($amount) : 0;
 
         if ($numOfMonths < 1)
             return $numOfMonths = 12;
+
+        // If amount is 0 or negative, return 0
+        if ($amount <= 0)
+            return 0;
 
         $rate = $interest / 12;
         $rate = round($rate, 7);

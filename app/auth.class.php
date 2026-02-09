@@ -507,12 +507,17 @@ class Auth
 
 		if(empty($user)){ $this->errormsg[] = 'User not found'; return false; }
 
-		// Update password and optionally mobile number
-		// if(!empty($mobile_number) && !empty($country_code)){
+		// Update password and optionally mobile number/country code
+		if(!empty($mobile_number) && !empty($country_code)){
 			$query = $this->mysqli->prepare("UPDATE users SET password=?, phone=?, country_code=? WHERE id=? LIMIT 1");
+			if($query === false){ $this->errormsg[] = 'Database error'; return false; }
 			$query->bind_param("ssss", $hashed_password, $mobile_number, $country_code, $username);
-		// }
-		
+		}else{
+			$query = $this->mysqli->prepare("UPDATE users SET password=? WHERE id=? LIMIT 1");
+			if($query === false){ $this->errormsg[] = 'Database error'; return false; }
+			$query->bind_param("ss", $hashed_password, $username);
+		}
+
 		$query->execute();
 		$query->close();
 
@@ -860,6 +865,7 @@ class Auth
 		$state = check_val($data, 'state', '');
 		$zip = check_val($data, 'zip', '');
 		$user_role = check_val($data, 'role', '');
+		$user_role_label = check_val($data, 'role_label', '');
 
 		if(empty($position_id)){
 			$error = ['key' => 'POSITION','message' => $lang[$loc]['auth']['signup_position_error']];
@@ -900,6 +906,8 @@ class Auth
 			$user_role = 'client_admin';
 		}
 
+		$role_label = $user_role_label ?? '';
+
 		$email_conds = ['email'=>$email]; 
 		$mobile_conds = ['phone'=>$mobile_number, 'country_code'=>$country_code];
 		if(!empty($uid)){
@@ -933,6 +941,7 @@ class Auth
 			'username'=>$email,
 			'password'=>$password,
 			'role'=> $user_role, 
+			'role_label' => $role_label,
 			'position_id'=>$position_id,
 			'country_code'=>$country_code,
 			'mobile_number'=>$mobile_number,
@@ -972,9 +981,9 @@ class Auth
 			return $uid;
 		}else{
 
-			$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, position_id, country_code ,phone, address, address2, city, state, zip, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			$query = $this->mysqli->prepare("INSERT INTO users (id, fn, ln, email, username, password, role, role_label, position_id, country_code ,phone, address, address2, city, state, zip, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			
-			$query->bind_param("ssssssssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user['address'], $user['address2'], $user['city'], $user['state'], $user['zip'], $user_active);
+			$query->bind_param("sssssssssssssssss", $user['id'], $user['first_name'], $user['last_name'], $user['email'], $user['username'], $hashed_password, $user['role'], $user['role_label'], $user['position_id'], $user['country_code'] , $user['mobile_number'], $user['address'], $user['address2'], $user['city'], $user['state'], $user['zip'], $user_active);
 			$query->execute();
 			$affected_id = $this->mysqli->insert_id;
 			$query->close();

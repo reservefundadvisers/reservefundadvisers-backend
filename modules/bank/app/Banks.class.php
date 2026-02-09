@@ -218,7 +218,7 @@ class Banks
             }
         } else {
 
-            $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation'];
+            $checkFor = ['user_id', 'bank_name', 'contact_person'];
 
             if(!empty($_FILES['media'])){
                 $image_upload = handle_file_upload($_FILES['media'], $upload_dir_banks);

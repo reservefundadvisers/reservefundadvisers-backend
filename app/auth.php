@@ -2,6 +2,112 @@
     
 include_once('init.php');
  
+/**
+ * Encode a string using base64url, which is a variant of base64 that is safe for use in URLs.
+ * This function is used internally by the JWT library to encode the JWT header and payload.
+ * @param string $input The string to be encoded.
+ * @return string The base64url encoded string.
+ */     
+function jwt_base64url_encode($input){
+    return rtrim(strtr(base64_encode($input), '+/', '-_'), '=');
+}
+
+/**
+ * Signs a string using the HS256 algorithm.
+ * This function is used internally by the JWT library to sign the JWT payload.
+ * @param string $data The string to be signed.
+ * @param string $secret The secret key to use for signing.
+ * @return string The signed string.
+ */
+function jwt_sign_hs256($data, $secret){
+    return hash_hmac('sha256', $data, $secret, true);
+}
+
+/**
+ * Generates a JSON Web Token (JWT) for a user.
+ * The JWT is signed with the configured JWT_SECRET, or a fallback value
+ * if JWT_SECRET is not configured.
+ * The JWT payload contains the user's information and expiration time.
+ *
+ * @param array $userPayload The user's information to be included in the JWT.
+ * @return array The generated JWT and its expiration time in seconds.
+ */
+function generate_user_jwt($userPayload){
+    global $auth_conf;
+
+    $issuedAt = time();
+    $jwtTtl = intval($_ENV['JWT_TTL'] ?? getenv('JWT_TTL') ?: 86400);
+    if ($jwtTtl <= 0) $jwtTtl = 86400;
+
+    $secret = trim($_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET') ?: '');
+    rfa_create_log(print_r(['secret' => $secret], true));
+    if ($secret === '') {
+        // Fallback for local/dev environments where JWT_SECRET is not configured.
+        $secret = ($auth_conf['salt_1'] ?? '') . ($auth_conf['salt_2'] ?? '');
+    }
+
+    $header = [
+        'alg' => 'HS256',
+        'typ' => 'JWT'
+    ];
+
+    $payload = [
+        'iat' => $issuedAt,
+        'exp' => $issuedAt + $jwtTtl,
+        'user' => $userPayload
+    ];
+
+    $encodedHeader = jwt_base64url_encode(json_encode($header));
+    $encodedPayload = jwt_base64url_encode(json_encode($payload));
+    $signature = jwt_base64url_encode(jwt_sign_hs256("$encodedHeader.$encodedPayload", $secret));
+
+    return [
+        'token' => "$encodedHeader.$encodedPayload.$signature",
+        'expires_in' => $jwtTtl
+    ];
+}
+
+/**
+ * Decodes a base64url encoded string.
+ * This function is used internally by the JWT library to decode the JWT header and payload.
+ * @param string $input The base64url encoded string to be decoded.
+ * @return string The decoded string.
+ */
+function jwt_base64url_decode($input) {
+    $remainder = strlen($input) % 4;
+    if ($remainder) {
+        $input .= str_repeat('=', 4 - $remainder);
+    }
+    return base64_decode(strtr($input, '-_', '+/'));
+}
+
+function decode_and_verify_jwt($jwt, $secret) {
+
+    $parts = explode('.', $jwt);
+    if (count($parts) !== 3) {
+        return false;
+    }
+
+    [$encodedHeader, $encodedPayload, $encodedSignature] = $parts;
+
+    // Recreate signature
+    $expectedSignature = jwt_base64url_encode(
+        jwt_sign_hs256("$encodedHeader.$encodedPayload", $secret)
+    );
+
+    if (!hash_equals($expectedSignature, $encodedSignature)) {
+        return false; // Invalid signature
+    }
+
+    $payload = json_decode(jwt_base64url_decode($encodedPayload), true);
+
+    // Expiration check
+    if (isset($payload['exp']) && time() >= $payload['exp']) {
+        return false; // Token expired
+    }
+
+    return $payload;
+}
 
 // check if user is logged in and redirect to page
 // else send to Login.php
@@ -138,20 +244,32 @@ if(isset($_POST['cmd'])){
         if ($res !== FALSE) {
             // set session for user
             $sessionHash = isset($_COOKIE['auth_session']) ? $_COOKIE['auth_session'] : null;
-            $user_info = $auth->sessioninfo();
+            $session_info = $auth->sessioninfo();
 
-            // die(json_encode([
-            //     'success'   => true,
-            //     'user'      => $_POST['username'],
-            //     'sessionid' => $sessionHash,
-            //     'cookie'    => "auth_session=" . $sessionHash
-            // ]));
+            $user_info = [];
+            $userId = check_val($session_info, 'uid', null);
+
+            if(!empty($userId)){
+                $user_info = get_element($usersTable, ['id' => $userId]);
+                // Remove sensitive information
+                unset($user_info['password']);
+            }
+
+            $jwtData = generate_user_jwt($user_info);
+            $secret = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
+            $token = $jwtData['token'];
+            $data = decode_and_verify_jwt($token, $secret);
+
             send_json_response(true, 200, $lang[$loc]['auth']['login_success'], [
                     'data' => [
                         'user'      => $_POST['username'],
                         'sessionid' => $sessionHash,
                         'cookie'    => "auth_session=" . $sessionHash ,
-                        'user_info' => $user_info ? $user_info : null
+                        'user_info' => $user_info ? $user_info : null,
+                        'session_info' => $session_info ? $session_info : null,
+                        'token_type' => 'Bearer',
+                        'jwt_token' => $jwtData['token'],
+                        'expires_in' => $jwtData['expires_in']
                     ]
                 ]);
         }
@@ -319,6 +437,38 @@ if(isset($_POST['cmd'])){
         } else {
             send_json_response(false, 400, $res['message'] ?? 'Verification failed');
         }
+    }
+
+    /**
+     * Decode JWT
+     * 
+     * Expected POST parameter:
+     * - token: The JWT string to decode
+     * Returns the decoded header and payload as JSON.
+     */
+    else if($cmd == 'decode_jwt') {
+       $token = check_val($_POST, 'token', '');
+
+        $parts = explode('.', $token);
+
+        if (count($parts) !== 3) {
+            send_json_response(false, 400, 'Invalid JWT format');
+            return;
+        }
+
+        list($headerB64, $payloadB64, $signatureB64) = $parts;
+
+        $header  = json_decode(jwt_base64url_decode($headerB64), true);
+        $payload = json_decode(jwt_base64url_decode($payloadB64), true);
+
+        $data = [
+            'header'  => $header,
+            'payload' => $payload,
+            // signature is intentionally ignored for decoding
+        ];
+
+        send_json_response(true, 200, 'JWT decoded successfully', ['data' => $data]);
+
     }
 
     
