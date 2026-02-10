@@ -94,7 +94,7 @@ class Banks
         }
 
         // Validate required fields
-        $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person', 'contact_person_phone', 'contact_person_email', 'contact_person_designation'];
+        $checkFor = ['user_id', 'bank_name', 'bank_address', 'contact_person'];
 
         $res = check_missing($checkFor, $data, $this->errors);
         if ($res !== true) {

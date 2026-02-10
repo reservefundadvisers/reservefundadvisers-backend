@@ -312,6 +312,20 @@ class Users
         }
         $user_info['companies_list'] = $companies_list;
 
+        // user managr lists
+        $user_managers = get_elements($usersTable, ['parent_user_id' => $user_info['uid'], 'role' => 'property_manager'], '*', "ORDER BY created_at DESC");
+        $managers_list = [];
+        if(!empty($user_managers)){
+            foreach($user_managers as $manager){
+                // Get the manager details
+                $manager_details = get_element($usersTable, ['id' => $manager['id']], 'id, fn, ln, email, phone');
+                if(!empty($manager_details)){
+                    $managers_list[] = $manager_details;
+                }
+            }
+        }
+        $user_info['managers_list'] = $managers_list;
+
         return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
         } catch (Exception $e) {
             return send_json_response(false, 500, 'An unexpected error occurred: ' . $e->getMessage());
