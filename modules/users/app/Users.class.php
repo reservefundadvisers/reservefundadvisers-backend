@@ -24,6 +24,8 @@ class Users
             case 'delete': $response = $this->delete($data); break;  
             case 'set': $response = $this->set($data); break;    
             case 'profile': $response = $this->getProfile($data); break;        
+            case 'permissions': $response = $this->get_role_permissions(); break;
+            case 'scope': $response = $this->get_scopes($data); break;
         }
 
         return $response;
@@ -214,7 +216,7 @@ class Users
      * @return array User profile session information or error message.
      */
     public function getProfile($data){
-        global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable, $userAssociationsTable, $userCompaniesTable, $clientsTable;
+        global $auth, $usersTable, $usersTable, $modelsTable, $clientPositionsTable, $userAssociationsTable, $userCompaniesTable, $clientsTable, $userRoleAssignmentsTable;
 
         try {
             // Log API call start
@@ -228,6 +230,12 @@ class Users
         if(empty($user_data)){
             return send_json_response(false, 500, 'Failed to retrieve user data');
         }
+        
+        // Parse last_activity_data if it exists
+        if(!empty($user_data['last_activity_data'])){
+            $user_data['last_activity_data'] = parse_json($user_data['last_activity_data'], null);
+        }
+        
         $user_info['userdata'] = $user_data;
 
 
@@ -264,14 +272,30 @@ class Users
             }
         }
 
-        // Get user's associations list from user_associations table
-        $user_associations = get_elements($userAssociationsTable, ['user_id' => $user_info['uid']], '*', "ORDER BY created_at DESC");
+        // Get user's associations list from user_associations table (include child users)
+        $user_ids = [$user_info['uid']];
+        $child_users = get_elements($usersTable, ['parent_user_id' => $user_info['uid']], 'id');
+        if(!empty($child_users)){
+            foreach($child_users as $child_user){
+                if(!empty($child_user['id'])){
+                    $user_ids[] = $child_user['id'];
+                }
+            }
+        }
+
+        $user_associations = get_elements($userAssociationsTable, [',user_id' => $user_ids], '*', "ORDER BY created_at DESC");
         $associations_list = [];
         if(!empty($user_associations)){
             foreach($user_associations as $association){
                 // Get the association/client details
-                $association_details = get_element($clientsTable, ['id' => $association['client_id']], 'id, association, company, type, email, media, phone, address, address2, city, zip, state');
+                $association_details = get_element($clientsTable, ['id' => $association['client_id']], 'id, association, company, type, email, media, phone, address, address2, city, zip, state, created_by_user_id');
                 if(!empty($association_details)){
+                    if(!empty($association_details['created_by_user_id'])){
+                        $created_by = get_element($usersTable, ['id' => $association_details['created_by_user_id']], 'id, fn, ln, email');
+                        if(!empty($created_by)){
+                            $association_details['created_by'] = $created_by;
+                        }
+                    }
                     $associations_list[] = $association_details;
                 }
             }
@@ -312,24 +336,193 @@ class Users
         }
         $user_info['companies_list'] = $companies_list;
 
-        // user managr lists
-        $user_managers = get_elements($usersTable, ['parent_user_id' => $user_info['uid'], 'role' => 'property_manager'], '*', "ORDER BY created_at DESC");
+        // Recursive function to get all descendants (children and their children)
+        function getAllDescendants($usersTable, $parentId) {
+            $descendants = [];
+            $children = get_elements($usersTable, ['parent_user_id' => $parentId], 'id, parent_user_id, fn, ln, email, phone, role, created_at, parent_user_id');
+            
+            if (!empty($children)) {
+                foreach ($children as $child) {
+                    $descendants[] = $child;
+                    // Recursively get children of this child
+                    $childDescendants = getAllDescendants($usersTable, $child['id']);
+                    if (!empty($childDescendants)) {
+                        $descendants = array_merge($descendants, $childDescendants);
+                    }
+                }
+            }
+            
+            return $descendants;
+        }
+
+        // Get all descendants (children, grandchildren, etc.)
+        $all_descendants = getAllDescendants($usersTable, $user_info['uid']);
+        
         $managers_list = [];
-        if(!empty($user_managers)){
-            foreach($user_managers as $manager){
-                // Get the manager details
-                $manager_details = get_element($usersTable, ['id' => $manager['id']], 'id, fn, ln, email, phone');
-                if(!empty($manager_details)){
+        if (!empty($all_descendants)) {
+            foreach ($all_descendants as $manager) {
+                // Get the manager details with created_by fields
+                $manager_details = get_element($usersTable, ['id' => $manager['id']], 'id, fn, ln, email, phone, role, created_at, parent_user_id');
+                if (!empty($manager_details)) {
+                    // Add created_by details
+                    if (!empty($manager_details['parent_user_id'])) {
+                        $created_by = get_element($usersTable, ['id' => $manager_details['parent_user_id']], 'id, fn, ln, email');
+                        if (!empty($created_by)) {
+                            $manager_details['created_by'] = $created_by;
+                        }
+                    }
                     $managers_list[] = $manager_details;
                 }
             }
         }
-        $user_info['managers_list'] = $managers_list;
+        $user_info['users_list'] = $managers_list;
+
+        $user_scrope = get_element($userRoleAssignmentsTable, ['user_id' => $user_info['uid']], 'id,scope_id, role');
+        // User Scope
+        $user_info['my_scope'] = [];
+        if(!empty($user_scrope)){
+            $user_info['my_scope'] = [
+                'id' => $user_scrope['id'],
+                'scope_id' => $user_scrope['scope_id'],
+                'role' => $user_scrope['role']
+            ];
+        }
 
         return send_json_response(true, 200, 'Success', ['data'=> $user_info]);
         } catch (Exception $e) {
             return send_json_response(false, 500, 'An unexpected error occurred: ' . $e->getMessage());
         }
+    }
+
+    public function get_scopes($data){
+        global $userRoleAssignmentsTable, $auth, $usersTable, $userAssociationsTable, $userCompaniesTable, $clientsTable;
+
+        $user_provided_scope_id = check_val($data, 'id') ? $data['id'] : null;
+        if(empty($user_provided_scope_id)){
+            return send_json_response(false, 400, 'ID is required');
+        }
+
+        $scope_data = get_element($userRoleAssignmentsTable, ['id' => $user_provided_scope_id], '*');
+        if(empty($scope_data)){
+            return send_json_response(false, 404, 'Scope not found');
+        }
+
+        //Get Client from scope
+        $client_data = get_element($clientsTable, ['id' => $scope_data['scope_id']], '*');
+        if(empty($client_data)){
+            return send_json_response(false, 404, 'Client not found for the scope');
+        }
+        $final_data= [];
+
+        if($scope_data['role'] == 'property_manager' && $client_data['type'] == 'company'){
+            $user_select = format_select($usersTable, "*", ['row_id', 'password']);
+
+            $get_users_from_links = function($link_table, $link_conds) use ($usersTable, $user_select) {
+                $links = get_elements($link_table, $link_conds, 'user_id');
+                $user_ids = [];
+                if(!empty($links)){
+                    foreach($links as $link){
+                        if(!empty($link['user_id']))$user_ids[] = $link['user_id'];
+                    }
+                }
+
+                $user_ids = array_values(array_unique($user_ids));
+                if(empty($user_ids))return [];
+
+                return get_elements($usersTable, [',id' => $user_ids, ';role' => ['manager', 'admin']], $user_select);
+            };
+
+            $companies_list = get_elements($clientsTable, ['id' => $client_data['id'], 'type' => 'company'], '*');
+            $final_companies = [];
+
+            if(!empty($companies_list)){
+                foreach($companies_list as $company){
+                    $company_id = $company['id'];
+
+                    $company['users'] = $get_users_from_links($userCompaniesTable, ['company_id' => $company_id]);
+
+                    $associations = get_elements($clientsTable, ['company_id' => $company_id, 'type' => 'client'], '*');
+                    $association_list = [];
+
+                    if(!empty($associations)){
+                        foreach($associations as $association){
+                            $association_id = $association['id'];
+                            $association['users'] = $get_users_from_links($userAssociationsTable, ['client_id' => $association_id]);
+                            $association_list[] = $association;
+                        }
+                    }
+
+                    $company['associations'] = $association_list;
+                    $final_companies[] = $company;
+                }
+            }
+
+            $final_data['companies_list'] = $final_companies;
+        }else if($scope_data['role'] == 'client_admin'){
+           
+        }else if($scope_data['role'] == 'client_user'){
+            $final_data['property_manager'] = true;
+        }
+
+        $scopes = [];
+        $scopes[] = [
+            'id' => $scope_data['id'],
+            'scope_id' => $scope_data['scope_id'],
+            'role' => $scope_data['role'],
+            'data' => $final_data
+        ];
+
+        return $scopes;
+    }
+
+    public function get_role_permissions(){
+        global $auth, $permissionsTable;
+
+        // take user id from session
+        $user_id = $auth->uid();
+        if(empty($user_id))return false;
+
+        // get user data
+        $user_data = get_element('users', ['id' => $user_id], 'role');
+        if(empty($user_data))return false;
+
+        // get permissions for the role
+        if(empty($user_data['role']))return false;
+
+        $permissions = [
+            'company' => [],
+            'association' => [],
+            'manager' => []
+        ];
+
+        if($user_data['role'] == 'admin'){
+            $permissions['company'] = ['view', 'edit', 'delete', 'create'];
+            $permissions['association'] = ['view', 'edit', 'delete', 'create'];
+            $permissions['manager'] = ['view', 'edit', 'delete', 'create'];
+        } else if($user_data['role'] == 'manager'){
+            $permissions['company'] = ['view', 'edit', 'create'];
+            $permissions['association'] = ['view', 'edit', 'create'];
+            $permissions['manager'] = ['view'];
+        } else if($user_data['role'] == 'client_admin'){
+            $permissions['company'] = ['view'];
+            $permissions['association'] = ['view'];
+            $permissions['manager'] = ['view'];
+        } else if($user_data['role'] == 'client_user'){
+            $permissions['company'] = ['view'];
+            $permissions['association'] = ['view'];
+            $permissions['manager'] = ['view'];
+        }else if($user_data['role'] == 'company_admin'){
+            $permissions['company'] = ['view'];
+            $permissions['association'] = ['view'];
+            $permissions['manager'] = ['view'];
+        }else if($user_data['role'] == 'company_user'){
+            $permissions['company'] = ['view'];
+            $permissions['company'] = ['view'];
+            $permissions['association'] = ['view'];
+            $permissions['manager'] = ['view'];
+        }
+
+        return $permissions;
     }
 
     public function username_exists($username, $id = null){

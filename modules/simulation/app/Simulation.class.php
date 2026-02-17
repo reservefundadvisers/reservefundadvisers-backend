@@ -384,6 +384,32 @@ class Simulation
 
 
 
+    /**
+     * Update user's last activity data with the accessed model and association info
+     * 
+     * @param string $model_id The ID of the model being accessed
+     * @param string $association_id The ID of the association/client
+     */
+    private function updateLastActivity($model_id, $association_id = null) {
+        global $auth, $usersTable;
+        
+        $user_id = $auth->uid();
+        if(empty($user_id)) return;
+        
+        // Build the last activity data structure
+        $last_activity_data = [
+            'model_id' => $model_id,
+            'association_id' => $association_id,
+            'accessed_at' => time()
+        ];
+        
+        // Update the user's last_activity_data field
+        save_element($usersTable, [
+            'id' => $user_id,
+            'last_activity_data' => json_encode($last_activity_data)
+        ]);
+    }
+
     public function simulation($data, $internal_call = false)
     {
         global $auth, $modelItemsTable, $modelsTable, $clientsTable,
@@ -409,6 +435,10 @@ class Simulation
             "LEFT JOIN $clientsTable ON $clientsTable.id = $modelsTable.client_id",
             format_select($modelsTable, '*') . ", $clientsTable.association AS association_name"
         );
+        
+        // Update user's last activity with this model and association
+        $this->updateLastActivity($data['model_id'], $model['client_id']);
+        
         // $model['fiscal_year'] = $model['fiscal_year'] - 1;
         // get model items
         $model_items = get_elements($modelItemsTable, ['model_id' => $data['model_id']]);

@@ -25,6 +25,9 @@ class BankDetail
             case 'get_hys':
                 $response = $this->list_hys($data);
                 break;
+            case 'get_loan':
+                $response = $this->list_loan($data);
+                break;
             case 'edit':
                 $response = $this->edit($data);
                 break;
@@ -152,7 +155,16 @@ class BankDetail
                             'panalty' => null,
                             'remarks' => null
                         ];
-                    } else {
+                    } elseif(strtolower($type_name) === 'loan') {
+                        $defaultFields = [
+                            'group_id' => $group_id,
+                            'interest' => null,
+                            'duration' => null,
+                            'panalty' => null,
+                            'remarks' => null
+                        ];
+                     }
+                    else {
                         // Fallback: just include what exists
                         $defaultFields = [];
                     }
@@ -339,6 +351,80 @@ class BankDetail
         return send_json_response(true, 200, $this->success['sucess'], ['data' => $grouped]);
     }
 
+    public function list_loan($data)
+    {
+        global $auth, $bankDetailsTables, $banksTable, $bankUsersTable, $bankTypesTable;
+
+        $conds = [];
+
+        $user_id = $auth->uid();
+
+        if (!empty($user_id)) {
+            $bank_ids = get_elements($bankUsersTable, ['user_id' => $user_id], 'bank_id');
+        }
+
+        if (isset($data['bank_id']) && !empty($data['bank_id'])) {
+            $bank_ids = [['bank_id' => $data['bank_id']]];
+        } else {
+            if (!empty($bank_ids)) {
+                $conds['bank_id'] = array_column($bank_ids, 'bank_id');
+            }
+        }
+
+        // Use JOIN to fetch bank_details with type_name, filter for HYS types
+        $join = "LEFT JOIN $bankTypesTable bt ON bd.type_id = bt.id";
+        $select = "bd.bank_id, bd.group_id, bd.field_name, bd.field_value, bt.name AS type_name";
+        $bank_ids_flat = array_column($bank_ids, 'bank_id');
+        $bank_ids_str = implode("','", $bank_ids_flat);
+        $extra = "WHERE bd.bank_id IN ('$bank_ids_str') AND LOWER(bt.name) IN ('loan', 'loan') ORDER BY bd.bank_id, bd.group_id";
+        $bank_details = get_elements_join($bankDetailsTables . " bd", [], $join, $select, $extra);
+
+        if (!$bank_details) {
+            return send_json_response(true, 200, $this->success['no_record'], ['data' => []]);
+        }
+
+        // Group bank_details by bank_id, then group_id (since type is fixed)
+        $grouped = [];
+        $temp = [];
+        foreach ($bank_details as $detail) {
+            $bank_id = $detail['bank_id'];
+            $group_id = $detail['group_id'];
+
+            if (!isset($temp[$bank_id])) {
+                $temp[$bank_id] = [];
+            }
+            if (!isset($temp[$bank_id][$group_id])) {
+                $temp[$bank_id][$group_id] = [];
+            }
+            $temp[$bank_id][$group_id][$detail['field_name']] = $detail['field_value'];
+        }
+
+        // Convert to table rows for HYS, flattened without bank_id
+        $grouped = [];
+        foreach ($temp as $bank_id => $groups) {
+            foreach ($groups as $group_id => $fields) {
+                $defaultFields = [
+                    'group_id' => $group_id,
+                    'interest' => null,
+                    'panalty' => null,
+                    'duration' => null,
+                    'remarks' => null
+                ];
+
+                // Fill in values from $fields (even if 0)
+                foreach ($defaultFields as $key => $val) {
+                    if (isset($fields[$key])) {
+                        $defaultFields[$key] = $fields[$key];
+                    }
+                }
+
+                $grouped[] = $defaultFields;
+            }
+        }
+
+        return send_json_response(true, 200, $this->success['sucess'], ['data' => $grouped]);
+    }
+
     public function edit($data)
     {
         global $bankDetailsTables;
@@ -352,6 +438,8 @@ class BankDetail
             $field_names = ['duration', 'interest', 'minimum_amount', 'panalty', 'remarks'];
         } elseif ($data['type'] === 'hys') {
             $field_names = ['interest', 'minimum_amount', 'is_demand_deposit', 'remarks'];
+        } else if ($data['type'] === 'loan') {
+            $field_names = ['interest', 'duration', 'panalty','remarks'];
         } else {
             return send_json_response(false, 400, 'Invalid type');
         }
@@ -562,6 +650,8 @@ class BankDetail
                     $expectedHeaders = ['duration', 'interest', 'minimum_amount', 'panalty', 'remarks'];
                 } elseif ($data['type'] === 'hys') {
                     $expectedHeaders = ['interest', 'minimum_amount', 'is_demand_deposit', 'remarks'];
+                } else if($data['type'] === 'loan') {
+                    $expectedHeaders = ['interest', 'duration', 'panalty','remarks'];
                 } else {
                     return send_json_response(false, 400, 'Invalid type value');
                 }
@@ -637,6 +727,8 @@ class BankDetail
                 }
             } else if ($data['type'] === 'hys') {
                 $checkFor = ['interest'];
+            } else if ($data['type'] === 'loan') {
+                $checkFor = ['interest', 'duration'];
             } else {
                 return send_json_response(false, 400, 'Invalid type value');
             }

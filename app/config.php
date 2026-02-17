@@ -124,6 +124,7 @@ $pages =   [
 $usersTable = 'users';
 $userCompaniesTable = 'user_companies';
 $userAssociationsTable = 'user_associations';
+$userRoleAssignmentsTable = 'user_role_assignments';
 $clientsTable = 'clients';
 $clientPositionsTable = 'client_positions';
 $clientPositionRolesTable = 'client_position_roles';
@@ -170,10 +171,11 @@ $investment_strategies = [  'cd'=>['name'=>'Certificat Of Deposit (CD)', 'show_m
 
 $db_table_cols = [ 
 
-                    $usersTable => ['id', 'username', 'password', 'role', 'role_label', 'client_id', 'position_id','position_role_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'opt-in', 'active', 'invite_token', 'parent_user_id', 'created_at'],
+                    $usersTable => ['id', 'username', 'password', 'role', 'role_label', 'client_id', 'position_id','position_role_id', 'fn', 'ln', 'email', 'country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'opt-in', 'active', 'invite_token', 'parent_user_id', 'created_at', 'last_activity_data'],
                     $userCompaniesTable => ['row_id','id', 'user_id', 'company_id', 'created_at', 'updated_at'],
                     $userAssociationsTable => ['row_id','id', 'user_id', 'client_id', 'created_at', 'updated_at'],
-                    $clientsTable => ['id', 'association','association_property_manager_name', 'company', 'company_details', 'company_id', 'media', 'tag_line', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
+                    $userRoleAssignmentsTable => ['row_id','id', 'user_id', 'role', 'scope_type', 'scope_id', 'status', 'created_at'],
+                    $clientsTable => ['id', 'association','created_by_user_id', 'association_property_manager_name', 'company', 'company_details', 'company_id', 'media', 'tag_line', 'type', 'company_type', 'email','country_code', 'phone', 'address', 'address2', 'city', 'zip', 'state', 'association_style','active', 'created_at'],
                     $clientPositionsTable => ['row_id', 'id', 'value', 'client_id', 'position_key'], 
                     $clientPositionRolesTable => ['row_id', 'id', 'value', 'client_position_id'],
                     $modelsTable => ['row_id', 'id', 'name', 'client_id', 'housing', 'starting_amount', 'inflation_rate', 'investment_rate_of_return', 'monthly_fees', 'monthly_fees_rate', 'cushion_fund', 'period', 'bank_int_rate', 'bank_rate', 'loan_years', 'fiscal_year', 'inv_strategy', 'annual_sirs_fees','total_reserve_fees_onhand','annual_reserve_fees','total_sirs_fund_onhand' ,'active', 'updated_at', 'created_at'],

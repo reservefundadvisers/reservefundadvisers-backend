@@ -39,7 +39,8 @@ class Clients
             case 'edit': $response = $this->edit($data); break;
             case 'save': $response = $this->save($data); break;     
             case 'delete': $response = $this->delete($data); break;  
-            case 'set': $response = $this->set($data); break;            
+            case 'set': $response = $this->set($data); break;         
+            case 'assign': $response = $this->assignAssociationToUser($data); break;   
         }
 
         return $response;
@@ -158,7 +159,7 @@ class Clients
     }
 
     public function save($data){
-        global $auth, $clientsTable, $upload_dir_association, $userAssociationsTable, $userCompaniesTable;
+        global $auth, $clientsTable, $upload_dir_association, $userAssociationsTable, $userCompaniesTable, $userRoleAssignmentsTable, $usersTable;
 
         if(!empty($_FILES['profile_picture'])){
             $image_upload = handle_file_upload($_FILES['profile_picture'], $upload_dir_association);
@@ -195,6 +196,7 @@ class Clients
         // client type and company type
         if($isNew){
             $data['type'] = $this->type;
+            $data['created_by_user_id'] = $auth->uid();
             if($this->type == 'client')$data['company_type'] = NULL;
         }else{
             if(isset($data['type']))unset($data['type']);
@@ -232,12 +234,28 @@ class Clients
 
                     $created_company = save_element($userCompaniesTable, $company_data);
                 }
-            
-                
                 // Update the logged-in user's client_id in the users table
-                global $usersTable;
                 $update_result = update_element($usersTable, ['client_id' => $client_id], ['id' => $auth->uid()]);
+            }   
+
+
+            if($data['invited_manager_id'] != NULL){
+
+                $userIdValidate = get_element($usersTable, ['id' => $data['invited_manager_id']]);
+                if(empty($userIdValidate))
+                    return send_json_response(false, 400, 'Invited Manager ID is invalid !');
+
+                $role_assignment_data = [
+                    'id' => generate_id(),
+                    'user_id' => $data['invited_manager_id'],
+                    'scope_id' => $client_id,
+                    'role' => $data['role']
+                ];
+
+                $created_role_assignment = save_element($userRoleAssignmentsTable, $role_assignment_data);
             }
+
+
 
         if($isNew && isset($data['admin_fn']) && isset($data['admin_ln']) && isset($data['admin_email'])){
 
@@ -363,6 +381,38 @@ class Clients
         );
 
         return send_json_response(true, 200, $this->success['success'], ['company_id'=>$company_id]);
+    }
+
+    public function assignAssociationToUser($data){
+        global $userRoleAssignmentsTable, $clientsTable, $usersTable, $auth;
+
+        if(!is_valid($data, 'association_id') || !is_valid($data, 'user_id') || !is_valid($data, 'role')){
+            return send_json_response(false, 400, 'association, user_id and role are required !');
+        }
+
+        // check if client exists
+        if(!exists($clientsTable, ['id' => $data['association_id']]))
+            return send_json_response(false, 400, 'Association not found !');
+
+        // check if user exists
+        if(!exists($usersTable, ['id' => $data['user_id']]))
+            return send_json_response(false, 400, 'User not found !');
+
+        if($data['role'] != 'client_admin' && $data['role'] != 'manager' && $data['role'] != 'property_manager')
+            return send_json_response(false, 400, 'Invalid role !');
+
+        $role_assignment_data = [
+            'id' => generate_id(),
+            'user_id' => $data['user_id'],
+            'scope_id' => $data['association_id'],
+            'role' => $data['role']
+        ];
+
+        $res = save_element($userRoleAssignmentsTable, $role_assignment_data);
+        if($res === false)
+            return send_json_response(false, 500, 'Failed to assign association to user !');
+
+        return send_json_response(true, 200, 'Association assigned to user !');
     }
 
 

@@ -110,10 +110,10 @@ class Banks
             }
         }
 
-        $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
-        if (!is_numeric($contact_person_country_code)) {
-            return send_json_response(false, 400, 'Country code is not valid.');
-        }
+        // $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
+        // if (!is_numeric($contact_person_country_code)) {
+        //     return send_json_response(false, 400, 'Country code is not valid.');
+        // }
 
         // Ensure the ID is set for update
         $data['id'] = $bank_id;
@@ -249,10 +249,10 @@ class Banks
                 return send_json_response(false, 400, $error);
             }
 
-            $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
-            if (!is_numeric($contact_person_country_code)) {
-                return send_json_response(false, 400, 'Country code is not valid.');
-            }
+            // $contact_person_country_code = isset($data['contact_person_country_code']) ? $data['contact_person_country_code'] : '';
+            // if (!is_numeric($contact_person_country_code)) {
+            //     return send_json_response(false, 400, 'Country code is not valid.');
+            // }
 
             $bank_id = generate_id();
             $data['id'] = $bank_id;

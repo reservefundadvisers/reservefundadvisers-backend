@@ -34,7 +34,8 @@
                         'edit_client' => ['admin', 'manager', 'company_admin'],
                         'save_client' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'delete' => ['admin', 'manager', 'company_admin'],
-                        'set' => ['admin', 'manager', 'company_admin']
+                        'set' => ['admin', 'manager', 'company_admin'],
+                        'assign' => ['admin', 'manager', 'client_admin', 'property_manager'],
                     ];
 
     $request = check_request();
