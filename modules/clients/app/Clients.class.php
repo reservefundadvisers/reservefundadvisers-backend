@@ -386,9 +386,16 @@ class Clients
     public function assignAssociationToUser($data){
         global $userRoleAssignmentsTable, $clientsTable, $usersTable, $auth;
 
-        if(!is_valid($data, 'association_id') || !is_valid($data, 'user_id') || !is_valid($data, 'role')){
-            return send_json_response(false, 400, 'association, user_id and role are required !');
+        if(!is_valid($data, 'association_id') || !is_valid($data, 'email') || !is_valid($data, 'role')){
+            return send_json_response(false, 400, 'association, email and role are required !');
         }
+
+        if(!exists($usersTable, ['email' => $data['email']])){
+            return send_json_response(false, 400, 'User not found !');
+        }
+
+        $user_id_from_email = get_elements($usersTable, ['email' => $data['email']], 'id');
+        $data['user_id'] = $user_id_from_email[0]['id'];
 
         // check if client exists
         if(!exists($clientsTable, ['id' => $data['association_id']]))
@@ -400,6 +407,10 @@ class Clients
 
         if($data['role'] != 'client_admin' && $data['role'] != 'manager' && $data['role'] != 'property_manager')
             return send_json_response(false, 400, 'Invalid role !');
+
+        if(exists($userRoleAssignmentsTable, ['user_id' => $data['user_id'], 'scope_id' => $data['association_id']])){
+            return send_json_response(false, 409, 'Association already exists for this user !');
+        }
 
         $role_assignment_data = [
             'id' => generate_id(),

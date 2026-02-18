@@ -285,10 +285,108 @@ class Users
 
         $user_associations = get_elements($userAssociationsTable, [',user_id' => $user_ids], '*', "ORDER BY created_at DESC");
         $associations_list = [];
+        $build_dashboard_details = function($association_id, $association_details) use ($usersTable, $modelsTable, $user_info){
+            $dashboard_details = [
+                'association' => $association_details['association'] ?? null,
+                'address' => null,
+                'invited_by' => null,
+                'admin' => null,
+                'property_manager' => null,
+                'no_of_models' => 0,
+                'no_of_user' => 0,
+                'last_used' => null,
+                'used_by' => null
+            ];
+
+            if(empty($association_id)) return $dashboard_details;
+
+            $address_parts = array_filter([
+                $association_details['address'] ?? null,
+                $association_details['address2'] ?? null,
+                $association_details['city'] ?? null,
+                $association_details['state'] ?? null,
+                $association_details['zip'] ?? null
+            ], function($part){
+                return !empty($part);
+            });
+            $dashboard_details['address'] = !empty($address_parts) ? implode(', ', $address_parts) : null;
+
+            if(!empty($association_details['created_by_user_id'])){
+                if($association_details['created_by_user_id'] == $user_info['uid']){
+                    $dashboard_details['invited_by'] = 'Myself';
+                }else{
+                    $invited_by_user = get_element($usersTable, ['id' => $association_details['created_by_user_id']], 'fn, ln, email');
+                    if(!empty($invited_by_user)){
+                        $invited_by_name = trim(($invited_by_user['fn'] ?? '').' '.($invited_by_user['ln'] ?? ''));
+                        $dashboard_details['invited_by'] = !empty($invited_by_name) ? $invited_by_name : ($invited_by_user['email'] ?? null);
+                    }
+                }
+            }
+
+            $admin_user = get_element($usersTable, ['client_id' => $association_id, 'role' => 'client_admin'], 'id, fn, ln, email');
+            if(!empty($admin_user)){
+                $admin_name = trim(($admin_user['fn'] ?? '').' '.($admin_user['ln'] ?? ''));
+                $dashboard_details['admin'] = !empty($admin_name) ? $admin_name : ($admin_user['email'] ?? null);
+            }else if(!empty($association_details['created_by_user_id'])){
+                $creator_user = get_element($usersTable, ['id' => $association_details['created_by_user_id']], 'fn, ln, email');
+                if(!empty($creator_user)){
+                    $creator_name = trim(($creator_user['fn'] ?? '').' '.($creator_user['ln'] ?? ''));
+                    $dashboard_details['admin'] = !empty($creator_name) ? $creator_name : ($creator_user['email'] ?? null);
+                }
+            }
+
+            if(!empty($association_details['association_property_manager_name'])){
+                $dashboard_details['property_manager'] = $association_details['association_property_manager_name'];
+            }else{
+                $pm_user = get_element($usersTable, ['client_id' => $association_id, 'role' => 'property_manager'], 'fn, ln, email');
+                if(!empty($pm_user)){
+                    $pm_name = trim(($pm_user['fn'] ?? '').' '.($pm_user['ln'] ?? ''));
+                    $dashboard_details['property_manager'] = !empty($pm_name) ? $pm_name : ($pm_user['email'] ?? null);
+                }
+            }
+
+            $models_count = get_element($modelsTable, ['client_id' => $association_id], 'COUNT(id) AS count');
+            $dashboard_details['no_of_models'] = !empty($models_count['count']) ? (int)$models_count['count'] : 0;
+
+            $users_count = get_element($usersTable, ['client_id' => $association_id], 'COUNT(id) AS count');
+            $dashboard_details['no_of_user'] = !empty($users_count['count']) ? (int)$users_count['count'] : 0;
+
+            $users_for_activity = get_elements($usersTable, ['client_id' => $association_id], 'id, fn, ln, email, last_activity_data');
+            $last_used_at = null;
+            $last_used_user = null;
+            if(!empty($users_for_activity)){
+                foreach($users_for_activity as $activity_user){
+                    if(empty($activity_user['last_activity_data'])) continue;
+                    $activity = parse_json($activity_user['last_activity_data'], null);
+                    if(empty($activity) || empty($activity['accessed_at'])) continue;
+                    if(!empty($activity['association_id']) && $activity['association_id'] != $association_id) continue;
+
+                    $accessed_at = (int)$activity['accessed_at'];
+                    if($last_used_at === null || $accessed_at > $last_used_at){
+                        $last_used_at = $accessed_at;
+                        $last_used_user = $activity_user;
+                    }
+                }
+            }
+
+            if(!empty($last_used_at)){
+                $dashboard_details['last_used'] = date('j M Y G:i', $last_used_at);
+                if(!empty($last_used_user)){
+                    if($last_used_user['id'] == $user_info['uid']){
+                        $dashboard_details['used_by'] = 'Myself';
+                    }else{
+                        $last_used_name = trim(($last_used_user['fn'] ?? '').' '.($last_used_user['ln'] ?? ''));
+                        $dashboard_details['used_by'] = !empty($last_used_name) ? $last_used_name : ($last_used_user['email'] ?? null);
+                    }
+                }
+            }
+
+            return $dashboard_details;
+        };
         if(!empty($user_associations)){
             foreach($user_associations as $association){
                 // Get the association/client details
-                $association_details = get_element($clientsTable, ['id' => $association['client_id']], 'id, association, company, type, email, media, phone, address, address2, city, zip, state, created_by_user_id');
+                $association_details = get_element($clientsTable, ['id' => $association['client_id']], 'id, association, company, type, email, media, phone, address, address2, city, zip, state, created_by_user_id, association_property_manager_name');
                 if(!empty($association_details)){
                     if(!empty($association_details['created_by_user_id'])){
                         $created_by = get_element($usersTable, ['id' => $association_details['created_by_user_id']], 'id, fn, ln, email');
@@ -296,6 +394,24 @@ class Users
                             $association_details['created_by'] = $created_by;
                         }
                     }
+                    $association_users = [];
+                    $association_user_links = get_elements($userAssociationsTable, ['client_id' => $association_details['id']], 'user_id');
+                    if(!empty($association_user_links)){
+                        $association_user_ids = [];
+                        foreach($association_user_links as $link){
+                            if(!empty($link['user_id'])) $association_user_ids[] = $link['user_id'];
+                        }
+                        $association_user_ids = array_values(array_unique($association_user_ids));
+                        if(!empty($association_user_ids)){
+                            $association_users = get_elements(
+                                $usersTable,
+                                [',id' => $association_user_ids],
+                                'id, fn, ln, email, phone, role, created_at, parent_user_id'
+                            );
+                        }
+                    }
+                    $association_details['association_users'] = !empty($association_users) ? $association_users : [];
+                    $association_details['dashboard_details'] = $build_dashboard_details($association_details['id'], $association_details);
                     $associations_list[] = $association_details;
                 }
             }
