@@ -261,7 +261,26 @@ class ClientUsers
         global $auth, $usersTable;
 
         if(!is_valid($data, 'id')){
-            return ['error' => $this->errors['id']];
+            return send_json_response(false, 400, $this->errors['id']);
+        }
+
+        if($data['sent_link'] == 1){
+
+            //Sent password reset link
+            $url = $_ENV['FRONTEND_URL'] ?? '';
+            $token = $auth->generate_token(64);
+            $invite_url = $url . "reset_password?token=" . $token;
+            $user_email = get_elements($usersTable, ['id' => $data['id']], 'email, fn, ln');
+            $receipientName = $user_email[0]['fn'] . ' ' . $user_email[0]['ln'];
+            $sendername = $auth->user_fnln() ?? '';
+            $template = emailTemplateResetPasswordLink($receipientName, $sendername , $invite_url,  'Our Platform');
+            $sent = sendOtpEmail($user_email[0]['email'], $template['subject'], $template['body']);
+
+            if($sent){
+                return send_json_response(true, 200, $this->success['sent'], ['id' => $data['id']]);
+            }else{
+                return send_json_response(false, 400, $this->errors['sent']);
+            }
         }
         
         if(isset($data['password'])){
@@ -309,7 +328,8 @@ class ClientUsers
                         "client_id" => "Please choose a Client first !",
                         "unspecified" => "Please choose a User first !" ,
                         "not_found" => "No Users found !",
-                        'internal_error' => 'Internal Error !' ];
+                        'internal_error' => 'Internal Error !' ,
+                        'sent' => "Link has not been sent."];
 
     private $tr = [     "password_reset" => "Password Reset link has been sent to the User's <u>Email</u> !"];
                         
@@ -318,6 +338,7 @@ class ClientUsers
 
     private $success = ["created" => "Created successfully !" , 
                         'success' => "Successfully !" , 
-                        'delete_success' => "Deleted successfully !" ];
+                        'delete_success' => "Deleted successfully !" ,
+                        'sent' => "Link has been sent."];
 
 }

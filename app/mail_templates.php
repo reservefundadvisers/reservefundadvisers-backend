@@ -148,6 +148,60 @@ function emailTemplateInviteMember($recipientName, $senderName, $inviteUrl, $pro
     ];
 }
 
+function emailTemplateResetPasswordLink($recipientName, $senderName, $resetUrl, $projectName)
+{
+    global $currentYear, $logoUrl, $supportEmail;
+    return [
+        'subject' => "Reset Your Password",
+        'body' => "
+        <body style='margin:0;padding:0;background-color:#f4f6f8;font-family: Arial, Helvetica, sans-serif;font-size:16px;'>
+            <table role='presentation' cellpadding='0' cellspacing='0' width='100%'>
+                <tr>
+                    <td align='center' style='padding:20px 10px;'>
+                        <table role='presentation' cellpadding='0' cellspacing='0' width='600' style='max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.08)'>
+                            <tr>
+                                <td style='background:#0e519b;padding:24px 24px;color:#ffffff;'>
+                                    <!-- Non-clickable logo (provide URL in '{{logoUrl}}') -->
+                                    <img src='$logoUrl' alt='$projectName logo' style='display:block;margin:0 auto;height:40px;width:auto;max-width:220px;' />
+
+                                    <!-- Heading -->
+                                    <h1 style='margin:12px 0 0 0;font-size:20px;font-weight:600;text-align:center;'>Reset Your Password</h1>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='padding:28px 24px;color:#263238;'>
+                                    <p style='margin:0 0 16px 0;font-size:16px;'>Hello <strong>$recipientName</strong>,</p>
+
+                                    <p style='margin:0 0 18px 0;font-size:16px;line-height:1.5;color:#334155;'>A password reset was requested for your <strong>$projectName</strong> account by <strong>$senderName</strong>.</p>
+
+                                    <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='margin-top:14px;margin-bottom:18px'>
+                                        <tr>
+                                            <td align='left'>
+                                                <a href='$resetUrl' style='display:inline-block;padding:12px 20px;background:#0e519b;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;'>Reset Password</a>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <p style='margin:0;font-size:15px;color:#6b7280;line-height:20px'>If you did not request this reset, you can safely ignore this email.</p>
+
+                                    <hr style='border:none;border-top:1px solid #e6eef6;margin:20px 0' />
+
+                                    <p style='margin:0;font-size:12px;color:#94a3b8;'>If you have any questions, contact us at <a href='mailto:$supportEmail' style='color:#0ea5e9;text-decoration:none'>$supportEmail</a>.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style='background:#f8fafc;padding:14px 24px;color:#94a3b8;font-size:12px;text-align:center;'>
+                                    <div>© $currentYear  Reserve Funds Advisers. All rights reserved.</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>"
+    ];
+}
+
 function emailTemplatePublishModel($recipientName, $modelName, $accessUrl)
 {
     return [
