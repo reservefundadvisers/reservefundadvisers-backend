@@ -61,7 +61,8 @@
                         'edit' => ['admin', 'manager', 'company_admin' ,'client_admin'],
                         'save' => ['admin', 'manager', 'company_admin', 'client_admin', 'property_manager'],
                         'delete' => ['admin', 'manager', 'company_admin', 'client_admin','property_manager'],
-                        'set' => ['admin', 'manager', 'company_admin']
+                        'set' => ['admin', 'manager', 'company_admin'],
+                        'block' => ['admin', 'manager', 'property_manager'],
                     ];
 
     ob_end_clean();

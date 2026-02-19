@@ -395,19 +395,29 @@ class Users
                         }
                     }
                     $association_users = [];
-                    $association_user_links = get_elements($userAssociationsTable, ['client_id' => $association_details['id']], 'user_id');
+                    $association_user_links = get_elements($userRoleAssignmentsTable, ['scope_id' => $association_details['id']], 'user_id, role');
                     if(!empty($association_user_links)){
                         $association_user_ids = [];
+                        $association_user_roles = [];
                         foreach($association_user_links as $link){
-                            if(!empty($link['user_id'])) $association_user_ids[] = $link['user_id'];
+                            if(!empty($link['user_id'])) {
+                                $association_user_ids[] = $link['user_id'];
+                                if(!empty($link['role'])) $association_user_roles[$link['user_id']] = $link['role'];
+                            }
                         }
                         $association_user_ids = array_values(array_unique($association_user_ids));
                         if(!empty($association_user_ids)){
                             $association_users = get_elements(
                                 $usersTable,
                                 [',id' => $association_user_ids],
-                                'id, fn, ln, email, phone, role, created_at, parent_user_id'
+                                'id, fn, ln, email, phone, created_at, parent_user_id, active'
                             );
+                            if(!empty($association_users)){
+                                foreach($association_users as $k => $u){
+                                    $uid = $u['id'] ?? null;
+                                    $association_users[$k]['role'] = $uid && !empty($association_user_roles[$uid]) ? $association_user_roles[$uid] : null;
+                                }
+                            }
                         }
                     }
                     $association_details['association_users'] = !empty($association_users) ? $association_users : [];

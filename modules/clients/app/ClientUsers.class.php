@@ -33,7 +33,8 @@ class ClientUsers
             case 'edit': $response = $this->edit($data); break;
             case 'save': $response = $this->save($data); break;     
             case 'delete': $response = $this->delete($data); break;  
-            case 'set': $response = $this->set($data); break;            
+            case 'set': $response = $this->set($data); break;     
+            case 'block': $response = $this->block($data); break;   
         }
 
         return $response;
@@ -310,6 +311,34 @@ class ClientUsers
         return exists($usersTable, $conds);
     }
 
+    public function block($data){
+        global $usersTable;
+
+        if(!is_valid($data, 'id')){
+            return send_json_response(false, 400, $this->errors['id']);
+        }
+
+        if(!is_valid($data, 'block')){
+            return send_json_response(false, 400, 'Invalid block value !');
+        }
+
+        $block_value = intval($data['block']);
+        if($block_value !== 0 && $block_value !== 1){
+            return send_json_response(false, 400, 'Invalid block value !');
+        }
+        $update = [
+            'id' => $data['id'],
+            'active' => $block_value === 1 ? 0 : 1
+        ];
+        $result = set_property($usersTable, $update);
+
+        if($result){
+            return send_json_response(true, 200, $this->success['block_success'], ['id' => $data['id']]);
+        }else{
+            return send_json_response(false, 400, $this->errors['block'], ['id' => $data['id']]);
+        }
+    }
+
 
     private $errors = [ "id" => "User is invalid !",
                         "association" => "Association Name invalid !",
@@ -329,7 +358,8 @@ class ClientUsers
                         "unspecified" => "Please choose a User first !" ,
                         "not_found" => "No Users found !",
                         'internal_error' => 'Internal Error !' ,
-                        'sent' => "Link has not been sent."];
+                        'sent' => "Link has not been sent.",
+                        'block' => "Something went wrong !" ];
 
     private $tr = [     "password_reset" => "Password Reset link has been sent to the User's <u>Email</u> !"];
                         
@@ -339,6 +369,7 @@ class ClientUsers
     private $success = ["created" => "Created successfully !" , 
                         'success' => "Successfully !" , 
                         'delete_success' => "Deleted successfully !" ,
-                        'sent' => "Link has been sent."];
+                        'sent' => "Link has been sent.",
+                        'block_success' => "Blocked/Unblock successfully !" ];
 
 }
