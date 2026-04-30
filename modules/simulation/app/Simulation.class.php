@@ -1729,430 +1729,461 @@ class Simulation
                         }
                     }
                 }
-                
-if ($disable_auto_fee_reduction && !$blue_opt_ran) {
 
-    $blue_opt_ran = true;
-    log_info("Blue Line Optimization Started (Smart Surplus Reduction)");
+                // Blue Line Optimization Started 
+                if ($disable_auto_fee_reduction && !$blue_opt_ran) {
 
-    // Iterate backwards from the last year
-    for ($y = $period - 1; $y >= 0; $y--) {
+                    $blue_opt_ran = true;
+                    log_info("Blue Line Optimization Started (Smart Surplus Reduction)");
 
-        $original_fee = $auto_monthly_fees[$y];
-        
-        // ---------------------------------------------------------
-        // 1. CALCULATE THE IDEAL FEE (Based on Need)
-        // ---------------------------------------------------------
-        // Calculate how much money we actually need this year
-        $spending_needed = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-        $start_bal = isset($calculated[$y]['sa']) ? $calculated[$y]['sa'] : 0;
-        
-        // If we have enough start balance to cover expenses, we technically need $0 fee.
-        // Otherwise, we only need the difference.
-        $needed_income = $spending_needed - $start_bal;
-        if ($needed_income < 0) $needed_income = 0; // We have surplus!
+                    // Iterate backwards from the last year
+                    for ($y = $period - 1; $y >= 0; $y--) {
 
-        $revenue_per_unit = $housing * 12;
-        
-        // Calculate the fee required to exactly meet expenses
-        $ideal_fee = ($revenue_per_unit > 0) ? ($needed_income / $revenue_per_unit) : $original_fee;
+                        $original_fee = $auto_monthly_fees[$y];
 
-        // Apply Constraints:
-        // A. Never go below the Base Monthly Fee (User Requirement)
-        if ($ideal_fee < $monthly_fees) $ideal_fee = $monthly_fees;
+                        // ---------------------------------------------------------
+                        // 1. CALCULATE THE IDEAL FEE (Based on Need)
+                        // ---------------------------------------------------------
+                        // Calculate how much money we actually need this year
+                        $spending_needed = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                        $start_bal = isset($calculated[$y]['sa']) ? $calculated[$y]['sa'] : 0;
 
-        // B. Smoothing: Don't allow the fee to drop instantly to $30 if it was $1000.
-        // Let's cap the max drop to 20% to keep the graph "smooth" and realistic.
-        $max_drop_limit = $original_fee * 0.80; 
-        if ($ideal_fee < $max_drop_limit) {
-            $ideal_fee = $max_drop_limit;
-        }
+                        // If we have enough start balance to cover expenses, we technically need $0 fee.
+                        // Otherwise, we only need the difference.
+                        $needed_income = $spending_needed - $start_bal;
+                        if ($needed_income < 0) $needed_income = 0; // We have surplus!
 
-        // ---------------------------------------------------------
-        // 2. ATTEMPT STRATEGY (Try Ideal, then Fallback)
-        // ---------------------------------------------------------
-        // We will try 2 attempts:
-        // Attempt A: The Ideal Fee (Aggressive reduction)
-        // Attempt B: A small 5% cut (Conservative reduction) - if A fails
-        
-        $attempts = [$ideal_fee, $original_fee * 0.95];
-        $success = false;
+                        $revenue_per_unit = $housing * 12;
 
-        foreach ($attempts as $attempt_fee) {
-            
-            // Skip if attempt is higher than original (shouldn't happen, but safety)
-            if ($attempt_fee >= $original_fee) continue;
+                        // Calculate the fee required to exactly meet expenses
+                        $ideal_fee = ($revenue_per_unit > 0) ? ($needed_income / $revenue_per_unit) : $original_fee;
 
-            log_info("Year {$y}: Trying reduction {$original_fee} -> {$attempt_fee}");
+                        // Apply Constraints:
+                        // A. Never go below the Base Monthly Fee (User Requirement)
+                        if ($ideal_fee < $monthly_fees) $ideal_fee = $monthly_fees;
 
-            // Create Snapshots
-            $calculated_snapshot = $calculated;
-            $default_snapshot    = $default_calculated;
-            $auto_fee_snapshot   = $auto_monthly_fees;
-            $manual_fee_snapshot = $manual_monthly_fees;
-            $used_manual_snapshot = $used_manual_monthly_fees;
+                        // B. Smoothing: Don't allow the fee to drop instantly to $30 if it was $1000.
+                        // Let's cap the max drop to 20% to keep the graph "smooth" and realistic.
+                        $max_drop_limit = $original_fee * 0.80;
+                        if ($ideal_fee < $max_drop_limit) {
+                            $ideal_fee = $max_drop_limit;
+                        }
 
-            // Apply Fee
-            $auto_monthly_fees[$y]        = $attempt_fee;
-            $manual_monthly_fees[$y]      = $attempt_fee;
-            $used_manual_monthly_fees[$y] = true;
-            $auto_monthly_fees_inc[$y]    = 0;
+                        // ---------------------------------------------------------
+                        // 2. ATTEMPT STRATEGY (Try Ideal, then Fallback)
+                        // ---------------------------------------------------------
+                        // We will try 2 attempts:
+                        // Attempt A: The Ideal Fee (Aggressive reduction)
+                        // Attempt B: A small 5% cut (Conservative reduction) - if A fails
 
-            // 1. Reset Base
-            $this->initOriginalCalculation(
-                $calculated, $default_calculated, $deficit_years, $starting_amount_o,
-                $monthly_fees, $housing, [], $existing_inv_strategy,
-                $inflation_rate, $spendings, $period
-            );
+                        $attempts = [$ideal_fee, $original_fee * 0.95];
+                        $success = false;
 
-            // 2. Re-run Simulation
-            $starting_amount_tmp = $starting_amount_o;
-            $simulation_valid = true;
+                        foreach ($attempts as $attempt_fee) {
 
-            for ($k = 0; $k < $period; $k++) {
-                $year_calculations = $calculated[$k];
-                
-                // CORRECTED FUNCTION CALL (Added missing 0 for ltim_yoc)
-                $this->calculateYearData(
-                    $starting_amount_tmp, 
-                    $auto_monthly_fees[$k], 
-                    $housing,
-                    $invest_strategies[$k] ?? [], 
-                    $existing_inv_strategy,
-                    $inflation_rate, 
-                    0, 0, 0, 
-                    $spendings[$k], 
-                    [], 
-                    0, 0, 0, 
-                    0, // <--- Corrected: ltim_yoc passed as 0
-                    $ltim_str, 
-                    true, 
-                    $year_calculations, 
-                    $k, 
-                    "", 
-                    $simulation_rules
-                );
+                            // Skip if attempt is higher than original (shouldn't happen, but safety)
+                            if ($attempt_fee >= $original_fee) continue;
 
-                // Check Deficit IMMEDIATELY (Optimization)
-                if (!isset($year_calculations['fa']) || $year_calculations['fa'] < -0.01) { // Allow tiny float error
-                    $simulation_valid = false;
-                    break; // Stop this simulation run early
+                            log_info("Year {$y}: Trying reduction {$original_fee} -> {$attempt_fee}");
+
+                            // Create Snapshots
+                            $calculated_snapshot = $calculated;
+                            $default_snapshot    = $default_calculated;
+                            $auto_fee_snapshot   = $auto_monthly_fees;
+                            $manual_fee_snapshot = $manual_monthly_fees;
+                            $used_manual_snapshot = $used_manual_monthly_fees;
+
+                            // Apply Fee
+                            $auto_monthly_fees[$y]        = $attempt_fee;
+                            $manual_monthly_fees[$y]      = $attempt_fee;
+                            $used_manual_monthly_fees[$y] = true;
+                            $auto_monthly_fees_inc[$y]    = 0;
+
+                            // 1. Reset Base
+                            $this->initOriginalCalculation(
+                                $calculated,
+                                $default_calculated,
+                                $deficit_years,
+                                $starting_amount_o,
+                                $monthly_fees,
+                                $housing,
+                                [],
+                                $existing_inv_strategy,
+                                $inflation_rate,
+                                $spendings,
+                                $period
+                            );
+
+                            // 2. Re-run Simulation
+                            $starting_amount_tmp = $starting_amount_o;
+                            $simulation_valid = true;
+
+                            for ($k = 0; $k < $period; $k++) {
+                                $year_calculations = $calculated[$k];
+
+                                // CORRECTED FUNCTION CALL (Added missing 0 for ltim_yoc)
+                                $this->calculateYearData(
+                                    $starting_amount_tmp,
+                                    $auto_monthly_fees[$k],
+                                    $housing,
+                                    $invest_strategies[$k] ?? [],
+                                    $existing_inv_strategy,
+                                    $inflation_rate,
+                                    0,
+                                    0,
+                                    0,
+                                    $spendings[$k],
+                                    [],
+                                    0,
+                                    0,
+                                    0,
+                                    0, // <--- Corrected: ltim_yoc passed as 0
+                                    $ltim_str,
+                                    true,
+                                    $year_calculations,
+                                    $k,
+                                    "",
+                                    $simulation_rules
+                                );
+
+                                // Check Deficit IMMEDIATELY (Optimization)
+                                if (!isset($year_calculations['fa']) || $year_calculations['fa'] < -0.01) { // Allow tiny float error
+                                    $simulation_valid = false;
+                                    break; // Stop this simulation run early
+                                }
+
+                                $calculated[$k] = $year_calculations;
+                                $starting_amount_tmp = $year_calculations['fa'];
+                            }
+
+                            // 3. Evaluate Result
+                            if ($simulation_valid) {
+                                log_info("Year {$y}: Success! Fee reduced to {$attempt_fee}");
+                                $success = true;
+                                break; // Stop trying attempts, move to next year
+                            } else {
+                                // Revert and try next attempt
+                                $auto_monthly_fees        = $auto_fee_snapshot;
+                                $manual_monthly_fees      = $manual_fee_snapshot;
+                                $used_manual_monthly_fees = $used_manual_snapshot;
+                                $calculated               = $calculated_snapshot;
+                                $default_calculated       = $default_snapshot;
+                                log_info("Year {$y}: Failed (Deficit created). Reverting.");
+                            }
+                        }
+
+                        // Note: If both attempts fail, we just keep the $original_fee and loop continues to $y-1
+                    }
+
+                    // HARD disable auto/global logic for remainder of run
+                    $mf_auto_enabled = false;
+                    $global_fee_auto_enabled = false;
+
+                    // FIX: Reset starting amount to original
+                    $starting_amount = $starting_amount_o;
+
+                    // restart main loop cleanly
+                    $i = -1;
+                    continue;
+                }
+                // ... inside function simulation() ...
+
+                // ... previous block ends here ...
+                //     $i = -1;
+                //     continue;
+                // }
+
+                // ---------------------------------------------------------
+                // NEW LOGIC: Rolling Solvency (Guaranteed No Deficit + Low Cash)
+                // ---------------------------------------------------------
+
+                $is_auto_calculated_enabled_v1 = check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false); // Or get from $simulation_rules
+                $is_auto_calculated_enabled_v2 = check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false); // Or get from $simulation_rules
+
+                rfa_create_log(print_r($is_auto_calculated_enabled_v1, true));
+
+                // Version 1
+                if ($is_auto_calculated_enabled_v1 && !$auto_calc_ran) {
+
+                    $auto_calc_ran = true;
+                    log_info("Rolling Solvency Fee Calculation Started");
+
+                    $running_balance = $starting_amount_o;
+                    $min_fee = 1;
+
+                    for ($y = 0; $y < $period; $y++) {
+
+                        $units = ($housing > 0) ? $housing : 1;
+
+                        // -------------------------------------------------------------------------
+                        // FIND THE "REQUIRED FEE" TO SURVIVE THE WORST FUTURE YEAR
+                        // -------------------------------------------------------------------------
+
+                        // --- NEW: Check for manual overwrite ---
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+                            $calculated_fee = $auto_monthly_fees[$y]; // Keep the manual fee already set
+                            log_info("Year {$y}: Manual fee detected ({$calculated_fee}). Skipping auto-adjustment.");
+                        } else {
+                            $highest_required_fee = 0;
+
+                            // We simulate a temporary balance into the future to find the "breaking point"
+                            $future_balance_projection = $running_balance;
+                            $months_passed = 0;
+
+                            for ($fy = $y; $fy < $period; $fy++) {
+
+                                // 1. Update projection with this future year's expense
+                                $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
+
+                                // Add a small safety buffer (e.g., 1%) to expenses to ensure we don't hit absolute 0.00
+                                $f_expense_with_buffer = $f_expense * 1.01;
+
+                                // We assume $0 income from fees for now to see the raw "gap"
+                                $future_balance_projection -= $f_expense_with_buffer;
+
+                                // Count how many months of fee collection we have from "Now" ($y) to "Then" ($fy)
+                                // +1 year because we collect fees during the current year too
+                                $months_available = ($fy - $y + 1) * 12;
+
+                                // 2. Check if we went negative
+                                if ($future_balance_projection < 0) {
+
+                                    // We found a deficit! 
+                                    // Calculate the monthly fee needed starting NOW ($y) to fix it by THEN ($fy).
+                                    $shortfall = abs($future_balance_projection);
+
+                                    $fee_needed_for_this_year = ($shortfall / $months_available) / $units;
+
+                                    // We must pick the MAXIMUM requirement.
+                                    // Example: To survive 2025 we need $5/mo. To survive 2040 we need $50/mo.
+                                    // We MUST charge $50/mo starting now, otherwise we will fail in 2040.
+                                    if ($fee_needed_for_this_year > $highest_required_fee) {
+                                        $highest_required_fee = $fee_needed_for_this_year;
+                                    }
+                                }
+                            }
+
+                            // -------------------------------------------------------------------------
+                            // SET THE FEE
+                            // -------------------------------------------------------------------------
+
+                            // If we found a future deficit, use that calculated fee.
+                            // If we found NO future deficits (surplus), $highest_required_fee will be 0.
+                            $calculated_fee = $highest_required_fee;
+
+                            // Apply Minimum Floor
+                            if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
+
+                            // Apply mf_perc cap: fee cannot exceed base monthly fee * (1 + mf_perc)
+                            if ($rule_mf_perc > 0) {
+                                $max_allowed_fee_v1 = $monthly_fees * (1 + floatval($rule_mf_perc));
+                                if ($calculated_fee > $max_allowed_fee_v1) {
+                                    $calculated_fee = $max_allowed_fee_v1;
+                                    log_info("Year {$y} [V1]: Fee capped at mf_perc limit ({$calculated_fee})");
+                                }
+                            }
+
+                            // OPTIONAL: Smoothing Rule (To prevent "jagged" lines)
+                            // If the new fee is massively different from last year, you can dampen it here.
+                            // But strictly speaking, to guarantee "No Deficit", we should use the calculated fee.
+
+                            // Store Values
+                            $auto_monthly_fees[$y]        = $calculated_fee;
+                            $manual_monthly_fees[$y]      = $calculated_fee;
+                            $used_manual_monthly_fees[$y] = true;
+
+                            // Update Increment %
+                            $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                            if ($prev_fee_ref > 0) {
+                                $auto_monthly_fees_inc[$y] = ($calculated_fee - $prev_fee_ref) / $prev_fee_ref;
+                            } else {
+                                $auto_monthly_fees_inc[$y] = 0;
+                            }
+
+                            // -------------------------------------------------------------------------
+                            // UPDATE REAL RUNNING BALANCE
+                            // -------------------------------------------------------------------------
+                            $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                            $year_income_real = $calculated_fee * $units * 12;
+
+                            $running_balance = $running_balance + $year_income_real - $year_expense_real;
+
+                            log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
+                        }
+                    }
+
+                    // 7. Reset & Re-run Simulation
+                    $this->initOriginalCalculation(
+                        $calculated,
+                        $default_calculated,
+                        $deficit_years,
+                        $starting_amount_o,
+                        $monthly_fees,
+                        $housing,
+                        [],
+                        $existing_inv_strategy,
+                        $inflation_rate,
+                        $spendings,
+                        $period
+                    );
+
+                    $starting_amount = $starting_amount_o;
+                    $i = -1;
+                    continue;
                 }
 
-                $calculated[$k] = $year_calculations;
-                $starting_amount_tmp = $year_calculations['fa'];
-            }
+                // Version 2
+                // ---------------------------------------------------------
+                // NEW LOGIC: Growth-Based Solvency
+                // ---------------------------------------------------------
 
-            // 3. Evaluate Result
-            if ($simulation_valid) {
-                log_info("Year {$y}: Success! Fee reduced to {$attempt_fee}");
-                $success = true;
-                break; // Stop trying attempts, move to next year
-            } else {
-                // Revert and try next attempt
-                $auto_monthly_fees        = $auto_fee_snapshot;
-                $manual_monthly_fees      = $manual_fee_snapshot;
-                $used_manual_monthly_fees = $used_manual_snapshot;
-                $calculated               = $calculated_snapshot;
-                $default_calculated       = $default_snapshot;
-                log_info("Year {$y}: Failed (Deficit created). Reverting.");
-            }
-        }
-        
-        // Note: If both attempts fail, we just keep the $original_fee and loop continues to $y-1
-    }
+                if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
 
-    // HARD disable auto/global logic for remainder of run
-    $mf_auto_enabled = false;
-    $global_fee_auto_enabled = false;
+                    $auto_calc_ran = true;
+                    log_info("Growth-Based Solvency Calculation Started");
 
-    // FIX: Reset starting amount to original
-    $starting_amount = $starting_amount_o;
+                    $running_balance = $starting_amount_o;
+                    $min_fee = 1;
 
-    // restart main loop cleanly
-    $i = -1;
-    continue;
-}
-// ... inside function simulation() ...
+                    // CONFIGURATION: Real World Constraints
+                    $assumed_yearly_growth = 0.05; // We assume we can raise fees 5% per year (Standard)
+                    $max_drop_per_year = 0.10;     // Never drop fees by more than 10% (Prevents cliffs)
 
-// ... previous block ends here ...
-//     $i = -1;
-//     continue;
-// }
+                    // Calculate monthly growth rate from yearly rate
+                    $monthly_growth = $assumed_yearly_growth / 12;
 
-// ---------------------------------------------------------
-// NEW LOGIC: Rolling Solvency (Guaranteed No Deficit + Low Cash)
-// ---------------------------------------------------------
+                    for ($y = 0; $y < $period; $y++) {
 
-$is_auto_calculated_enabled_v1 = check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false); // Or get from $simulation_rules
-$is_auto_calculated_enabled_v2 = check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false); // Or get from $simulation_rules
+                        $units = ($housing > 0) ? $housing : 1;
+                        // --- NEW: Check for manual overwrite ---
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+                            $calculated_fee = $auto_monthly_fees[$y];
+                            log_info("Year {$y}: Manual fee detected ({$calculated_fee}). Skipping growth calculation.");
+                        } else {
+                            $highest_required_start_fee = 0;
 
-rfa_create_log(print_r($is_auto_calculated_enabled_v1, true));
+                            // -------------------------------------------------------------------------
+                            // 1. LOOK AHEAD: Find the "Growth Fee" needed for worst future year
+                            // -------------------------------------------------------------------------
 
-// Version 1
-if ($is_auto_calculated_enabled_v1 && !$auto_calc_ran) {
-    
-    $auto_calc_ran = true;
-    log_info("Rolling Solvency Fee Calculation Started");
+                            // We simulate a temporary balance into the future with $0 fees
+                            $future_balance_projection = $running_balance;
 
-    $running_balance = $starting_amount_o;
-    $min_fee = 1; 
+                            for ($fy = $y; $fy < $period; $fy++) {
 
-    for ($y = 0; $y < $period; $y++) {
-        
-        $units = ($housing > 0) ? $housing : 1;
-        
-        // -------------------------------------------------------------------------
-        // FIND THE "REQUIRED FEE" TO SURVIVE THE WORST FUTURE YEAR
-        // -------------------------------------------------------------------------
-        
-        // --- NEW: Check for manual overwrite ---
-        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
-            $calculated_fee = $auto_monthly_fees[$y]; // Keep the manual fee already set
-            log_info("Year {$y}: Manual fee detected ({$calculated_fee}). Skipping auto-adjustment.");
-        } else {  
-            $highest_required_fee = 0;
-            
-            // We simulate a temporary balance into the future to find the "breaking point"
-            $future_balance_projection = $running_balance;
-            $months_passed = 0;
+                                // Future Expense
+                                $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
 
-            for ($fy = $y; $fy < $period; $fy++) {
-                
-                // 1. Update projection with this future year's expense
-                $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
-                
-                // Add a small safety buffer (e.g., 1%) to expenses to ensure we don't hit absolute 0.00
-                $f_expense_with_buffer = $f_expense * 1.01; 
-                
-                // We assume $0 income from fees for now to see the raw "gap"
-                $future_balance_projection -= $f_expense_with_buffer;
-                
-                // Count how many months of fee collection we have from "Now" ($y) to "Then" ($fy)
-                // +1 year because we collect fees during the current year too
-                $months_available = ($fy - $y + 1) * 12;
+                                // Add slight safety buffer (1%)
+                                $f_expense_with_buffer = $f_expense * 1.01;
 
-                // 2. Check if we went negative
-                if ($future_balance_projection < 0) {
-                    
-                    // We found a deficit! 
-                    // Calculate the monthly fee needed starting NOW ($y) to fix it by THEN ($fy).
-                    $shortfall = abs($future_balance_projection);
-                    
-                    $fee_needed_for_this_year = ($shortfall / $months_available) / $units;
-                    
-                    // We must pick the MAXIMUM requirement.
-                    // Example: To survive 2025 we need $5/mo. To survive 2040 we need $50/mo.
-                    // We MUST charge $50/mo starting now, otherwise we will fail in 2040.
-                    if ($fee_needed_for_this_year > $highest_required_fee) {
-                        $highest_required_fee = $fee_needed_for_this_year;
+                                // Project balance without fees
+                                $future_balance_projection -= $f_expense_with_buffer;
+
+                                // Calculate months from NOW ($y) until THAT future expense ($fy)
+                                $months_available = ($fy - $y + 1) * 12;
+
+                                // If we go negative, we need to fund this deficit
+                                if ($future_balance_projection < 0) {
+
+                                    $shortfall = abs($future_balance_projection);
+
+                                    // MATH MAGIC: Geometric Series Formula
+                                    // Calculate the Starting Fee (P) such that if we grow it by $monthly_growth (r)
+                                    // for $months_available (n), the total sum equals $shortfall.
+                                    // Formula: Sum = P * ((1+r)^n - 1) / r
+                                    // Therefore: P = (Sum * r) / ((1+r)^n - 1)
+
+                                    if ($monthly_growth > 0) {
+                                        $fee_needed = ($shortfall * $monthly_growth) / (pow(1 + $monthly_growth, $months_available) - 1);
+                                    } else {
+                                        $fee_needed = $shortfall / $months_available; // Fallback to flat if growth is 0
+                                    }
+
+                                    // Normalize per unit
+                                    $fee_needed_per_unit = $fee_needed / $units;
+
+                                    // Keep the highest requirement found
+                                    if ($fee_needed_per_unit > $highest_required_start_fee) {
+                                        $highest_required_start_fee = $fee_needed_per_unit;
+                                    }
+                                }
+                            }
+
+                            // -------------------------------------------------------------------------
+                            // 2. SET THE FEE & APPLY SMOOTHING
+                            // -------------------------------------------------------------------------
+
+                            $calculated_fee = $highest_required_start_fee;
+
+                            // Apply Minimum Floor
+                            if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
+
+                            // SMOOTHING: Prevent sharp drops (The "Cliff" Fix)
+                            // If the calculation says we can drop to $1, but last year was $1000, 
+                            // we restrict the drop to 10% max.
+                            if ($y > 0) {
+                                $prev_fee_val = $auto_monthly_fees[$y - 1];
+                                $min_allowed_drop = $prev_fee_val * (1 - $max_drop_per_year);
+
+                                if ($calculated_fee < $min_allowed_drop) {
+                                    $calculated_fee = $min_allowed_drop;
+                                }
+                            }
+
+                            // Apply mf_perc cap: fee cannot exceed base monthly fee * (1 + mf_perc)
+                            if ($rule_mf_perc > 0) {
+                                $max_allowed_fee_v2 = $monthly_fees * (1 + floatval($rule_mf_perc));
+                                if ($calculated_fee > $max_allowed_fee_v2) {
+                                    $calculated_fee = $max_allowed_fee_v2;
+                                    log_info("Year {$y} [V2]: Fee capped at mf_perc limit ({$calculated_fee})");
+                                }
+                            }
+
+                            // Store Values
+                            $auto_monthly_fees[$y]        = $calculated_fee;
+                            $manual_monthly_fees[$y]      = $calculated_fee;
+                            $used_manual_monthly_fees[$y] = true;
+
+                            // Update Increment %
+                            $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                            if ($prev_fee_ref > 0) {
+                                $auto_monthly_fees_inc[$y] = ($calculated_fee - $prev_fee_ref) / $prev_fee_ref;
+                            } else {
+                                $auto_monthly_fees_inc[$y] = 0;
+                            }
+
+                            // -------------------------------------------------------------------------
+                            // 3. UPDATE REAL RUNNING BALANCE
+                            // -------------------------------------------------------------------------
+                            $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                            $year_income_real = $calculated_fee * $units * 12;
+
+                            $running_balance = $running_balance + $year_income_real - $year_expense_real;
+
+                            log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
+                        }
                     }
+
+                    // 4. Reset & Re-run Simulation
+                    $this->initOriginalCalculation(
+                        $calculated,
+                        $default_calculated,
+                        $deficit_years,
+                        $starting_amount_o,
+                        $monthly_fees,
+                        $housing,
+                        [],
+                        $existing_inv_strategy,
+                        $inflation_rate,
+                        $spendings,
+                        $period
+                    );
+
+                    $starting_amount = $starting_amount_o;
+                    $i = -1;
+                    continue;
                 }
-            }
-
-            // -------------------------------------------------------------------------
-            // SET THE FEE
-            // -------------------------------------------------------------------------
-            
-            // If we found a future deficit, use that calculated fee.
-            // If we found NO future deficits (surplus), $highest_required_fee will be 0.
-            $calculated_fee = $highest_required_fee;
-
-            // Apply Minimum Floor
-            if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
-            
-            // OPTIONAL: Smoothing Rule (To prevent "jagged" lines)
-            // If the new fee is massively different from last year, you can dampen it here.
-            // But strictly speaking, to guarantee "No Deficit", we should use the calculated fee.
-            
-            // Store Values
-            $auto_monthly_fees[$y]        = $calculated_fee;
-            $manual_monthly_fees[$y]      = $calculated_fee;
-            $used_manual_monthly_fees[$y] = true;
-            
-            // Update Increment %
-            $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y-1];
-            if ($prev_fee_ref > 0) {
-                $auto_monthly_fees_inc[$y] = ($calculated_fee - $prev_fee_ref) / $prev_fee_ref;
-            } else {
-                $auto_monthly_fees_inc[$y] = 0;
-            }
-
-            // -------------------------------------------------------------------------
-            // UPDATE REAL RUNNING BALANCE
-            // -------------------------------------------------------------------------
-            $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-            $year_income_real = $calculated_fee * $units * 12;
-            
-            $running_balance = $running_balance + $year_income_real - $year_expense_real;
-
-            log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
-        }
-    }
-
-    // 7. Reset & Re-run Simulation
-    $this->initOriginalCalculation(
-        $calculated, 
-        $default_calculated, 
-        $deficit_years, 
-        $starting_amount_o,
-        $monthly_fees, 
-        $housing, 
-        [], 
-        $existing_inv_strategy,
-        $inflation_rate, 
-        $spendings, 
-        $period
-    );
-
-    $starting_amount = $starting_amount_o;
-    $i = -1;
-    continue;
-}
-
-// Version 2
-// ---------------------------------------------------------
-// NEW LOGIC: Growth-Based Solvency
-// ---------------------------------------------------------
-
-if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
-    
-    $auto_calc_ran = true;
-    log_info("Growth-Based Solvency Calculation Started");
-
-    $running_balance = $starting_amount_o;
-    $min_fee = 1; 
-    
-    // CONFIGURATION: Real World Constraints
-    $assumed_yearly_growth = 0.05; // We assume we can raise fees 5% per year (Standard)
-    $max_drop_per_year = 0.10;     // Never drop fees by more than 10% (Prevents cliffs)
-
-    // Calculate monthly growth rate from yearly rate
-    $monthly_growth = $assumed_yearly_growth / 12;
-
-    for ($y = 0; $y < $period; $y++) {
-        
-        $units = ($housing > 0) ? $housing : 1;
-        // --- NEW: Check for manual overwrite ---
-        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
-            $calculated_fee = $auto_monthly_fees[$y];
-            log_info("Year {$y}: Manual fee detected ({$calculated_fee}). Skipping growth calculation.");
-        } else { 
-            $highest_required_start_fee = 0;
-            
-            // -------------------------------------------------------------------------
-            // 1. LOOK AHEAD: Find the "Growth Fee" needed for worst future year
-            // -------------------------------------------------------------------------
-            
-            // We simulate a temporary balance into the future with $0 fees
-            $future_balance_projection = $running_balance;
-
-            for ($fy = $y; $fy < $period; $fy++) {
-                
-                // Future Expense
-                $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
-                
-                // Add slight safety buffer (1%)
-                $f_expense_with_buffer = $f_expense * 1.01; 
-                
-                // Project balance without fees
-                $future_balance_projection -= $f_expense_with_buffer;
-                
-                // Calculate months from NOW ($y) until THAT future expense ($fy)
-                $months_available = ($fy - $y + 1) * 12;
-
-                // If we go negative, we need to fund this deficit
-                if ($future_balance_projection < 0) {
-                    
-                    $shortfall = abs($future_balance_projection);
-                    
-                    // MATH MAGIC: Geometric Series Formula
-                    // Calculate the Starting Fee (P) such that if we grow it by $monthly_growth (r)
-                    // for $months_available (n), the total sum equals $shortfall.
-                    // Formula: Sum = P * ((1+r)^n - 1) / r
-                    // Therefore: P = (Sum * r) / ((1+r)^n - 1)
-                    
-                    if ($monthly_growth > 0) {
-                        $fee_needed = ($shortfall * $monthly_growth) / (pow(1 + $monthly_growth, $months_available) - 1);
-                    } else {
-                        $fee_needed = $shortfall / $months_available; // Fallback to flat if growth is 0
-                    }
-                    
-                    // Normalize per unit
-                    $fee_needed_per_unit = $fee_needed / $units;
-                    
-                    // Keep the highest requirement found
-                    if ($fee_needed_per_unit > $highest_required_start_fee) {
-                        $highest_required_start_fee = $fee_needed_per_unit;
-                    }
-                }
-        }
-
-        // -------------------------------------------------------------------------
-        // 2. SET THE FEE & APPLY SMOOTHING
-        // -------------------------------------------------------------------------
-        
-        $calculated_fee = $highest_required_start_fee;
-
-        // Apply Minimum Floor
-        if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
-        
-        // SMOOTHING: Prevent sharp drops (The "Cliff" Fix)
-        // If the calculation says we can drop to $1, but last year was $1000, 
-        // we restrict the drop to 10% max.
-        if ($y > 0) {
-            $prev_fee_val = $auto_monthly_fees[$y-1];
-            $min_allowed_drop = $prev_fee_val * (1 - $max_drop_per_year);
-            
-            if ($calculated_fee < $min_allowed_drop) {
-                $calculated_fee = $min_allowed_drop;
-            }
-        }
-        
-        // Store Values
-        $auto_monthly_fees[$y]        = $calculated_fee;
-        $manual_monthly_fees[$y]      = $calculated_fee;
-        $used_manual_monthly_fees[$y] = true;
-        
-        // Update Increment %
-        $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y-1];
-        if ($prev_fee_ref > 0) {
-            $auto_monthly_fees_inc[$y] = ($calculated_fee - $prev_fee_ref) / $prev_fee_ref;
-        } else {
-            $auto_monthly_fees_inc[$y] = 0;
-        }
-
-        // -------------------------------------------------------------------------
-        // 3. UPDATE REAL RUNNING BALANCE
-        // -------------------------------------------------------------------------
-        $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-        $year_income_real = $calculated_fee * $units * 12;
-        
-        $running_balance = $running_balance + $year_income_real - $year_expense_real;
-
-        log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
-        }
-    }
-
-    // 4. Reset & Re-run Simulation
-    $this->initOriginalCalculation(
-        $calculated, 
-        $default_calculated, 
-        $deficit_years, 
-        $starting_amount_o,
-        $monthly_fees, 
-        $housing, 
-        [], 
-        $existing_inv_strategy,
-        $inflation_rate, 
-        $spendings, 
-        $period
-    );
-
-    $starting_amount = $starting_amount_o;
-    $i = -1;
-    continue;
-}
 
                 // apply cushion
                 if ($current_adjustment == 'cushion') {
@@ -2390,7 +2421,7 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
 
             'ltim_p_perc' => 'ltim_percent_allocated',
             'lopp_rate'   => 'loss_of_purchase_power_rate',
-            'loan_balance'=> 'remaining_loan_balance',
+            'loan_balance' => 'remaining_loan_balance',
         ];
 
         $results['formatted_calculation'] = [];
@@ -2621,13 +2652,13 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
      * This method finds the exact minimum fee that prevents deficits
      * Only works when "Optimize All Monthly Fees" toggle is ON
      */
-    private function adjustFeesForNoDeficitScenario(&$calculated, &$auto_monthly_fees, $original_monthly_fees, $housing, $period, $simulation_rules){
+    private function adjustFeesForNoDeficitScenario(&$calculated, &$auto_monthly_fees, $original_monthly_fees, $housing, $period, $simulation_rules)
+    {
         // Check if there are any deficit years
         $has_deficits = false;
 
         for ($i = 0; $i < $period; $i++) {
-            $final_amount = isset($calculated[$i]['fa']) ? $calculated[$i]['fa'] :
-                (isset($calculated[$i]['fa_o']) ? $calculated[$i]['fa_o'] : 0);
+            $final_amount = isset($calculated[$i]['fa']) ? $calculated[$i]['fa'] : (isset($calculated[$i]['fa_o']) ? $calculated[$i]['fa_o'] : 0);
 
             if ($final_amount < 0) {
                 $has_deficits = true;
@@ -2656,8 +2687,7 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
 
                 // NEW: Include starting amount for first year
                 if ($i == 0) {
-                    $final_amount = isset($calculated[$i]['sa']) ? $calculated[$i]['sa'] :
-                        (isset($calculated[$i]['sa_o']) ? $calculated[$i]['sa_o'] : 0);
+                    $final_amount = isset($calculated[$i]['sa']) ? $calculated[$i]['sa'] : (isset($calculated[$i]['sa_o']) ? $calculated[$i]['sa_o'] : 0);
                 }
 
                 // Calculate NET expenses (expenses minus income)
@@ -5446,7 +5476,7 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
     // update simulation model item data
     public function update($data)
     {
-        global $simSplitsTable, $simSplitsLTIMTable, $modelsTable, $clientsTable, $auth , $simDeficitTable, $simDeficitLTIMTable;
+        global $simSplitsTable, $simSplitsLTIMTable, $modelsTable, $clientsTable, $auth, $simDeficitTable, $simDeficitLTIMTable;
 
         // the id is pregenerated, so if it doesnt exist just add it as is
         // and the parent_id is the master item id
@@ -5854,7 +5884,7 @@ if ($is_auto_calculated_enabled_v2 && !$auto_calc_ran) {
 
 
         // return ['success' => ''];
-        return send_json_response(true, 200, 'success',[ 'loaded_version_id' => $version_id ]);
+        return send_json_response(true, 200, 'success', ['loaded_version_id' => $version_id]);
     }
 
     // compare versions
