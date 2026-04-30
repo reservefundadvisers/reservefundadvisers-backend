@@ -27,7 +27,7 @@
                         'get' => ['admin'],
                         'edit' => ['admin'],
                         'save' => ['admin'],
-                        'delete' => ['admin'],
+                        'delete' => ['admin', 'manager', 'client_admin', 'property_manager'],
                         'set' => ['admin'],
                         'profile' => ['admin', 'manager', 'client_admin', 'client_user', 'property_manager','company_admin', 'company_user'],
                         'scope' => ['admin', 'manager', 'client_admin', 'client_user', 'property_manager','company_admin', 'company_user'],

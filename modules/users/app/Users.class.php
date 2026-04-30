@@ -153,13 +153,13 @@ class Users
         $res = array();
 
         if(!is_valid($data, 'id')){
-            return ['error' => ''];
+            return send_json_response(false, 400, 'ID is required');
         }
 
         $self_id = $auth->uid();
         if(array_has($data['id'], $self_id)){
             if(count($data['id']) == 1)
-                return ['error' => $this->errors['self']];
+                return send_json_response(false, 400, $this->errors['self']);
             else
                 array_remove($data['id'], $self_id);
         }
@@ -177,8 +177,8 @@ class Users
         $count = count($data['id']) - count($res);
         
 
-        if(!empty($res))return ['error' => $res];
-        else return ['success' => ''];
+        if(!empty($res))return send_json_response(false, 500, 'Failed to delete '.count($res).' user(s) with IDs: '.implode(', ', $res));
+        else return send_json_response(true, 200, $count.' user(s) deleted successfully');
 
     }
     

@@ -405,7 +405,7 @@ class Clients
         if(!exists($usersTable, ['id' => $data['user_id']]))
             return send_json_response(false, 400, 'User not found !');
 
-        if($data['role'] != 'client_admin' && $data['role'] != 'manager' && $data['role'] != 'property_manager')
+        if($data['role'] != 'client_admin' && $data['role'] != 'manager' && $data['role'] != 'property_manager' && $data['role'] != 'client_user')
             return send_json_response(false, 400, 'Invalid role !');
 
         if(exists($userRoleAssignmentsTable, ['user_id' => $data['user_id'], 'scope_id' => $data['association_id']])){
