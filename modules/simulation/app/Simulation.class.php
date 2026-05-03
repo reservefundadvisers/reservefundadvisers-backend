@@ -1968,9 +1968,10 @@ class Simulation
                             // Apply Minimum Floor
                             if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
 
-                            // Apply mf_perc cap: fee cannot exceed base monthly fee * (1 + mf_perc)
+                            // Apply mf_perc cap: fee cannot exceed previous year's fee * (1 + mf_perc)
                             if ($rule_mf_perc > 0) {
-                                $max_allowed_fee_v1 = $monthly_fees * (1 + floatval($rule_mf_perc));
+                                $prev_fee_for_cap_v1 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                                $max_allowed_fee_v1 = $prev_fee_for_cap_v1 * (1 + floatval($rule_mf_perc));
                                 if ($calculated_fee > $max_allowed_fee_v1) {
                                     $calculated_fee = $max_allowed_fee_v1;
                                     log_info("Year {$y} [V1]: Fee capped at mf_perc limit ({$calculated_fee})");
@@ -2125,9 +2126,10 @@ class Simulation
                                 }
                             }
 
-                            // Apply mf_perc cap: fee cannot exceed base monthly fee * (1 + mf_perc)
+                            // Apply mf_perc cap: fee cannot exceed previous year's fee * (1 + mf_perc)
                             if ($rule_mf_perc > 0) {
-                                $max_allowed_fee_v2 = $monthly_fees * (1 + floatval($rule_mf_perc));
+                                $prev_fee_for_cap_v2 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                                $max_allowed_fee_v2 = $prev_fee_for_cap_v2 * (1 + floatval($rule_mf_perc));
                                 if ($calculated_fee > $max_allowed_fee_v2) {
                                     $calculated_fee = $max_allowed_fee_v2;
                                     log_info("Year {$y} [V2]: Fee capped at mf_perc limit ({$calculated_fee})");
