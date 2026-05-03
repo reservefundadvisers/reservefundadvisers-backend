@@ -183,8 +183,8 @@ class Simulation
     {
         global $simMonthlyItems;
 
-       if (!is_valid($data, 'year') || !is_valid($data, 'model_id')) {
-           return send_json_response(false, 400, "year and model_id is required");
+        if (!is_valid($data, 'year') || !is_valid($data, 'model_id')) {
+            return send_json_response(false, 400, "year and model_id is required");
         }
 
         $year = intval($data['year']);
@@ -225,7 +225,7 @@ class Simulation
                 ];
             }
             $grouped_allocated[$key]['monthly'][] = [
-                'allocated_item_id' => $entry['id'], 
+                'allocated_item_id' => $entry['id'],
                 'month' => intval($entry['month']),
                 'amount' => floatval($entry['amount'])
             ];
@@ -236,8 +236,8 @@ class Simulation
 
         $unallocated_items = [];
         foreach ($items_in_year as $item) {
-           $occurrence = isset($item['occurrence']) 
-                ? $item['occurrence'] 
+            $occurrence = isset($item['occurrence'])
+                ? $item['occurrence']
                 : ($item['redundancy_at'] ?? 0);
 
             $item_id = !empty($item['parent_id']) ? $item['parent_id'] : $item['id'];
@@ -332,11 +332,11 @@ class Simulation
     {
         global $simMonthlyItems;
 
-        if (!is_valid($data,'allocated_item_id')) {
+        if (!is_valid($data, 'allocated_item_id')) {
             return send_json_response(false, 400, "allocated_item_id is required");
         }
 
-        $existing = get_element($simMonthlyItems,['id'=>$data['allocated_item_id']]);
+        $existing = get_element($simMonthlyItems, ['id' => $data['allocated_item_id']]);
         if (!$existing) {
             return send_json_response(false, 404, "Record not found");
         }
@@ -348,9 +348,7 @@ class Simulation
         return send_json_response(true, 200, "Monthly allocation deleted");
     }
 
-    public function split_item_monthly($data){
-
-    }
+    public function split_item_monthly($data) {}
 
     private function init_config()
     {
@@ -390,19 +388,20 @@ class Simulation
      * @param string $model_id The ID of the model being accessed
      * @param string $association_id The ID of the association/client
      */
-    private function updateLastActivity($model_id, $association_id = null) {
+    private function updateLastActivity($model_id, $association_id = null)
+    {
         global $auth, $usersTable;
-        
+
         $user_id = $auth->uid();
-        if(empty($user_id)) return;
-        
+        if (empty($user_id)) return;
+
         // Build the last activity data structure
         $last_activity_data = [
             'model_id' => $model_id,
             'association_id' => $association_id,
             'accessed_at' => time()
         ];
-        
+
         // Update the user's last_activity_data field
         save_element($usersTable, [
             'id' => $user_id,
@@ -435,10 +434,10 @@ class Simulation
             "LEFT JOIN $clientsTable ON $clientsTable.id = $modelsTable.client_id",
             format_select($modelsTable, '*') . ", $clientsTable.association AS association_name"
         );
-        
+
         // Update user's last activity with this model and association
         $this->updateLastActivity($data['model_id'], $model['client_id']);
-        
+
         // $model['fiscal_year'] = $model['fiscal_year'] - 1;
         // get model items
         $model_items = get_elements($modelItemsTable, ['model_id' => $data['model_id']]);
@@ -615,7 +614,7 @@ class Simulation
                 // update actual cost and keep the same until new value
                 if (isset($spendings_actuals[$item_id][$i]))
                     // $actual_cost = $spendings_actuals[$item_id][$i];
-                // Maintain continuity, but do NOT override updated cost
+                    // Maintain continuity, but do NOT override updated cost
                     if (
                         isset($spendings_actuals[$item_id][$i]) &&
                         floatval($item['cost']) == floatval($spendings_actuals[$item_id][$i])
@@ -900,7 +899,7 @@ class Simulation
                     // add auto fee to all previous years
                     $apply_auto_fees[$i] = true;
                 }
-                 } else if (
+            } else if (
 
                 isset($deficit_array[$year]['monthly_fees_auto_range']) &&
                 is_array($deficit_array[$year]['monthly_fees_auto_range'])
@@ -939,11 +938,10 @@ class Simulation
                         $auto_monthly_fees[$i] = $auto_monthly_fees[$i - 1] * (1 + $max_perc);
                         $auto_monthly_fees_inc[$i] = $max_perc;
                     }
-
                 }
 
                 //If deficit_per_unit is not set
-                if(!isset($deficit_per_unit)){
+                if (!isset($deficit_per_unit)) {
                     $deficit_per_unit = 0;
                 }
                 // Now optimize all years, skipping custom range years
@@ -954,7 +952,7 @@ class Simulation
                             $custom_range_fees = [];
                         if (!isset($custom_gradual_range_inc))
                             $custom_gradual_range_inc = [];
-                        
+
                         $this->updateMonthlyFeeInc(
                             $year_idx,
                             $deficit_per_unit,
@@ -993,7 +991,6 @@ class Simulation
                         }
                     }
                 }
-
             } else if (isset($deficit_array[$year]['monthly_fees_range']) && is_array($deficit_array[$year]['monthly_fees_range'])) {
 
                 $range = $deficit_array[$year]['monthly_fees_range'];
@@ -1045,9 +1042,7 @@ class Simulation
                             $custom_gradual_range_years,
                             $disable_auto_fee_reduction
                         );
-
                     }
-
                 }
 
                 $custom_range_fees = [];
@@ -1057,7 +1052,6 @@ class Simulation
                         $custom_range_fees[$year] = $auto_monthly_fees[$year];
                     }
                 }
-
             } else if (isset($deficit_array[$year]['disable_auto_fee_reduction'])) {
                 $disable_auto_fee_reduction = $deficit_array[$year]['disable_auto_fee_reduction'];
                 $blue_opt_active = false;
@@ -1084,7 +1078,6 @@ class Simulation
                         $disable_auto_fee_reduction
                     );
                 }
-                
             } else if (is_valid($deficit_array[$year], 'monthly_fees')) {
 
                 $new_monthly_fees = floatval($deficit_array[$year]['monthly_fees']);
@@ -1228,7 +1221,7 @@ class Simulation
             // log_info($existing_inv['sy'] . " - " . $model['fiscal_year'] . " = " .$start_year, $existing_inv, $ret_strategies);
             // $existing_inv['existing'] = 1;
             // $process_inv_strategies($existing_inv, $start_year, -1);
-            if(!isset($ret_strategies)){
+            if (!isset($ret_strategies)) {
                 $ret_strategies = [];
             }
             // add as existing propagated
@@ -1329,7 +1322,7 @@ class Simulation
 
             // get any calculated as year_calculations      
             $year_calculations = $calculated[$i];
-            
+
             $year_calculations['lopp_rate'] = $lopp_rate;
 
             // current year spendings, array index starts at 0
@@ -1639,7 +1632,7 @@ class Simulation
 
                 // log_info($current_adjustment);
 
-                if ($global_fee_auto_enabled  ) {
+                if ($global_fee_auto_enabled) {
                     $auto_deficit_years = $this->getDeficitYears($calculated, $period);
                     if (!empty($auto_deficit_years)) {
                         if (!$patch_global_logged) {
@@ -1648,7 +1641,7 @@ class Simulation
                         }
 
                         foreach ($auto_deficit_years as $deficit_year) {
-                            
+
                             $calendar_year = intval($model['fiscal_year']) + $deficit_year;
                             $this->appendFeeLog(
                                 'PATCH_MF_AUTO',
@@ -1899,6 +1892,7 @@ class Simulation
 
                 $is_auto_calculated_enabled_v1 = check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false); // Or get from $simulation_rules
                 $is_auto_calculated_enabled_v2 = check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false); // Or get from $simulation_rules
+                $is_auto_calculated_enabled_v3 = check_val($simulation_rules, 'is_auto_calculated_enabled_v3', false); // Stable Equilibrium
 
                 rfa_create_log(print_r($is_auto_calculated_enabled_v1, true));
 
@@ -2364,7 +2358,7 @@ class Simulation
 
                     // Adnan Saleem........
                     // if($rule_cushion_fund > 0 && $rule_cushion_fund < $rule_mf_perc && $rule_mf_perc > 0){
-                   
+
                     //Rushi patel
                     // if (
                     //     $cash_reserve_threshold == 0 &&
@@ -2553,7 +2547,7 @@ class Simulation
         if ($results['inv_strategies']['bbp'])
             unset($results['inv_strategies']['bbp']);
 
-      // Prepare formatted_calculation with descriptive keys
+        // Prepare formatted_calculation with descriptive keys
         $key_mapping = [
             'sa'        => 'starting_amount',
             'yc'        => 'yearly_collections',
@@ -2613,7 +2607,7 @@ class Simulation
         }
 
         // return $results;
-        if($internal_call){
+        if ($internal_call) {
             return $results;
         }
         return send_json_response(true, 200, $this->success['getted'], ['data' => $results]);
@@ -2670,14 +2664,14 @@ class Simulation
         $conds['client_id'] = $auth->checkRole('client_admin') || $auth->checkRole('client_user') ? $auth->clientId() : check_val($data, 'client_id', $auth->clientId());
 
         // User permissions - fetch allowed model IDs based on user_id AND client_id
-        if($auth->checkRole('client_user')){
+        if ($auth->checkRole('client_user')) {
             $allowed_models = get_elements($userModelsTable, [
                 'user_id' => $auth->uid(),
                 'client_id' => $auth->clientId()
             ], "$userModelsTable.model_id");
 
-             // Extract only the model IDs into an array
-            $allowed_model_ids = array_map(function($item) {
+            // Extract only the model IDs into an array
+            $allowed_model_ids = array_map(function ($item) {
                 return $item['model_id'];
             }, $allowed_models);
 
@@ -3001,7 +2995,6 @@ class Simulation
                     }
                 }
             }
-
         }
     }
 
@@ -3152,10 +3145,10 @@ class Simulation
         // add propagated inv strategy
         // $ret_strategies = array_reverse($ret_strategies); // reverse order to prepend current year strategy over old ones
         // var_dump($ret_strategies);
-        if(!isset($ret_strategies)){
+        if (!isset($ret_strategies)) {
             $ret_strategies = [];
         }
-        
+
         foreach ($ret_strategies as $ret_strategy) {
 
             // log_info($ret_strategy);
@@ -4090,8 +4083,7 @@ class Simulation
         &$auto_monthly_fees_inc,
         $custom_gradual_range_years = [],
         $custom_gradual_range_inc = []
-    )
-    {
+    ) {
         $period = count($auto_monthly_fees);
         for ($i = 0; $i < $period; $i++) {
             if (!empty($custom_gradual_range_years[$i]) && isset($custom_gradual_range_inc[$i])) {
@@ -4742,7 +4734,6 @@ class Simulation
                     // var_dump($default_monthly_fee);
 
                     continue;
-
                 }
 
 
@@ -4892,9 +4883,6 @@ class Simulation
 
 
             }
-
-
-
         } else if ($deficit > 0) {
             // Get closest year with % to increase by and total years to increase
             $inc_infos = $this->get_closest_inc_year(
@@ -4979,7 +4967,7 @@ class Simulation
             if (!isset($total_covered)) {
                 $total_covered = 0;
             }
-            $remain_to_cover = abs($deficit) - $total_covered ;
+            $remain_to_cover = abs($deficit) - $total_covered;
             if ($remain_to_cover > 0 && $auto_monthly_fees_inc[$year] < $max_inc) {
                 $prev_mf = $year == 0 ? $default_monthly_fee : $auto_monthly_fees[$year - 1];
                 $curr_mf = $auto_monthly_fees[$year];
@@ -4988,7 +4976,7 @@ class Simulation
                 $auto_monthly_fees[$year] = $curr_mf + ceil($remain_to_cover);
                 if ($auto_monthly_fees[$year] > $max_mf) {
                     $auto_monthly_fees[$year] = $max_mf;
-                    }
+                }
             }
         }
         // print_r($auto_monthly_fees_inc);
@@ -5067,13 +5055,13 @@ class Simulation
         global $simSplitsTable, $simDeficitTable, $simSplitsLTIMTable, $simDeficitLTIMTable, $modelsTable, $clientsTable, $auth;
 
         // get model info and year to erase deficit for
-        if (!is_valid($data, 'model_id')){
+        if (!is_valid($data, 'model_id')) {
             // return ['error' => $this->errors['model_id']];
-            return send_json_response(false, 400 , $this->errors['model_id']);
+            return send_json_response(false, 400, $this->errors['model_id']);
         }
-        if (!is_valid($data, 'year') || intval($data['year']) < 0){
+        if (!is_valid($data, 'year') || intval($data['year']) < 0) {
             // return ['error' => $this->errors['deficit_year']];
-            return send_json_response(false, 400 , $this->errors['deficit_year']);
+            return send_json_response(false, 400, $this->errors['deficit_year']);
         }
 
         //if(!is_valid($data, 'to') || intval($data['to']) < 0)return ['error'=>$this->errors['deficit_to'] ];
@@ -5084,14 +5072,14 @@ class Simulation
 
         $model = get_element($modelsTable, ['id' => $model_id]);
 
-        if (empty($model)){
+        if (empty($model)) {
             // return ['error' => $this->errors['missing']];
-            return send_json_response(false, 404 , $this->errors['missing']);
+            return send_json_response(false, 404, $this->errors['missing']);
         }
 
-        if (!belongs_to_client($modelsTable, $model_id, false, true)){
+        if (!belongs_to_client($modelsTable, $model_id, false, true)) {
             // return ['error' => $this->errors['not_allowed']];
-            return send_json_response(false, 403 , $this->errors['not_allowed']);
+            return send_json_response(false, 403, $this->errors['not_allowed']);
         }
 
         // check if LTIM is enabled in the simulation
@@ -5104,7 +5092,7 @@ class Simulation
 
         // add erase deficit data
         if (isset($data['deficit'])) {
-             if (
+            if (
                 isset($data['deficit']['monthly_fees_range']) &&
                 is_array($data['deficit']['monthly_fees_range']) &&
                 isset($data['deficit']['monthly_fees_range']['start']) &&
@@ -5745,9 +5733,10 @@ class Simulation
         return $rules;
     }
 
-      // Helper: Get mf_perc for a specific year (array or single value supported)
+    // Helper: Get mf_perc for a specific year (array or single value supported)
 
-    private function get_mf_perc($simulation_rules, $year){
+    private function get_mf_perc($simulation_rules, $year)
+    {
         $mf_perc_mf_perc = check_val($simulation_rules, 'mf_perc_per_year', 0);
         if (is_array($mf_perc_mf_perc)) {
             return isset($mf_perc_mf_perc[$year]) ? $mf_perc_mf_perc[$year] : (is_array($mf_perc_mf_perc) && count($mf_perc_mf_perc) > 0 ? end($mf_perc_mf_perc) : 0);
