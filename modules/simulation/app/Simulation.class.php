@@ -2185,6 +2185,179 @@ class Simulation
                     continue;
                 }
 
+                // Version 3
+                // ---------------------------------------------------------
+                // STABLE EQUILIBRIUM: No deficit, no excess cash, smooth fees
+                // Rules:
+                //   1. Increase fees until all deficits are covered
+                //   2. Never decrease a fee if a future increase is needed
+                //   3. Do not collect excess fees that create large cash surplus
+                //   4. No mf_perc cap (unlimited increase allowed)
+                //   5. Jump fees immediately when needed — no artificial smoothing cap on increases
+                // ---------------------------------------------------------
+
+                if ($is_auto_calculated_enabled_v3 && !$auto_calc_ran) {
+
+                    $auto_calc_ran = true;
+                    log_info("V3 Stable Equilibrium Fee Calculation Started");
+
+                    $units   = ($housing > 0) ? $housing : 1;
+                    $min_fee = 1;
+
+                    // -------------------------------------------------------------------------
+                    // PASS 1 — Compute the exact required fee for each year.
+                    //
+                    // For year Y: given the real running balance at the start of year Y,
+                    // look at every future year FY and ask:
+                    //   "If I collect zero fees from Y onward, will I go negative at FY?"
+                    // If yes, compute the flat monthly fee starting at Y that exactly
+                    // covers that shortfall by FY. Take the highest such fee across all
+                    // future years — that is the minimum safe fee for year Y.
+                    //
+                    // No cap on how high this can go. If year Y needs $120 to survive
+                    // next year, the fee is $120.
+                    // -------------------------------------------------------------------------
+                    $required_fees   = array_fill(0, $period, 0.0);
+                    $running_balance = $starting_amount_o;
+
+                    for ($y = 0; $y < $period; $y++) {
+
+                        // Respect manual overrides
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+                            $required_fees[$y] = $auto_monthly_fees[$y];
+                            // Advance running balance with the manual fee
+                            $yr_exp = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                            $running_balance += ($required_fees[$y] * $units * 12) - $yr_exp;
+                            continue;
+                        }
+
+                        // Look ahead from the current running balance (no fees assumed)
+                        $highest_required  = 0;
+                        $lookahead_balance = $running_balance;
+
+                        for ($fy = $y; $fy < $period; $fy++) {
+                            $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
+                            $lookahead_balance -= $f_expense;
+
+                            if ($lookahead_balance < 0) {
+                                // Shortfall at year FY — how much monthly fee from Y covers it?
+                                $shortfall        = abs($lookahead_balance);
+                                $months_available = ($fy - $y + 1) * 12;
+                                $fee_needed       = ($shortfall / $months_available) / $units;
+
+                                if ($fee_needed > $highest_required) {
+                                    $highest_required = $fee_needed;
+                                }
+                            }
+                        }
+
+                        $required_fees[$y] = max($min_fee, $highest_required);
+
+                        // Advance the real running balance using this year's required fee
+                        $yr_exp = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                        $running_balance += ($required_fees[$y] * $units * 12) - $yr_exp;
+
+                        log_info("V3 Pass1 Year {$y}: Balance={$running_balance} | RequiredFee={$required_fees[$y]}");
+                    }
+
+                    // -------------------------------------------------------------------------
+                    // PASS 2 — Backward propagation: never decrease if future needs more.
+                    //
+                    // Walk from the last year backward. If year Y+1 requires a higher fee
+                    // than year Y, raise year Y to match. This prevents the pattern:
+                    //   fee drops → then spikes back up later.
+                    // -------------------------------------------------------------------------
+                    for ($y = $period - 2; $y >= 0; $y--) {
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) continue;
+                        if ($required_fees[$y + 1] > $required_fees[$y]) {
+                            $required_fees[$y] = $required_fees[$y + 1];
+                        }
+                    }
+
+                    // -------------------------------------------------------------------------
+                    // PASS 3 — Excess-cash reduction: if we have too much money and no
+                    // future deficit requires a high fee, reduce the fee — even to $1.
+                    //
+                    // Re-simulate forward with the Pass-2 fees to get the real balance
+                    // at each year. If the balance is "too high" (more than 1 year of
+                    // upcoming expenses sitting idle), reduce the fee to just what is
+                    // needed to keep the balance at that comfortable level.
+                    //
+                    // The floor is always required_fees[$y] — we never go below what
+                    // is needed to avoid a deficit.
+                    // -------------------------------------------------------------------------
+                    $final_fees      = array_fill(0, $period, 0.0);
+                    $running_balance = $starting_amount_o;
+
+                    for ($y = 0; $y < $period; $y++) {
+
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+                            $final_fees[$y] = $auto_monthly_fees[$y];
+                        } else {
+                            $yr_exp        = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                            $floor_fee     = $required_fees[$y]; // minimum to avoid any future deficit
+
+                            // "Comfortable" target balance = just enough to cover next year's expense
+                            // If we already have more than that, we can reduce the fee.
+                            $target_balance = $yr_exp; // 1× next year's expense as comfortable reserve
+
+                            if ($running_balance > $target_balance) {
+                                // We have excess. Calculate the fee that would bring the balance
+                                // down to exactly the target by end of this year.
+                                // balance_end = running_balance + fee*units*12 - yr_exp = target_balance
+                                // => fee = (target_balance - running_balance + yr_exp) / (units * 12)
+                                $reduced_fee = ($target_balance - $running_balance + $yr_exp) / ($units * 12);
+                                // Never go below the deficit-prevention floor or $min_fee
+                                $final_fees[$y] = max($min_fee, $floor_fee, $reduced_fee);
+                            } else {
+                                // Balance is at or below target — use the required fee as-is
+                                $final_fees[$y] = max($min_fee, $floor_fee);
+                            }
+                        }
+
+                        // Advance running balance
+                        $yr_exp = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                        $running_balance += ($final_fees[$y] * $units * 12) - $yr_exp;
+
+                        log_info("V3 Pass3 Year {$y}: Balance={$running_balance} | FinalFee={$final_fees[$y]} | Floor={$required_fees[$y]}");
+                    }
+
+                    // -------------------------------------------------------------------------
+                    // PASS 4 — Commit final fees into the fee arrays
+                    // -------------------------------------------------------------------------
+                    for ($y = 0; $y < $period; $y++) {
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) continue;
+
+                        $auto_monthly_fees[$y]        = $final_fees[$y];
+                        $manual_monthly_fees[$y]      = $final_fees[$y];
+                        $used_manual_monthly_fees[$y] = true;
+
+                        $prev_fee_ref = ($y == 0) ? $monthly_fees : $final_fees[$y - 1];
+                        $auto_monthly_fees_inc[$y] = ($prev_fee_ref > 0)
+                            ? ($final_fees[$y] - $prev_fee_ref) / $prev_fee_ref
+                            : 0;
+                    }
+
+                    // Reset & Re-run Simulation with the new fees
+                    $this->initOriginalCalculation(
+                        $calculated,
+                        $default_calculated,
+                        $deficit_years,
+                        $starting_amount_o,
+                        $monthly_fees,
+                        $housing,
+                        [],
+                        $existing_inv_strategy,
+                        $inflation_rate,
+                        $spendings,
+                        $period
+                    );
+
+                    $starting_amount = $starting_amount_o;
+                    $i = -1;
+                    continue;
+                }
+
                 // apply cushion
                 if ($current_adjustment == 'cushion') {
                     // var_dump($rule_mf_perc);var_dump($cushion_fund_thre);
