@@ -156,6 +156,13 @@ class Simulation
             case 'split_item_monthly':
                 $response = $this->split_item_monthly($data);
                 break;
+
+            case 'get_simulation_settings':
+                $response = $this->get_simulation_settings();
+                break;
+            case 'update_simulation_setting':
+                $response = $this->update_simulation_setting($data);
+                break;
         }
 
         return $response;
@@ -1894,7 +1901,23 @@ class Simulation
                 $is_auto_calculated_enabled_v2 = check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false); // Or get from $simulation_rules
                 $is_auto_calculated_enabled_v3 = check_val($simulation_rules, 'is_auto_calculated_enabled_v3', false); // Stable Equilibrium
 
+                if (!isset($auto_calc_ran)) $auto_calc_ran = false;
+
                 rfa_create_log(print_r($is_auto_calculated_enabled_v1, true));
+
+                // Pre-apply any manual fee overrides from deficit_array so V1/V2/V3
+                // respect manually-set fees (e.g. current year fee = $12) before
+                // their look-ahead calculations begin.
+                if ($is_auto_calculated_enabled_v1 || $is_auto_calculated_enabled_v2 || $is_auto_calculated_enabled_v3) {
+                    foreach ($deficit_array as $def_year => $def_data) {
+                        if (is_valid($def_data, 'monthly_fees')) {
+                            $def_fee = floatval($def_data['monthly_fees']);
+                            $auto_monthly_fees[intval($def_year)]        = $def_fee;
+                            $manual_monthly_fees[intval($def_year)]      = $def_fee;
+                            $used_manual_monthly_fees[intval($def_year)] = true;
+                        }
+                    }
+                }
 
                 // Version 1
                 if ($is_auto_calculated_enabled_v1 && !$auto_calc_ran) {
@@ -1903,84 +1926,78 @@ class Simulation
                     log_info("Rolling Solvency Fee Calculation Started");
 
                     $running_balance = $starting_amount_o;
-                    $min_fee = 1;
+                    $min_fee         = 1;
+
+                    // Track whether any manual fee has been encountered so far.
+                    // Once a manual fee is seen, the running balance may be inflated/deflated
+                    // vs what V1 would have set — so for the next auto year we compute the
+                    // required fee from the REAL balance, not gradually from the manual fee.
+                    $had_manual_fee = false;
 
                     for ($y = 0; $y < $period; $y++) {
 
                         $units = ($housing > 0) ? $housing : 1;
 
-                        // -------------------------------------------------------------------------
-                        // FIND THE "REQUIRED FEE" TO SURVIVE THE WORST FUTURE YEAR
-                        // -------------------------------------------------------------------------
-
-                        // --- NEW: Check for manual overwrite ---
+                        // --- Manual fee: accept as-is, advance balance, flag that manual was used ---
                         if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
-                            $calculated_fee = $auto_monthly_fees[$y]; // Keep the manual fee already set
-                            log_info("Year {$y}: Manual fee detected ({$calculated_fee}). Skipping auto-adjustment.");
+                            $calculated_fee = $auto_monthly_fees[$y];
+                            $had_manual_fee = true;
+                            log_info("Year {$y} [V1]: Manual fee ({$calculated_fee}). Balance will be recalculated next year.");
                         } else {
+                            // -------------------------------------------------------------------------
+                            // FIND THE EXACT REQUIRED FEE from the current real running balance.
+                            // If a manual fee was used before, the balance may be very different
+                            // from what gradual auto-fees would have produced — so we compute
+                            // the true minimum needed, not a gradual step from the previous fee.
+                            // -------------------------------------------------------------------------
                             $highest_required_fee = 0;
-
-                            // We simulate a temporary balance into the future to find the "breaking point"
                             $future_balance_projection = $running_balance;
-                            $months_passed = 0;
 
                             for ($fy = $y; $fy < $period; $fy++) {
-
-                                // 1. Update projection with this future year's expense
                                 $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
-
-                                // Add a small safety buffer (e.g., 1%) to expenses to ensure we don't hit absolute 0.00
                                 $f_expense_with_buffer = $f_expense * 1.01;
-
-                                // We assume $0 income from fees for now to see the raw "gap"
                                 $future_balance_projection -= $f_expense_with_buffer;
-
-                                // Count how many months of fee collection we have from "Now" ($y) to "Then" ($fy)
-                                // +1 year because we collect fees during the current year too
                                 $months_available = ($fy - $y + 1) * 12;
 
-                                // 2. Check if we went negative
                                 if ($future_balance_projection < 0) {
-
-                                    // We found a deficit! 
-                                    // Calculate the monthly fee needed starting NOW ($y) to fix it by THEN ($fy).
                                     $shortfall = abs($future_balance_projection);
-
-                                    $fee_needed_for_this_year = ($shortfall / $months_available) / $units;
-
-                                    // We must pick the MAXIMUM requirement.
-                                    // Example: To survive 2025 we need $5/mo. To survive 2040 we need $50/mo.
-                                    // We MUST charge $50/mo starting now, otherwise we will fail in 2040.
-                                    if ($fee_needed_for_this_year > $highest_required_fee) {
-                                        $highest_required_fee = $fee_needed_for_this_year;
+                                    $fee_needed = ($shortfall / $months_available) / $units;
+                                    if ($fee_needed > $highest_required_fee) {
+                                        $highest_required_fee = $fee_needed;
                                     }
                                 }
                             }
 
-                            // -------------------------------------------------------------------------
-                            // SET THE FEE
-                            // -------------------------------------------------------------------------
+                            $calculated_fee = max($min_fee, $highest_required_fee);
 
-                            // If we found a future deficit, use that calculated fee.
-                            // If we found NO future deficits (surplus), $highest_required_fee will be 0.
-                            $calculated_fee = $highest_required_fee;
-
-                            // Apply Minimum Floor
-                            if ($calculated_fee < $min_fee) $calculated_fee = $min_fee;
-
-                            // Apply mf_perc cap: fee cannot exceed previous year's fee * (1 + mf_perc)
-                            if ($rule_mf_perc > 0) {
-                                $prev_fee_for_cap_v1 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                            // Apply mf_perc cap — but ONLY when there was no prior manual fee.
+                            // If a manual fee was used, the previous fee is not a meaningful
+                            // baseline for the cap (e.g. $10,000 manual → cap would be $11,500
+                            // which is wrong). Instead, cap against the actual required fee only.
+                            $prev_fee_for_cap_v1 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                            if ($rule_mf_perc > 0 && !$had_manual_fee) {
                                 $max_allowed_fee_v1 = $prev_fee_for_cap_v1 * (1 + floatval($rule_mf_perc));
+                                $mf_perc_pct_v1     = round($rule_mf_perc * 100, 2);
                                 if ($calculated_fee > $max_allowed_fee_v1) {
                                     $calculated_fee = $max_allowed_fee_v1;
-                                    log_info("Year {$y} [V1]: Fee capped at mf_perc limit ({$calculated_fee})");
+                                    $actual_inc_v1  = $prev_fee_for_cap_v1 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v1) / $prev_fee_for_cap_v1) * 100, 4) : 0;
+                                    rfa_create_log("Year {$y} [V1]: CAPPED | PrevFee={$prev_fee_for_cap_v1} → NewFee={$calculated_fee} | Increase={$actual_inc_v1}% | Limit={$mf_perc_pct_v1}%");
+                                } else {
+                                    $actual_inc_v1  = $prev_fee_for_cap_v1 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v1) / $prev_fee_for_cap_v1) * 100, 4) : 0;
+                                    rfa_create_log("Year {$y} [V1]: OK     | PrevFee={$prev_fee_for_cap_v1} → NewFee={$calculated_fee} | Increase={$actual_inc_v1}% | Limit={$mf_perc_pct_v1}%");
                                 }
+                            } elseif ($rule_mf_perc > 0 && $had_manual_fee) {
+                                // After a manual fee: cap is not applied — use the true required fee.
+                                // Log it so it's visible.
+                                $actual_inc_v1 = $prev_fee_for_cap_v1 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v1) / $prev_fee_for_cap_v1) * 100, 4) : 0;
+                                rfa_create_log("Year {$y} [V1]: POST_MANUAL | PrevFee={$prev_fee_for_cap_v1} → NewFee={$calculated_fee} | Increase={$actual_inc_v1}% | Cap skipped (manual fee was set)");
+                                // Once we've recalculated from real balance, reset the manual flag
+                                // so subsequent years use normal cap logic again.
+                                $had_manual_fee = false;
+                            } else {
+                                $actual_inc_v1 = $prev_fee_for_cap_v1 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v1) / $prev_fee_for_cap_v1) * 100, 4) : 0;
+                                rfa_create_log("Year {$y} [V1]: NO_CAP | PrevFee={$prev_fee_for_cap_v1} → NewFee={$calculated_fee} | Increase={$actual_inc_v1}% | Limit=none");
                             }
-
-                            // OPTIONAL: Smoothing Rule (To prevent "jagged" lines)
-                            // If the new fee is massively different from last year, you can dampen it here.
-                            // But strictly speaking, to guarantee "No Deficit", we should use the calculated fee.
 
                             // Store Values
                             $auto_monthly_fees[$y]        = $calculated_fee;
@@ -1989,22 +2006,17 @@ class Simulation
 
                             // Update Increment %
                             $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
-                            if ($prev_fee_ref > 0) {
-                                $auto_monthly_fees_inc[$y] = ($calculated_fee - $prev_fee_ref) / $prev_fee_ref;
-                            } else {
-                                $auto_monthly_fees_inc[$y] = 0;
-                            }
-
-                            // -------------------------------------------------------------------------
-                            // UPDATE REAL RUNNING BALANCE
-                            // -------------------------------------------------------------------------
-                            $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-                            $year_income_real = $calculated_fee * $units * 12;
-
-                            $running_balance = $running_balance + $year_income_real - $year_expense_real;
-
-                            log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
+                            $auto_monthly_fees_inc[$y] = ($prev_fee_ref > 0)
+                                ? ($calculated_fee - $prev_fee_ref) / $prev_fee_ref
+                                : 0;
                         }
+
+                        // Advance real running balance
+                        $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                        $year_income_real  = $calculated_fee * $units * 12;
+                        $running_balance   = $running_balance + $year_income_real - $year_expense_real;
+
+                        log_info("Year {$y} [V1]: Bal={$running_balance} | Fee={$calculated_fee}");
                     }
 
                     // 7. Reset & Re-run Simulation
@@ -6057,6 +6069,45 @@ class Simulation
     //Missing func
     public function list_fiscal() {}
 
+    public function get_simulation_settings()
+    {
+        global $simulationSettingsTable;
+
+        $items = get_elements(
+            $simulationSettingsTable,
+            [],
+            "id AS setting_id, setting_value, setting_view_status"
+        );
+
+        return send_json_response(true, 200, "Settings fetched", ['data' => $items]);
+    }
+
+    public function update_simulation_setting($data)
+    {
+        global $simulationSettingsTable;
+
+        if (!is_valid($data, 'setting_id')) {
+            return send_json_response(false, 400, "Setting ID is required");
+        }
+
+        $existing = get_element($simulationSettingsTable, ['id' => $data['setting_id']]);
+        if (!$existing) {
+            return send_json_response(false, 404, "Setting not found");
+        }
+
+        $update = ['id' => $data['setting_id']];
+
+        if (isset($data['setting_value'])) $update['setting_value'] = $data['setting_value']; // setting_value
+        if (isset($data['setting_view_status']))  $update['setting_view_status'] = $data['setting_view_status']; // setting_view_status
+
+        $update_setting_data = save_element($simulationSettingsTable, $update);
+
+        if (!$update_setting_data) {
+            return send_json_response(false, 500, "Setting update failed");
+        }
+
+        return send_json_response(true, 200, "Setting is updated", $update);
+    }
 
     private $errors = [
         "client_id" => "Please choose an Association !",
