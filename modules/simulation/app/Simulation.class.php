@@ -2071,51 +2071,58 @@ class Simulation
 
                             // -------------------------------------------------------------------------
                             // 1. LOOK AHEAD: Find the "Growth Fee" needed for worst future year
+                            //
+                            // We iterate: find the worst shortfall, compute the fee, then verify
+                            // that fee actually covers all future years. If not, raise and repeat.
+                            // This converges quickly (usually 2-3 iterations).
                             // -------------------------------------------------------------------------
 
-                            // We simulate a temporary balance into the future with $0 fees
-                            $future_balance_projection = $running_balance;
+                            $max_iterations = 20;
+                            $candidate_fee  = 0;
 
-                            for ($fy = $y; $fy < $period; $fy++) {
+                            for ($iter = 0; $iter < $max_iterations; $iter++) {
 
-                                // Future Expense
-                                $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
+                                $future_balance_projection = $running_balance;
+                                $new_highest = $candidate_fee;
 
-                                // Add slight safety buffer (1%)
-                                $f_expense_with_buffer = $f_expense * 1.01;
+                                for ($fy = $y; $fy < $period; $fy++) {
 
-                                // Project balance without fees
-                                $future_balance_projection -= $f_expense_with_buffer;
+                                    // Add the candidate fee income for this year
+                                    $future_balance_projection += $candidate_fee * $units * 12;
 
-                                // Calculate months from NOW ($y) until THAT future expense ($fy)
-                                $months_available = ($fy - $y + 1) * 12;
+                                    // Subtract expense
+                                    $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
+                                    $f_expense_with_buffer = $f_expense * 1.01;
+                                    $future_balance_projection -= $f_expense_with_buffer;
 
-                                // If we go negative, we need to fund this deficit
-                                if ($future_balance_projection < 0) {
+                                    if ($future_balance_projection < 0) {
+                                        // Shortfall found — how much flat fee from year Y covers it?
+                                        $shortfall        = abs($future_balance_projection);
+                                        $months_available = ($fy - $y + 1) * 12;
 
-                                    $shortfall = abs($future_balance_projection);
+                                        if ($monthly_growth > 0) {
+                                            $fee_needed = ($shortfall * $monthly_growth) / (pow(1 + $monthly_growth, $months_available) - 1);
+                                        } else {
+                                            $fee_needed = $shortfall / $months_available;
+                                        }
 
-                                    // MATH MAGIC: Geometric Series Formula
-                                    // Calculate the Starting Fee (P) such that if we grow it by $monthly_growth (r)
-                                    // for $months_available (n), the total sum equals $shortfall.
-                                    // Formula: Sum = P * ((1+r)^n - 1) / r
-                                    // Therefore: P = (Sum * r) / ((1+r)^n - 1)
+                                        $fee_needed_per_unit = $fee_needed / $units;
 
-                                    if ($monthly_growth > 0) {
-                                        $fee_needed = ($shortfall * $monthly_growth) / (pow(1 + $monthly_growth, $months_available) - 1);
-                                    } else {
-                                        $fee_needed = $shortfall / $months_available; // Fallback to flat if growth is 0
-                                    }
-
-                                    // Normalize per unit
-                                    $fee_needed_per_unit = $fee_needed / $units;
-
-                                    // Keep the highest requirement found
-                                    if ($fee_needed_per_unit > $highest_required_start_fee) {
-                                        $highest_required_start_fee = $fee_needed_per_unit;
+                                        if ($fee_needed_per_unit > $new_highest) {
+                                            $new_highest = $fee_needed_per_unit;
+                                        }
                                     }
                                 }
+
+                                // If the candidate didn't change, we've converged
+                                if (abs($new_highest - $candidate_fee) < 0.001) {
+                                    break;
+                                }
+
+                                $candidate_fee = $new_highest;
                             }
+
+                            $highest_required_start_fee = $candidate_fee;
 
                             // -------------------------------------------------------------------------
                             // 2. SET THE FEE & APPLY SMOOTHING
@@ -2139,13 +2146,21 @@ class Simulation
                             }
 
                             // Apply mf_perc cap: fee cannot exceed previous year's fee * (1 + mf_perc)
+                            $prev_fee_for_cap_v2 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
                             if ($rule_mf_perc > 0) {
-                                $prev_fee_for_cap_v2 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
-                                $max_allowed_fee_v2 = $prev_fee_for_cap_v2 * (1 + floatval($rule_mf_perc));
+                                $max_allowed_fee_v2  = $prev_fee_for_cap_v2 * (1 + floatval($rule_mf_perc));
+                                $mf_perc_pct_v2      = round($rule_mf_perc * 100, 2);
                                 if ($calculated_fee > $max_allowed_fee_v2) {
                                     $calculated_fee = $max_allowed_fee_v2;
-                                    log_info("Year {$y} [V2]: Fee capped at mf_perc limit ({$calculated_fee})");
+                                    $actual_inc_v2 = $prev_fee_for_cap_v2 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v2) / $prev_fee_for_cap_v2) * 100, 4) : 0;
+                                    log_info("Year {$y} [V2]: CAPPED | PrevFee={$prev_fee_for_cap_v2} → NewFee={$calculated_fee} | Increase={$actual_inc_v2}% | Limit={$mf_perc_pct_v2}%");
+                                } else {
+                                    $actual_inc_v2 = $prev_fee_for_cap_v2 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v2) / $prev_fee_for_cap_v2) * 100, 4) : 0;
+                                    log_info("Year {$y} [V2]: OK     | PrevFee={$prev_fee_for_cap_v2} → NewFee={$calculated_fee} | Increase={$actual_inc_v2}% | Limit={$mf_perc_pct_v2}%");
                                 }
+                            } else {
+                                $actual_inc_v2 = $prev_fee_for_cap_v2 > 0 ? round((($calculated_fee - $prev_fee_for_cap_v2) / $prev_fee_for_cap_v2) * 100, 4) : 0;
+                                log_info("Year {$y} [V2]: NO_CAP | PrevFee={$prev_fee_for_cap_v2} → NewFee={$calculated_fee} | Increase={$actual_inc_v2}% | Limit=none");
                             }
 
                             // Store Values
