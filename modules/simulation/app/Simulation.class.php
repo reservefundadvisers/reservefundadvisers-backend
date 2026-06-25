@@ -1900,15 +1900,16 @@ class Simulation
                 $is_auto_calculated_enabled_v1 = check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false); // Or get from $simulation_rules
                 $is_auto_calculated_enabled_v2 = check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false); // Or get from $simulation_rules
                 $is_auto_calculated_enabled_v3 = check_val($simulation_rules, 'is_auto_calculated_enabled_v3', false); // Stable Equilibrium
+                $is_auto_calculated_enabled_v4 = check_val($simulation_rules, 'is_auto_calculated_enabled_v4', false); // Year-by-Year Expense Match
 
                 if (!isset($auto_calc_ran)) $auto_calc_ran = false;
 
                 rfa_create_log(print_r($is_auto_calculated_enabled_v1, true));
 
-                // Pre-apply any manual fee overrides from deficit_array so V1/V2/V3
+                // Pre-apply any manual fee overrides from deficit_array so V1/V2/V3/V4
                 // respect manually-set fees (e.g. current year fee = $12) before
                 // their look-ahead calculations begin.
-                if ($is_auto_calculated_enabled_v1 || $is_auto_calculated_enabled_v2 || $is_auto_calculated_enabled_v3) {
+                if ($is_auto_calculated_enabled_v1 || $is_auto_calculated_enabled_v2 || $is_auto_calculated_enabled_v3 || $is_auto_calculated_enabled_v4) {
                     foreach ($deficit_array as $def_year => $def_data) {
                         if (is_valid($def_data, 'monthly_fees')) {
                             $def_fee = floatval($def_data['monthly_fees']);
@@ -1927,6 +1928,49 @@ class Simulation
 
                     $running_balance = $starting_amount_o;
                     $min_fee         = 1;
+
+                    // Extra cash injections per year: special assessments,
+                    // loans taken (and their future repayments), and manual
+                    // LTIM withdrawals. All of this is REAL money the user
+                    // has already brought in (or committed) to cover a
+                    // deficit — V1 must see it in its lookahead and its real
+                    // running balance, otherwise it keeps charging
+                    // deficit-level fees on top of money already in hand.
+                    $v1_assessments   = array_fill(0, $period, 0.0);
+                    $v1_loan_income   = array_fill(0, $period, 0.0);
+                    $v1_loan_payments = array_fill(0, $period, 0.0);
+                    $v1_ltim_wth      = array_fill(0, $period, 0.0);
+
+                    for ($ay = 0; $ay < $period; $ay++) {
+                        $ay_data = check_val($deficit_array, $ay, []);
+
+                        $v1_assessments[$ay] = floatval(check_val($ay_data, 'assessment', 0));
+                        $v1_ltim_wth[$ay]    = floatval(check_val($ay_data, 'ltim_wth', 0));
+
+                        $v1_loan_amount = floatval(check_val($ay_data, 'loan_amount', 0));
+                        if ($v1_loan_amount > 0) {
+                            $v1_loan_income[$ay] = $v1_loan_amount;
+
+                            $v1_bank_rate  = floatval(check_val($ay_data, 'bank_rate', $bank_rate));
+                            $v1_loan_years = floatval(check_val($ay_data, 'loan_years', $loan_years));
+
+                            // Populate $v1_loan_payments with this loan's future yearly repayments.
+                            $this->calculateLoan($v1_loan_payments, $v1_loan_amount, $v1_bank_rate, $v1_loan_years, $ay, $period, true);
+                        }
+                    }
+
+                    // If ANY year has an assessment, loan proceeds, or an LTIM
+                    // withdrawal, that outer money is already covering part of
+                    // the plan. In that case the lookahead recompute below must
+                    // never INCREASE the fee above last year's fee — it may only
+                    // stay the same or decrease (once no longer required).
+                    $v1_has_outer_money = false;
+                    for ($ay = 0; $ay < $period; $ay++) {
+                        if ($v1_assessments[$ay] > 0 || $v1_loan_income[$ay] > 0 || $v1_ltim_wth[$ay] > 0) {
+                            $v1_has_outer_money = true;
+                            break;
+                        }
+                    }
 
                     // Track whether any manual fee has been encountered so far.
                     // Once a manual fee is seen, the running balance may be inflated/deflated
@@ -1956,6 +2000,11 @@ class Simulation
                             for ($fy = $y; $fy < $period; $fy++) {
                                 $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
                                 $f_expense_with_buffer = $f_expense * 1.01;
+                                // Money already coming in (assessment, loan proceeds, LTIM
+                                // withdrawal) that year reduces or removes the shortfall —
+                                // and a future loan repayment is an extra outflow.
+                                $future_balance_projection += $v1_assessments[$fy] + $v1_loan_income[$fy] + $v1_ltim_wth[$fy];
+                                $future_balance_projection -= $v1_loan_payments[$fy];
                                 $future_balance_projection -= $f_expense_with_buffer;
                                 $months_available = ($fy - $y + 1) * 12;
 
@@ -1970,11 +2019,21 @@ class Simulation
 
                             $calculated_fee = max($min_fee, $highest_required_fee);
 
+                            $prev_fee_for_cap_v1 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+
+                            // With outer money (assessment/loan/LTIM) anywhere in the
+                            // plan, never let the lookahead INCREASE the fee above last
+                            // year's fee — it may only stay the same or decrease once
+                            // it's no longer required.
+                            if ($v1_has_outer_money && $calculated_fee > $prev_fee_for_cap_v1) {
+                                rfa_create_log("Year {$y} [V1]: OUTER_MONEY_HOLD | Required={$calculated_fee} capped to PrevFee={$prev_fee_for_cap_v1} (no fee increase while outer money present)");
+                                $calculated_fee = max($min_fee, $prev_fee_for_cap_v1);
+                            }
+
                             // Apply mf_perc cap — but ONLY when there was no prior manual fee.
                             // If a manual fee was used, the previous fee is not a meaningful
                             // baseline for the cap (e.g. $10,000 manual → cap would be $11,500
                             // which is wrong). Instead, cap against the actual required fee only.
-                            $prev_fee_for_cap_v1 = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
                             if ($rule_mf_perc > 0 && !$had_manual_fee) {
                                 $max_allowed_fee_v1 = $prev_fee_for_cap_v1 * (1 + floatval($rule_mf_perc));
                                 $mf_perc_pct_v1     = round($rule_mf_perc * 100, 2);
@@ -2011,12 +2070,21 @@ class Simulation
                                 : 0;
                         }
 
-                        // Advance real running balance
+                        // Advance real running balance (including assessment, loan
+                        // proceeds/repayments, and LTIM withdrawals already taken)
                         $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
                         $year_income_real  = $calculated_fee * $units * 12;
-                        $running_balance   = $running_balance + $year_income_real - $year_expense_real;
+                        $running_balance   = $running_balance + $year_income_real
+                            + $v1_assessments[$y] + $v1_loan_income[$y] + $v1_ltim_wth[$y]
+                            - $v1_loan_payments[$y]
+                            - $year_expense_real;
 
-                        log_info("Year {$y} [V1]: Bal={$running_balance} | Fee={$calculated_fee}");
+                        log_info(
+                            "Year {$y} [V1]: Bal={$running_balance} | Fee={$calculated_fee}"
+                                . " | Assessment={$v1_assessments[$y]} | LoanIncome={$v1_loan_income[$y]}"
+                                . " | LoanPayment={$v1_loan_payments[$y]} | LTIM_Wth={$v1_ltim_wth[$y]}"
+                                . " | Threshold={$cash_reserve_threshold}"
+                        );
                     }
 
                     // 7. Reset & Re-run Simulation
@@ -2381,6 +2449,110 @@ class Simulation
                     continue;
                 }
 
+                // Version 4
+                // ---------------------------------------------------------
+                // YEAR-BY-YEAR EXPENSE MATCH: No lookahead, no backward pass.
+                // Rules:
+                //   1. Use whatever cash is already on hand (running balance)
+                //      to cover this year's expense FIRST.
+                //   2. Only the remainder (expense minus cash on hand) is
+                //      collected via the monthly fee — nothing more.
+                //   3. If cash on hand fully covers the expense (or there is
+                //      no expense), the fee is $1 (minimum).
+                //   4. If cash on hand is negative (a manual under-fee left a
+                //      deficit), that deficit is added to this year's need
+                //      and recovered entirely this year — it never carries
+                //      forward beyond this point.
+                //   5. Each year is decided purely on its own — no looking
+                //      at future years.
+                // ---------------------------------------------------------
+
+                if ($is_auto_calculated_enabled_v4 && !$auto_calc_ran) {
+
+                    $auto_calc_ran = true;
+                    log_info("V4 Year-by-Year Expense Match Fee Calculation Started");
+
+                    $units           = ($housing > 0) ? $housing : 1;
+                    $min_fee         = 1;
+                    $running_balance = $starting_amount_o;
+
+                    // Cash Reserve Threshold / Cushion Fund %, as a fraction (e.g. 0.20
+                    // for 20%). This is the % of THIS YEAR's expense that should remain
+                    // on hand after this year's expense is paid — every expense year,
+                    // flat, never compounding.
+                    $v4_threshold_pct = $cash_reserve_threshold + $rule_cushion_fund;
+                    if ($v4_threshold_pct > 1) {
+                        $v4_threshold_pct = 1;
+                    }
+                    if ($v4_threshold_pct < 0) {
+                        $v4_threshold_pct = 0;
+                    }
+
+                    for ($y = 0; $y < $period; $y++) {
+
+                        $year_expense_raw = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+
+                        // Inflation erodes the purchasing power of cash already on hand.
+                        // $100 saved last year is only worth $90 in real terms this year
+                        // at 10% inflation — so reduce the tracked balance before using
+                        // it to offset this year's expense. This naturally forces fees
+                        // to rise over time to compensate for eroded savings.
+                        if ($inflation_rate > 0 && $running_balance > 0) {
+                            $running_balance = $running_balance * (1 - $inflation_rate);
+                        }
+
+                        if (isset($used_manual_monthly_fees[$y]) && $used_manual_monthly_fees[$y] === true) {
+                            $calculated_fee = $auto_monthly_fees[$y];
+                            log_info("V4 Year {$y}: Manual fee ({$calculated_fee}).");
+                        } else {
+                            // Cash on hand (already inflation-eroded) covers expense first.
+                            $cash_on_hand = $running_balance;
+                            $net_needed   = $year_expense_raw - $cash_on_hand;
+
+                            if ($net_needed > 0) {
+                                $calculated_fee = max($min_fee, ($net_needed / $units) / 12);
+                            } else {
+                                $calculated_fee = $min_fee;
+                            }
+
+                            $auto_monthly_fees[$y]        = $calculated_fee;
+                            $manual_monthly_fees[$y]      = $calculated_fee;
+                            $used_manual_monthly_fees[$y] = true;
+
+                            $prev_fee_ref = ($y == 0) ? $monthly_fees : $auto_monthly_fees[$y - 1];
+                            $auto_monthly_fees_inc[$y] = ($prev_fee_ref > 0)
+                                ? ($calculated_fee - $prev_fee_ref) / $prev_fee_ref
+                                : 0;
+
+                            log_info("V4 Year {$y}: Expense={$year_expense_raw} | CashOnHand(post-inflation-erosion)={$cash_on_hand} | InfRate={$inflation_rate} | Fee={$calculated_fee}");
+                        }
+
+                        // Advance balance tracker using threshold-reduced raw expense,
+                        // mirroring what calculateYearData will deduct in the real run.
+                        $year_expense_for_balance = $year_expense_raw * (1 - $v4_threshold_pct);
+                        $running_balance += ($calculated_fee * $units * 12) - $year_expense_for_balance;
+                    }
+
+                    // Reset & Re-run Simulation with the new fees
+                    $this->initOriginalCalculation(
+                        $calculated,
+                        $default_calculated,
+                        $deficit_years,
+                        $starting_amount_o,
+                        $monthly_fees,
+                        $housing,
+                        [],
+                        $existing_inv_strategy,
+                        $inflation_rate,
+                        $spendings,
+                        $period
+                    );
+
+                    $starting_amount = $starting_amount_o;
+                    $i = -1;
+                    continue;
+                }
+
                 // apply cushion
                 if ($current_adjustment == 'cushion') {
                     // var_dump($rule_mf_perc);var_dump($cushion_fund_thre);
@@ -2547,6 +2719,54 @@ class Simulation
                 return $a['parent'] < $b['parent'] ? 1 : -1;
             });
         }
+
+        // -------------------------------------------------------------------------
+        // YEAR 0: Prepend an opening-state row before the simulation years.
+        // This row shows the starting balance and original monthly fee with
+        // no expenses applied — it is the baseline before anything happens.
+        // All existing years are shifted by +1 (year 1 = first simulation year).
+        // -------------------------------------------------------------------------
+        // $year_zero_row = [
+        //     'sa'         => $starting_amount_o,
+        //     'yc'         => $monthly_fees * $housing * 12,
+        //     'mf'         => $monthly_fees,
+        //     'mf_m'       => $monthly_fees,
+        //     'ta'         => $starting_amount_o,
+        //     'ih'         => 0,
+        //     'ipn'        => 0,
+        //     'is'         => [],
+        //     'ip'         => 0,
+        //     'inv'        => 0,
+        //     'ne'         => 0,
+        //     'pip'        => 0,
+        //     'pne'        => 0,
+        //     'cp'         => $starting_amount_o,
+        //     'lp'         => 0,
+        //     'sp'         => 0,
+        //     'loan_t'     => 0,
+        //     'loan_pay'   => 0,
+        //     'tx'         => 0,
+        //     'fa'         => $starting_amount_o,
+        //     'deficit'    => [],
+        //     'assess'     => 0,
+        //     'ltim_yoc'   => 0,
+        //     'ltim_spl'   => 0,
+        //     'ltim_p'     => 0,
+        //     'ltim_ne'    => 0,
+        //     'ltim_str'   => 0,
+        //     'loan_i'     => 0,
+        //     'loan_y'     => 0,
+        //     'lopp_rate'  => 0,
+        //     'loan_balance' => 0,
+        //     'is_year_zero' => true,  // flag so frontend can identify this row
+        // ];
+
+        // // Shift all existing years by 1 and prepend year 0
+        // $shifted_calculated = [$year_zero_row];
+        // foreach ($calculated as $yr => $row) {
+        //     $shifted_calculated[$yr + 1] = $row;
+        // }
+        // $calculated = $shifted_calculated;
 
 
         if ($last_deficit >= 0)
