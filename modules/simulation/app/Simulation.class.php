@@ -101,6 +101,9 @@ class Simulation
             case 'reset':
                 $response = $this->reset($data);
                 break;
+            case 'reset_item':
+                $response = $this->reset_item($data);
+                break;
             case 'rule':
                 $response = $this->rules($data);
                 break;
@@ -481,6 +484,14 @@ class Simulation
         if (!is_numeric($rule_inf_rate)) {
             $rule_inf_rate = 0;
         }
+
+        // Allow per-request inflation override — used exclusively by the
+        // compare_inflation feature to run a zero-inflation pass without
+        // touching any saved rules in the database.
+        if (array_key_exists('override_inf_rate', $data)) {
+            $rule_inf_rate      = floatval($data['override_inf_rate']);
+            $rule_use_inflation = $rule_inf_rate > 0;
+        }
         $rule_cushion_fund = floatval(check_val($simulation_rules, 'cushion_fund', 0));
         // Adnan Saleem..........
         $cushion_fund_thre = floatval(check_val($simulation_rules, 'cushion_fund_thre', 0));
@@ -489,6 +500,17 @@ class Simulation
         //Rushi Patel..........
         $cash_reserve_threshold = floatval(check_val($simulation_rules, 'cash_reserve_threshold', 0));
         //Rushi Patel..........
+
+        // Allow per-request threshold override — used exclusively by the
+        // compare_threshold feature to run a zero-threshold pass without
+        // touching any saved rules in the database.
+        if (array_key_exists('override_threshold', $data)) {
+            $cash_reserve_threshold                    = 0;
+            $rule_cushion_fund                         = 0;
+            $cushion_fund_thre                         = 0;
+            $simulation_rules['cash_reserve_threshold'] = 0;
+            $simulation_rules['cushion_fund']           = 0;
+        }
         $rule_inv_keep = check_val($simulation_rules, 'inv_keep', 0) == 1;
 
         $rule_use_inflation = check_val($simulation_rules, 'use_infl', 1) == 1;
@@ -609,7 +631,7 @@ class Simulation
                     ['s1.parent_id' => $item['id'], 's1.redundancy_at' => $i],
                     "LEFT JOIN $splitsTable s2 ON s2.split_of = s1.id",
                     "s1.*, count(s2.id) as splits ",
-                    "GROUP BY s1.id"
+                    "GROUP BY s1.id ORDER BY (s1.original_year IS NOT NULL AND s1.original_year != s1.year) DESC, s1.row_id ASC"
                 );
 
                 $at = $from + ($i * $redundancy);
@@ -678,7 +700,9 @@ class Simulation
                             'redundancy_at' => $i,
                             'parent_id' => $item['id'],
                             'split_of' => '',
-                            'splits' => 0
+                            'splits' => 0,
+                            'original_year' => null,
+                            'is_moved' => false
                         ]
                     );
                 } else if (!empty($splits)) {
@@ -729,6 +753,9 @@ class Simulation
                             ? $spendings_actuals[$item_id][$i]
                             : null;
 
+                        $split_original_year = (isset($split['original_year']) && $split['original_year'] !== '') ? intval($split['original_year']) : null;
+                        $split_is_moved      = $split_original_year !== null && $split_original_year !== $split_spending_year;
+
                         array_push(
                             $spending_data[$split_spending_year],
                             [
@@ -743,7 +770,9 @@ class Simulation
                                 'redundancy_at' => $i,
                                 'parent_id' => $split['parent_id'],
                                 'split_of' => $split['split_of'],
-                                'splits' => $split['splits']
+                                'splits' => $split['splits'],
+                                'original_year' => $split_original_year,
+                                'is_moved' => $split_is_moved
                             ]
                         );
                     }
@@ -1972,6 +2001,10 @@ class Simulation
                         }
                     }
 
+                    // Threshold: mirror calculateYearData's spending reduction so V1's
+                    // lookahead and balance tracker stay in sync with the real run.
+                    $v1_threshold_pct = min(1.0, max(0.0, $cash_reserve_threshold + $rule_cushion_fund));
+
                     // Track whether any manual fee has been encountered so far.
                     // Once a manual fee is seen, the running balance may be inflated/deflated
                     // vs what V1 would have set — so for the next auto year we compute the
@@ -1999,7 +2032,18 @@ class Simulation
 
                             for ($fy = $y; $fy < $period; $fy++) {
                                 $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
-                                $f_expense_with_buffer = $f_expense * 1.01;
+
+                                // Threshold: only plan for the portion calculateYearData will
+                                // actually deduct — leaving threshold% as reserve each year.
+                                $f_expense_effective   = $f_expense * (1 - $v1_threshold_pct);
+                                $f_expense_with_buffer = $f_expense_effective * 1.01;
+
+                                // Inflation erodes the purchasing power of existing cash
+                                // each year — apply before adding/subtracting this year's flows.
+                                if ($inflation_rate > 0 && $future_balance_projection > 0) {
+                                    $future_balance_projection *= (1 - $inflation_rate);
+                                }
+
                                 // Money already coming in (assessment, loan proceeds, LTIM
                                 // withdrawal) that year reduces or removes the shortfall —
                                 // and a future loan repayment is an extra outflow.
@@ -2071,19 +2115,27 @@ class Simulation
                         }
 
                         // Advance real running balance (including assessment, loan
-                        // proceeds/repayments, and LTIM withdrawals already taken)
-                        $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-                        $year_income_real  = $calculated_fee * $units * 12;
-                        $running_balance   = $running_balance + $year_income_real
+                        // proceeds/repayments, and LTIM withdrawals already taken).
+                        // Inflation erodes existing cash first, then threshold-reduced
+                        // expense mirrors what calculateYearData will actually deduct.
+                        $year_expense_real   = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                        $year_income_real    = $calculated_fee * $units * 12;
+                        $year_expense_deduct = $year_expense_real * (1 - $v1_threshold_pct);
+
+                        if ($inflation_rate > 0 && $running_balance > 0) {
+                            $running_balance *= (1 - $inflation_rate);
+                        }
+
+                        $running_balance = $running_balance + $year_income_real
                             + $v1_assessments[$y] + $v1_loan_income[$y] + $v1_ltim_wth[$y]
                             - $v1_loan_payments[$y]
-                            - $year_expense_real;
+                            - $year_expense_deduct;
 
                         log_info(
                             "Year {$y} [V1]: Bal={$running_balance} | Fee={$calculated_fee}"
                                 . " | Assessment={$v1_assessments[$y]} | LoanIncome={$v1_loan_income[$y]}"
                                 . " | LoanPayment={$v1_loan_payments[$y]} | LTIM_Wth={$v1_ltim_wth[$y]}"
-                                . " | Threshold={$cash_reserve_threshold}"
+                                . " | Threshold={$cash_reserve_threshold} | Inflation={$inflation_rate}"
                         );
                     }
 
@@ -2119,6 +2171,9 @@ class Simulation
 
                     $running_balance = $starting_amount_o;
                     $min_fee = 1;
+
+                    // Threshold: mirror calculateYearData's spending reduction.
+                    $v2_threshold_pct = min(1.0, max(0.0, $cash_reserve_threshold + $rule_cushion_fund));
 
                     // CONFIGURATION: Real World Constraints
                     $assumed_yearly_growth = 0.05; // We assume we can raise fees 5% per year (Standard)
@@ -2158,9 +2213,18 @@ class Simulation
                                     // Add the candidate fee income for this year
                                     $future_balance_projection += $candidate_fee * $units * 12;
 
-                                    // Subtract expense
+                                    // Inflation erodes the purchasing power of existing
+                                    // cash — apply after collecting fees for the year,
+                                    // before paying the expense.
+                                    if ($inflation_rate > 0 && $future_balance_projection > 0) {
+                                        $future_balance_projection *= (1 - $inflation_rate);
+                                    }
+
+                                    // Threshold: only project the portion calculateYearData
+                                    // will actually deduct, leaving threshold% as reserve.
                                     $f_expense = isset($spendings[$fy]) ? abs($spendings[$fy]) : 0;
-                                    $f_expense_with_buffer = $f_expense * 1.01;
+                                    $f_expense_effective   = $f_expense * (1 - $v2_threshold_pct);
+                                    $f_expense_with_buffer = $f_expense_effective * 1.01;
                                     $future_balance_projection -= $f_expense_with_buffer;
 
                                     if ($future_balance_projection < 0) {
@@ -2246,13 +2310,20 @@ class Simulation
 
                             // -------------------------------------------------------------------------
                             // 3. UPDATE REAL RUNNING BALANCE
+                            // Inflation erodes existing cash first; threshold-reduced expense
+                            // mirrors what calculateYearData will actually deduct in the real run.
                             // -------------------------------------------------------------------------
-                            $year_expense_real = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
-                            $year_income_real = $calculated_fee * $units * 12;
+                            $year_expense_real   = isset($spendings[$y]) ? abs($spendings[$y]) : 0;
+                            $year_income_real    = $calculated_fee * $units * 12;
+                            $year_expense_deduct = $year_expense_real * (1 - $v2_threshold_pct);
 
-                            $running_balance = $running_balance + $year_income_real - $year_expense_real;
+                            if ($inflation_rate > 0 && $running_balance > 0) {
+                                $running_balance *= (1 - $inflation_rate);
+                            }
 
-                            log_info("Year {$y}: Bal: {$running_balance} | Fee set to: {$calculated_fee}");
+                            $running_balance = $running_balance + $year_income_real - $year_expense_deduct;
+
+                            log_info("Year {$y} [V2]: Bal={$running_balance} | Fee={$calculated_fee} | Threshold={$v2_threshold_pct} | Inflation={$inflation_rate}");
                         }
                     }
 
@@ -2802,6 +2873,8 @@ class Simulation
             'yc'        => 'yearly_collections',
             'mf'        => 'monthly_fee',
             'mf_m'      => 'monthly_fee_manual',
+            'mf_no_inf' => 'monthly_fee_no_inflation',
+            'mf_no_thr' => 'monthly_fee_no_threshold',
             'ta'        => 'total_amount',
             'ih'        => 'held_amount',
             'ipn'       => 'early_penalty',
@@ -2853,6 +2926,92 @@ class Simulation
                 }
             }
             $results['formatted_calculation'][$year_idx] = $formatted_year;
+        }
+
+        // When any auto-fee version is active AND inflation/threshold is set,
+        // inject mf_no_inf / mf_no_thr directly into each calculated year so
+        // the frontend can read them the same way as mf and mf_o — no new
+        // top-level arrays, just extra fields per year in the existing structure.
+        $any_v_active = (
+            check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false) ||
+            check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false) ||
+            check_val($simulation_rules, 'is_auto_calculated_enabled_v3', false) ||
+            check_val($simulation_rules, 'is_auto_calculated_enabled_v4', false)
+        );
+
+        if (!$internal_call && $inflation_rate > 0 && !array_key_exists('override_inf_rate', $data)) {
+            $data_no_inf = $data;
+            $data_no_inf['override_inf_rate'] = 0;
+            unset($data_no_inf['compare_inflation']);
+            $no_inf_res = $this->simulation($data_no_inf, true);
+            for ($y = 0; $y < $period; $y++) {
+                $calculated[$y]['mf_no_inf'] = isset($no_inf_res['calculated'][$y]['mf'])
+                    ? floatval($no_inf_res['calculated'][$y]['mf']) : 0;
+            }
+        }
+
+        $has_threshold = ($cash_reserve_threshold > 0 || $rule_cushion_fund > 0);
+        if (!$internal_call && $has_threshold && !array_key_exists('override_threshold', $data)) {
+            $data_no_thr = $data;
+            $data_no_thr['override_threshold'] = 0;
+            unset($data_no_thr['compare_threshold']);
+            $no_thr_res = $this->simulation($data_no_thr, true);
+            for ($y = 0; $y < $period; $y++) {
+                $calculated[$y]['mf_no_thr'] = isset($no_thr_res['calculated'][$y]['mf'])
+                    ? floatval($no_thr_res['calculated'][$y]['mf']) : 0;
+            }
+        }
+
+        // Rebuild results with the updated calculated (mf_no_inf / mf_no_thr injected)
+        $results['calculated'] = $calculated;
+
+        // Inflation comparison: run a second zero-inflation pass and attach both
+        // sets of results so the frontend can show "with vs without inflation".
+        // Only triggered when compare_inflation=1 is in the request and this is
+        // not already the internal comparison pass (prevents recursion).
+        if (!$internal_call && check_val($data, 'compare_inflation', 0) == 1) {
+            $data_no_inf = $data;
+            $data_no_inf['override_inf_rate'] = 0;
+            unset($data_no_inf['compare_inflation']); // prevent recursive second compare
+
+            $no_inf_results = $this->simulation($data_no_inf, true);
+
+            $results['inflation_compare'] = [
+                'inflation_rate'     => $inflation_rate,
+                'with_inflation'     => [
+                    'calculated'            => $results['calculated'],
+                    'formatted_calculation' => $results['formatted_calculation'],
+                ],
+                'without_inflation'  => [
+                    'calculated'            => $no_inf_results['calculated'],
+                    'formatted_calculation' => $no_inf_results['formatted_calculation'],
+                ],
+            ];
+        }
+
+        // Threshold comparison: run a second zero-threshold pass and attach both
+        // sets of results so the frontend can show "with vs without threshold".
+        // Only triggered when compare_threshold=1 is in the request and this is
+        // not already the internal comparison pass (prevents recursion).
+        if (!$internal_call && check_val($data, 'compare_threshold', 0) == 1) {
+            $data_no_thr = $data;
+            $data_no_thr['override_threshold'] = 0;
+            unset($data_no_thr['compare_threshold']); // prevent recursive second compare
+
+            $no_thr_results = $this->simulation($data_no_thr, true);
+
+            $results['threshold_compare'] = [
+                'threshold_rate'      => $cash_reserve_threshold,
+                'cushion_fund_rate'   => $rule_cushion_fund,
+                'with_threshold'      => [
+                    'calculated'            => $results['calculated'],
+                    'formatted_calculation' => $results['formatted_calculation'],
+                ],
+                'without_threshold'   => [
+                    'calculated'            => $no_thr_results['calculated'],
+                    'formatted_calculation' => $no_thr_results['formatted_calculation'],
+                ],
+            ];
         }
 
         // return $results;
@@ -3286,6 +3445,7 @@ class Simulation
         $cash_reserve_threshold = floatval(check_val($simulation_rules, 'cash_reserve_threshold', 0));
         // echo "spending: " . $spending . "<br>";
 
+        $spending_before_threshold = $spending;
         if ($cash_reserve_threshold > 0 || $cushion_fund > 0) {
 
             // Check if cushion_fund exceeds 15%
@@ -5232,6 +5392,35 @@ class Simulation
         // exit;
     }
 
+    // Resets a single moved item back to its original year by deleting its
+    // split entry. The frontend passes the split `id` and `model_id`.
+    // After deletion the item naturally falls back to its original_year.
+    public function reset_item($data)
+    {
+        global $auth, $modelsTable, $simSplitsTable, $simDeficitTable;
+
+        if (!is_valid($data, 'id'))
+            return send_json_response(false, 400, $this->errors['item_id']);
+
+        if (!is_valid($data, 'model_id'))
+            return send_json_response(false, 400, $this->errors['model_id']);
+
+        if (!belongs_to_user($simSplitsTable, $data['id']))
+            return send_json_response(false, 403, $this->errors['not_allowed']);
+
+        // Delete just this one split row — item reverts to its original_year
+        delete_elements_by_id($simSplitsTable, [$data['id']]);
+
+        // Clear cached deficit data so the simulation re-calculates cleanly
+        delete_elements_by_cond(
+            $simDeficitTable,
+            'model_id = :model_id AND user_id = :user_id AND year >= 0',
+            ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]
+        );
+
+        return send_json_response(true, 200, 'Item reset to original year');
+    }
+
     public function reset($data)
     {
         global $auth, $modelsTable, $simRulesTable, $simDeficitTable, $simSplitsTable, $simSplitsLTIMTable, $simDeficitLTIMTable;
@@ -5920,9 +6109,19 @@ class Simulation
         if (is_valid($data, 'model_id'))
             delete_elements_by_cond($deficitTable, 'model_id = :model_id AND user_id = :user_id AND year >= 0', ['model_id' => $data['model_id'], 'user_id' => $auth->uid()]);
 
+        // Return the saved split row so the caller can confirm what was stored,
+        // including original_year (to know where the item came from) and year
+        // (where it was moved to). is_moved = true whenever original_year is set
+        // and differs from year.
+        $saved = get_element($splitsTable, ['id' => $data['id']]);
+        $saved['is_moved'] = (
+            isset($saved['original_year']) &&
+            $saved['original_year'] !== '' &&
+            $saved['original_year'] !== null &&
+            $saved['original_year'] != $saved['year']
+        );
 
-        // return ['success' => ''];
-        return send_json_response(true, 200, 'success');
+        return send_json_response(true, 200, 'success', ['item' => $saved]);
     }
 
     private function get_rules($model_id)
@@ -6104,7 +6303,7 @@ class Simulation
         $version_data = array();
         $version_data['rules'] = $this->get_rules($model_id);
         $version_data['deficit'] = get_elements($simDeficitTable, ['model_id' => $model_id, 'user_id' => $uid]); // get deficits;
-        $version_data['splits'] = get_elements($simSplitsTable, ['model_id' => $model_id, 'user_id' => $uid]); // get deficits;
+        $version_data['splits'] = get_elements($simSplitsTable, ['model_id' => $model_id, 'user_id' => $uid], "*", "ORDER BY (original_year IS NOT NULL AND original_year != year) DESC, row_id ASC"); // get deficits;
         $version_data['simulation'] = $this->simulation(['model_id' => $model_id], true); // get deficits;
 
         $data['data'] = json_encode($version_data);
