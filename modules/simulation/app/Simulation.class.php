@@ -166,6 +166,18 @@ class Simulation
             case 'update_simulation_setting':
                 $response = $this->update_simulation_setting($data);
                 break;
+
+            case 'remove_all_deficits':
+                $response = $this->removeAllDeficits($data);
+                break;
+
+            case 'apply_monthly_fee_to_all':
+                $response = $this->applyMonthlyFeeToAll($data);
+                break;
+
+            case 'reset_monthly_fees_all':
+                $response = $this->resetMonthlyFeesAll($data);
+                break;
         }
 
         return $response;
@@ -1642,6 +1654,31 @@ class Simulation
             // Add is_deficit boolean to indicate if year has deficit (fa < 0)
             $calculated[$i]['is_deficit'] = ($year_calculations['fa'] < 0);
 
+            // Monthly fee breakdown — lets the frontend build a fee overview table
+            // without needing to know which algorithm is active or how ranges work.
+            $mf_src = 'base';
+            if (!empty($used_manual_monthly_fees[$i])) {
+                $mf_src = 'manual';
+            } elseif (!empty($custom_range_years[$i])) {
+                $mf_src = 'custom_range';
+            } elseif (!empty($custom_gradual_range_years[$i])) {
+                $mf_src = 'gradual';
+            } elseif (check_val($simulation_rules, 'is_auto_calculated_enabled_v4', false)) {
+                $mf_src = 'v4';
+            } elseif (check_val($simulation_rules, 'is_auto_calculated_enabled_v3', false)) {
+                $mf_src = 'v3';
+            } elseif (check_val($simulation_rules, 'is_auto_calculated_enabled_v2', false)) {
+                $mf_src = 'v2';
+            } elseif (check_val($simulation_rules, 'is_auto_calculated_enabled_v1', false)) {
+                $mf_src = 'v1';
+            }
+
+            $calculated[$i]['mf_base']            = $monthly_fees;
+            $calculated[$i]['mf_source']          = $mf_src;
+            $calculated[$i]['mf_is_manual']       = !empty($used_manual_monthly_fees[$i]);
+            $calculated[$i]['mf_is_custom_range'] = !empty($custom_range_years[$i]);
+            $calculated[$i]['mf_is_gradual']      = !empty($custom_gradual_range_years[$i]);
+
             //log_info("$starting_amount -> $final_amount");
 
             // next year starting amount as current year final amout, 0 if negatif
@@ -2871,10 +2908,15 @@ class Simulation
         $key_mapping = [
             'sa'        => 'starting_amount',
             'yc'        => 'yearly_collections',
-            'mf'        => 'monthly_fee',
-            'mf_m'      => 'monthly_fee_manual',
-            'mf_no_inf' => 'monthly_fee_no_inflation',
-            'mf_no_thr' => 'monthly_fee_no_threshold',
+            'mf'             => 'monthly_fee',
+            'mf_m'           => 'monthly_fee_manual',
+            'mf_no_inf'      => 'monthly_fee_no_inflation',
+            'mf_no_thr'      => 'monthly_fee_no_threshold',
+            'mf_base'        => 'monthly_fee_base',
+            'mf_source'      => 'monthly_fee_source',
+            'mf_is_manual'       => 'monthly_fee_is_manual',
+            'mf_is_custom_range' => 'monthly_fee_is_custom_range',
+            'mf_is_gradual'      => 'monthly_fee_is_gradual',
             'ta'        => 'total_amount',
             'ih'        => 'held_amount',
             'ipn'       => 'early_penalty',
@@ -2960,6 +3002,23 @@ class Simulation
                 $calculated[$y]['mf_no_thr'] = isset($no_thr_res['calculated'][$y]['mf'])
                     ? floatval($no_thr_res['calculated'][$y]['mf']) : 0;
             }
+        }
+
+        // Build fee_overview sub-object per year so the FE has one place
+        // to read every fee variant without knowing which fields to look for.
+        for ($y = 0; $y < $period; $y++) {
+            $yr = $calculated[$y];
+            $calculated[$y]['fee_overview'] = [
+                'final_fee'        => floatval($yr['mf']         ?? 0),
+                'base_fee'         => floatval($yr['mf_base']    ?? 0),
+                'manual_fee'       => floatval($yr['mf_m']       ?? 0),
+                'no_inflation_fee' => floatval($yr['mf_no_inf']  ?? 0),
+                'no_threshold_fee' => floatval($yr['mf_no_thr']  ?? 0),
+                'source'           => $yr['mf_source']           ?? 'base',
+                'is_manual'        => !empty($yr['mf_is_manual']),
+                'is_custom_range'  => !empty($yr['mf_is_custom_range']),
+                'is_gradual'       => !empty($yr['mf_is_gradual']),
+            ];
         }
 
         // Rebuild results with the updated calculated (mf_no_inf / mf_no_thr injected)
@@ -6541,6 +6600,221 @@ class Simulation
         }
 
         return send_json_response(true, 200, "Setting is updated", $update);
+    }
+
+    public function applyMonthlyFeeToAll($data)
+    {
+        global $simDeficitTable, $modelsTable, $simRulesTable, $auth;
+
+        if (!is_valid($data, 'model_id'))
+            return send_json_response(false, 400, $this->errors['model_id']);
+
+        if (!is_valid($data, 'monthly_fee'))
+            return send_json_response(false, 400, 'monthly_fee is required');
+
+        $model_id = $data['model_id'];
+        $fee      = floatval($data['monthly_fee']);
+
+        $model = get_element($modelsTable, ['id' => $model_id]);
+        if (empty($model))
+            return send_json_response(false, 404, $this->errors['missing']);
+
+        if (!belongs_to_client($modelsTable, $model_id, false, true))
+            return send_json_response(false, 403, $this->errors['not_allowed']);
+
+        // from_year: apply fee starting at this year (default 0 = all years)
+        $rules  = $this->get_rules($model_id);
+        $period = intval(check_val($rules, 'period', check_val($model, 'period', 29)));
+
+        $from_year = isset($data['from_year']) ? max(0, intval($data['from_year'])) : 0;
+        $to_year   = isset($data['to_year'])   ? min($period - 1, intval($data['to_year'])) : $period - 1;
+
+        $updated = [];
+
+        for ($y = $from_year; $y <= $to_year; $y++) {
+            $row = get_element($simDeficitTable, [
+                'model_id' => $model_id,
+                'user_id'  => $auth->uid(),
+                'year'     => $y
+            ]);
+
+            $deficit_data = [];
+            if (!empty($row))
+                $deficit_data = parse_json($row['data'], []);
+
+            // Set the fee — keep everything else (assessment, loan, ltim, etc.) intact
+            $deficit_data['monthly_fees'] = $fee;
+
+            save_element($simDeficitTable, [
+                'model_id' => $model_id,
+                'user_id'  => $auth->uid(),
+                'year'     => $y,
+                'data'     => json_encode($deficit_data)
+            ], ['model_id', 'user_id', 'year']);
+
+            $updated[] = $y;
+        }
+
+        return send_json_response(true, 200, 'Monthly fee applied to all years', [
+            'monthly_fee'  => $fee,
+            'from_year'    => $from_year,
+            'to_year'      => $to_year,
+            'years_updated' => $updated,
+        ]);
+    }
+
+    public function resetMonthlyFeesAll($data)
+    {
+        global $simDeficitTable, $modelsTable, $auth;
+
+        if (!is_valid($data, 'model_id'))
+            return send_json_response(false, 400, $this->errors['model_id']);
+
+        $model_id = $data['model_id'];
+        $model    = get_element($modelsTable, ['id' => $model_id]);
+
+        if (empty($model))
+            return send_json_response(false, 404, $this->errors['missing']);
+
+        if (!belongs_to_client($modelsTable, $model_id, false, true))
+            return send_json_response(false, 403, $this->errors['not_allowed']);
+
+        $rules     = $this->get_rules($model_id);
+        $period    = intval(check_val($rules, 'period', check_val($model, 'period', 29)));
+        $from_year = isset($data['from_year']) ? max(0, intval($data['from_year'])) : 0;
+        $to_year   = isset($data['to_year'])   ? min($period - 1, intval($data['to_year'])) : $period - 1;
+
+        $cleared = [];
+
+        for ($y = $from_year; $y <= $to_year; $y++) {
+            $row = get_element($simDeficitTable, [
+                'model_id' => $model_id,
+                'user_id'  => $auth->uid(),
+                'year'     => $y
+            ]);
+
+            if (empty($row)) continue;
+
+            $deficit_data = parse_json($row['data'], []);
+
+            if (!array_key_exists('monthly_fees', $deficit_data)) continue;
+
+            unset($deficit_data['monthly_fees']);
+
+            if (empty($deficit_data)) {
+                // Row has no other data — remove the row entirely
+                delete_elements_by_cond($simDeficitTable,
+                    'model_id = :model_id AND user_id = :user_id AND year = :year',
+                    ['model_id' => $model_id, 'user_id' => $auth->uid(), 'year' => $y]
+                );
+            } else {
+                save_element($simDeficitTable, [
+                    'model_id' => $model_id,
+                    'user_id'  => $auth->uid(),
+                    'year'     => $y,
+                    'data'     => json_encode($deficit_data)
+                ], ['model_id', 'user_id', 'year']);
+            }
+
+            $cleared[] = $y;
+        }
+
+        return send_json_response(true, 200, 'Monthly fees reset', [
+            'from_year'     => $from_year,
+            'to_year'       => $to_year,
+            'years_cleared' => $cleared,
+        ]);
+    }
+
+    public function removeAllDeficits($data)
+    {
+        global $simDeficitTable, $modelsTable, $auth;
+
+        if (!is_valid($data, 'model_id'))
+            return send_json_response(false, 400, $this->errors['model_id']);
+
+        $model_id = $data['model_id'];
+        $model    = get_element($modelsTable, ['id' => $model_id]);
+
+        if (empty($model))
+            return send_json_response(false, 404, $this->errors['missing']);
+
+        if (!belongs_to_client($modelsTable, $model_id, false, true))
+            return send_json_response(false, 403, $this->errors['not_allowed']);
+
+        $type = check_val($data, 'type', 'assessment');
+        if (!in_array($type, ['assessment', 'loan']))
+            return send_json_response(false, 400, 'type must be assessment or loan');
+
+        $bank_rate  = floatval(check_val($data, 'bank_rate',  check_val($model, 'bank_rate',  0)));
+        $loan_years = intval(check_val($data, 'loan_years', check_val($model, 'loan_years', 10)));
+
+        $additions    = [];   // [year => total_added]
+        $max_iter     = 60;
+        $iter         = 0;
+
+        // Strip one-time flags so the internal simulation run is a clean baseline
+        $sim_data = $data;
+        unset($sim_data['compare_inflation'], $sim_data['compare_threshold']);
+
+        while ($iter < $max_iter) {
+            $iter++;
+
+            $sim_result = $this->simulation($sim_data, true);
+            $calculated = $sim_result['calculated'] ?? [];
+
+            // Find the first year that still has a deficit
+            $deficit_year   = -1;
+            $deficit_amount = 0;
+            foreach ($calculated as $y => $year_data) {
+                $fa = floatval($year_data['fa'] ?? 0);
+                if ($fa < 0) {
+                    $deficit_year   = $y;
+                    $deficit_amount = (int) ceil(abs($fa));
+                    break;
+                }
+            }
+
+            if ($deficit_year < 0) break; // no more deficits — done
+
+            // Load existing deficit row for this year so we don't wipe other settings
+            $deficit_row = get_element($simDeficitTable, [
+                'model_id' => $model_id,
+                'user_id'  => $auth->uid(),
+                'year'     => $deficit_year
+            ]);
+
+            $deficit_data = [];
+            if (!empty($deficit_row))
+                $deficit_data = parse_json($deficit_row['data'], []);
+
+            if ($type === 'assessment') {
+                $deficit_data['assessment'] = floatval($deficit_data['assessment'] ?? 0) + $deficit_amount;
+            } else {
+                $deficit_data['loan_amount'] = floatval($deficit_data['loan_amount'] ?? 0) + $deficit_amount;
+                $deficit_data['bank_rate']   = $bank_rate;
+                $deficit_data['loan_years']  = $loan_years;
+            }
+
+            save_element($simDeficitTable, [
+                'model_id' => $model_id,
+                'user_id'  => $auth->uid(),
+                'year'     => $deficit_year,
+                'data'     => json_encode($deficit_data)
+            ], ['model_id', 'user_id', 'year']);
+
+            $additions[$deficit_year] = ($additions[$deficit_year] ?? 0) + $deficit_amount;
+        }
+
+        $added_list = [];
+        foreach ($additions as $yr => $amt) {
+            $added_list[] = ['year' => $yr, 'amount' => $amt, 'type' => $type];
+        }
+
+        return send_json_response(true, 200, 'All deficits removed', [
+            'added' => $added_list,
+            'type'  => $type
+        ]);
     }
 
     private $errors = [
