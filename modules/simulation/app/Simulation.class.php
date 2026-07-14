@@ -2929,6 +2929,8 @@ class Simulation
             'cp'        => 'compound',
             'lp'        => 'loss_purchase_power',
             'sp'        => 'spending',
+            'sp_pre_thr' => 'spending_pre_threshold',
+            'thr_held'   => 'threshold_held',
 
             //LOANS
             'loan_t'    => 'loan_total',
@@ -3004,10 +3006,11 @@ class Simulation
             }
         }
 
-        // Build fee_overview sub-object per year so the FE has one place
-        // to read every fee variant without knowing which fields to look for.
+        // Build fee_overview and balance_breakdown sub-objects per year
+        // so the FE has one place to read every fee/balance variant.
         for ($y = 0; $y < $period; $y++) {
             $yr = $calculated[$y];
+
             $calculated[$y]['fee_overview'] = [
                 'final_fee'        => floatval($yr['mf']         ?? 0),
                 'base_fee'         => floatval($yr['mf_base']    ?? 0),
@@ -3018,6 +3021,36 @@ class Simulation
                 'is_manual'        => !empty($yr['mf_is_manual']),
                 'is_custom_range'  => !empty($yr['mf_is_custom_range']),
                 'is_gradual'       => !empty($yr['mf_is_gradual']),
+            ];
+
+            $fa  = floatval($yr['fa']  ?? 0);
+            $lp  = floatval($yr['lp']  ?? 0);
+            $sp  = floatval($yr['sp']  ?? 0);
+            $sp_pre = floatval($yr['sp_pre_thr'] ?? $sp);
+            $thr_held = floatval($yr['thr_held'] ?? 0);
+
+            $calculated[$y]['balance_breakdown'] = [
+                // ── Inflows ──────────────────────────────────────
+                'starting_balance'        => floatval($yr['sa']      ?? 0),
+                'monthly_collection'      => floatval($yr['yc']      ?? 0),
+                'investment_income'       => floatval($yr['ne']      ?? 0),
+                'assessment_received'     => floatval($yr['assess']  ?? 0),
+                'loan_received'           => floatval($yr['loan_t']  ?? 0),
+
+                // ── Outflows ─────────────────────────────────────
+                'spending'                => $sp,
+                'spending_pre_threshold'  => $sp_pre,
+                'threshold_held'          => $thr_held,
+                'inflation_balance_impact'=> $lp,
+                'loan_payment'            => floatval($yr['loan_pay'] ?? 0),
+                'ltim_allocated'          => floatval($yr['ltim_p']  ?? 0),
+
+                // ── Result ───────────────────────────────────────
+                'compound'                => floatval($yr['cp']      ?? 0),
+                'final_balance'           => $fa,
+                'surplus'                 => $fa > 0 ? $fa : 0,
+                'deficit_amount'          => $fa < 0 ? abs($fa) : 0,
+                'is_deficit'              => $fa < 0,
             ];
         }
 
@@ -3723,6 +3756,8 @@ class Simulation
 
             "lp$suffix" => $loss_purchase,
             "sp$suffix" => $spending,
+            "sp_pre_thr$suffix" => $spending_before_threshold,
+            "thr_held$suffix"   => $spending_before_threshold - $spending,
 
             "loan_t" => $loan,
             "loan_pay" => $prev_loan_payment,
